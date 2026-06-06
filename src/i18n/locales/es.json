@@ -326,7 +326,14 @@
     "clockOutPending": "Salida pendiente de aprobación…",
     "requestEarlyOut": "Solicitar salida anticipada",
     "clockOutRejected": "Tu solicitud de salida anticipada fue rechazada.",
-    "earlyOutHint": "Tu turno aún no termina. Pide aprobación a tu supervisor para salir antes."
+    "earlyOutHint": "Tu turno aún no termina. Pide aprobación a tu supervisor para salir antes.",
+    "earlyOutReasonTitle": "Solicitud de salida anticipada",
+    "earlyOutReasonLabel": "Motivo de la salida anticipada",
+    "earlyOutReasonPlaceholder": "Explica por qué necesitas salir antes…",
+    "earlyOutReasonRequired": "Ingresa un motivo para continuar.",
+    "earlyOutReasonSubmit": "Enviar solicitud",
+    "earlyOutCancel": "Cancelar",
+    "earlyOutRequestSent": "Solicitud enviada. Espera la aprobación de tu supervisor."
   },
   "features": {
     "visitors": "Visitas",

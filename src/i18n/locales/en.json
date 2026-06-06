@@ -326,7 +326,14 @@
     "clockOutPending": "Clock-out pending approval…",
     "requestEarlyOut": "Request early clock-out",
     "clockOutRejected": "Your early clock-out request was rejected.",
-    "earlyOutHint": "Your shift hasn’t ended. Request supervisor approval to leave early."
+    "earlyOutHint": "Your shift hasn’t ended. Request supervisor approval to leave early.",
+    "earlyOutReasonTitle": "Early clock-out request",
+    "earlyOutReasonLabel": "Reason for leaving early",
+    "earlyOutReasonPlaceholder": "Explain why you need to leave early…",
+    "earlyOutReasonRequired": "Enter a reason to continue.",
+    "earlyOutReasonSubmit": "Send request",
+    "earlyOutCancel": "Cancel",
+    "earlyOutRequestSent": "Request sent. Wait for your supervisor’s approval."
   },
   "features": {
     "visitors": "Visitors",

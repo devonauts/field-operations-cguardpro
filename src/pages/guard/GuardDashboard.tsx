@@ -37,6 +37,7 @@ import { logError } from "@/lib/errorLog";
 import OnDutyView from "./OnDutyView";
 import { StartShiftModal, ChecklistResult } from "@/components/StartShiftModal";
 import { SelfieClockIn, SelfieResult } from "@/components/SelfieClockIn";
+import { EarlyClockOutModal } from "@/components/EarlyClockOutModal";
 
 const TIER_COLOR: Record<Tier, string> = {
   excellent: "#22c55e",
@@ -60,6 +61,7 @@ export default function GuardDashboard() {
   const perf = useAsync(() => loadGuardPerformance(30));
   const [busy, setBusy] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
+  const [earlyOutOpen, setEarlyOutOpen] = useState(false);
   // Clock-in flow: pick station → start-shift checklist → geo-stamped selfie → submit
   const [flowStep, setFlowStep] = useState<"idle" | "checklist" | "selfie">("idle");
   const [flowStation, setFlowStation] = useState<any | null>(null);
@@ -202,10 +204,12 @@ export default function GuardDashboard() {
         /* GPS optional on clock-out */
       }
       const res = await guardService.clockOut(coords);
-      // Early clock-out needs supervisor approval first — surface it + refresh
-      // so the on-duty view flips to the "request approval" state.
+      // Early clock-out needs supervisor approval first. Instead of failing
+      // silently, prompt the guard for a reason and submit an approval request.
       if (res && res.success === false && res.error === "approval_required") {
-        setGpsError(res.message || t("onduty.earlyOutHint"));
+        setGpsError(null);
+        setEarlyOutOpen(true);
+        return;
       }
       await reload();
     } catch (e: any) {
@@ -215,12 +219,14 @@ export default function GuardDashboard() {
     }
   };
 
-  // Guard requests permission to clock out early; supervisor approves in the CRM.
-  const requestClockOut = async () => {
+  // Guard requests permission to clock out early WITH a reason; the supervisor
+  // approves/rejects in the CRM. The reason rides along on the clockOutRequest.
+  const submitEarlyOut = async (reason: string) => {
     setBusy(true);
     setGpsError(null);
     try {
-      await guardService.requestClockOut();
+      await guardService.requestClockOut({ reason });
+      setEarlyOutOpen(false);
       await reload();
     } catch (e: any) {
       setGpsError(e?.message || "error");
@@ -261,11 +267,17 @@ export default function GuardDashboard() {
             data={data}
             busy={busy}
             onClockOut={handleClockOut}
-            onRequestClockOut={requestClockOut}
+            onRequestClockOut={() => { setGpsError(null); setEarlyOutOpen(true); }}
           />
           {gpsError && (
             <p className="mt-3 text-center text-xs text-critical">{gpsError}</p>
           )}
+          <EarlyClockOutModal
+            isOpen={earlyOutOpen}
+            busy={busy}
+            onCancel={() => setEarlyOutOpen(false)}
+            onSubmit={submitEarlyOut}
+          />
         </>
       ) : (
         /* ====================== OFF-DUTY VIEW ===================== */
