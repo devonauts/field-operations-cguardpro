@@ -1,8 +1,9 @@
 import { useState, FormEvent } from "react";
 import { IonPage, IonContent } from "@ionic/react";
 import { useTranslation } from "react-i18next";
-import { Shield, Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import brandLogo from "../assets/brand-logo.png";
 
 export default function Login() {
   const { t } = useTranslation();
@@ -30,8 +31,8 @@ export default function Login() {
           <div className="mx-auto w-full max-w-sm">
             {/* Brand */}
             <div className="mb-8 text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-gold/30 bg-gold-soft">
-                <Shield className="text-gold" size={32} />
+              <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl border border-gold/30 bg-navy-50">
+                <img src={brandLogo} alt="CGuardPro" className="h-14 w-14 object-contain" />
               </div>
               <h1 className="text-2xl font-bold tracking-tight text-ink">
                 CGUARD<span className="text-gold">PRO</span>

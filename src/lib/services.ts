@@ -46,6 +46,9 @@ export const guardService = {
   /** Active early-clock-out request status (or { request: null }). */
   clockOutRequest: () =>
     api.get(tenantPath("/guard/me/clock-out/request")).then(unwrap),
+  /** Update my own contact details (phone/address) — notifies HR in the CRM. */
+  updateProfile: (data: { phone?: string; address?: string }) =>
+    api.patch(tenantPath("/guard/me/profile"), { data }).then(unwrap),
   timeOff: () => api.get(tenantPath("/guard/me/time-off")).then(unwrap),
   requestTimeOff: (data: {
     type: string;
