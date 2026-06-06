@@ -46,9 +46,14 @@ export const guardService = {
   /** Active early-clock-out request status (or { request: null }). */
   clockOutRequest: () =>
     api.get(tenantPath("/guard/me/clock-out/request")).then(unwrap),
+  /** Withdraw my pending early-clock-out request (escape a stuck approval). */
+  cancelClockOutRequest: () =>
+    api.post(tenantPath("/guard/me/clock-out/request/cancel"), { data: {} }).then(unwrap),
   /** Update my own contact details (phone/address) — notifies HR in the CRM. */
   updateProfile: (data: { phone?: string; address?: string }) =>
     api.patch(tenantPath("/guard/me/profile"), { data }).then(unwrap),
+  /** Recent site activity for the on-duty home feed. */
+  activity: () => api.get(tenantPath("/guard/me/activity")).then((r) => asRows(r)),
   timeOff: () => api.get(tenantPath("/guard/me/time-off")).then(unwrap),
   requestTimeOff: (data: {
     type: string;

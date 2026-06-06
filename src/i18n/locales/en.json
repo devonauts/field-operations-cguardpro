@@ -542,5 +542,16 @@
     "rating": "Rating",
     "notes": "Notes (optional)",
     "save": "Save inspection"
+  },
+  "clockOutReport": {
+    "title": "Shift report",
+    "hint": "Describe how your shift went before clocking out.",
+    "summaryLabel": "Shift summary",
+    "summaryPlaceholder": "e.g. Quiet shift. Patrols completed. No incidents…",
+    "dictate": "Dictate",
+    "listening": "Listening…",
+    "speakNow": "Speak now…",
+    "required": "The summary is required.",
+    "submit": "Submit & clock out"
   }
 }

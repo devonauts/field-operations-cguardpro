@@ -12,6 +12,10 @@
 	<string>CGuardPro usa tu galería para adjuntar fotos a visitas, incidentes y puntos de control.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>CGuardPro puede guardar imágenes generadas (como códigos QR) en tu galería.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>CGuardPro usa el micrófono para dictar por voz el reporte de salida del turno.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>CGuardPro usa el reconocimiento de voz para convertir tu dictado en texto en el reporte de salida.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

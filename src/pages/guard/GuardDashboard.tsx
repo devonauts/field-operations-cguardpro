@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useHistory } from "react-router-dom";
+import { useIonToast } from "@ionic/react";
+import { App as CapacitorApp } from "@capacitor/app";
 import {
   Shield,
   Clock,
@@ -25,6 +27,7 @@ import {
   EmptyState,
   ScoreRing,
   MeterBar,
+  Avatar,
 } from "@/components/ui";
 import { useAsync } from "@/lib/useAsync";
 import { guardService } from "@/lib/services";
@@ -38,6 +41,7 @@ import OnDutyView from "./OnDutyView";
 import { StartShiftModal, ChecklistResult } from "@/components/StartShiftModal";
 import { SelfieClockIn, SelfieResult } from "@/components/SelfieClockIn";
 import { EarlyClockOutModal } from "@/components/EarlyClockOutModal";
+import { ClockOutReportModal } from "@/components/ClockOutReportModal";
 
 const TIER_COLOR: Record<Tier, string> = {
   excellent: "#22c55e",
@@ -57,11 +61,13 @@ const COMPONENT_COLOR: Record<ComponentKey, string> = {
 
 export default function GuardDashboard() {
   const { t } = useTranslation();
+  const [presentToast] = useIonToast();
   const { data, loading, error, reload } = useAsync(() => guardService.dashboard());
   const perf = useAsync(() => loadGuardPerformance(30));
   const [busy, setBusy] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
   const [earlyOutOpen, setEarlyOutOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   // Clock-in flow: pick station → start-shift checklist → geo-stamped selfie → submit
   const [flowStep, setFlowStep] = useState<"idle" | "checklist" | "selfie">("idle");
   const [flowStation, setFlowStation] = useState<any | null>(null);
@@ -81,6 +87,52 @@ export default function GuardDashboard() {
   const currentShift = data?.currentShift;
   const nextShift = data?.nextShift;
   const isClockedIn = !!data?.isClockedIn;
+  const clockOutStatus: string | undefined = data?.clockOutRequest?.status;
+
+  // Live early-clock-out decision: while a request is PENDING, poll the
+  // lightweight status endpoint so the UI flips to "approved/rejected" the
+  // moment the supervisor decides — no manual refresh. Stops once resolved.
+  useEffect(() => {
+    if (!isClockedIn || clockOutStatus !== "pending") return;
+    let active = true;
+    const id = setInterval(async () => {
+      try {
+        const r: any = await guardService.clockOutRequest();
+        const s: string | undefined = r?.request?.status;
+        if (active && s && s !== "pending") {
+          await reload();
+          presentToast({
+            message:
+              s === "approved"
+                ? t("onduty.clockOutApprovedToast", "Tu salida fue aprobada. Ya puedes marcar salida.")
+                : t("onduty.clockOutRejectedToast", "Tu solicitud de salida fue rechazada."),
+            duration: 3500,
+            color: s === "approved" ? "success" : "danger",
+            position: "top",
+          });
+        }
+      } catch {
+        /* transient — try again next tick */
+      }
+    }, 6000);
+    return () => {
+      active = false;
+      clearInterval(id);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isClockedIn, clockOutStatus]);
+
+  // Refresh when the app returns to the foreground (an approval may have landed
+  // while it was backgrounded — interval timers are throttled there).
+  useEffect(() => {
+    const sub = CapacitorApp.addListener("appStateChange", (state) => {
+      if (state.isActive) reload();
+    });
+    return () => {
+      sub.then((h) => h.remove()).catch(() => {});
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // The shift is the unit of work: if the guard has a shift, they must be able
   // to clock in for it (its start time is the scheduled baseline). Derive a
@@ -109,6 +161,14 @@ export default function GuardDashboard() {
   const greeting = firstName
     ? t(greetingKey, { name: firstName })
     : t("guard.myPanel");
+  const punchInTime = data?.activeClockIn?.punchInTime || data?.activeClockIn?.createdAt;
+  const fmtClock = (d: any) => {
+    try {
+      return new Date(d).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    } catch {
+      return "";
+    }
+  };
 
   const beginClockIn = (station: any) => {
     setGpsError(null);
@@ -190,7 +250,7 @@ export default function GuardDashboard() {
     }
   };
 
-  const handleClockOut = async () => {
+  const handleClockOut = async (summary?: string) => {
     setBusy(true);
     try {
       let coords: { latitude?: number; longitude?: number } = {};
@@ -203,14 +263,17 @@ export default function GuardDashboard() {
       } catch {
         /* GPS optional on clock-out */
       }
-      const res = await guardService.clockOut(coords);
+      // The end-of-shift report summary travels as the clock-out observations.
+      const res = await guardService.clockOut({ ...coords, observations: summary });
       // Early clock-out needs supervisor approval first. Instead of failing
       // silently, prompt the guard for a reason and submit an approval request.
       if (res && res.success === false && res.error === "approval_required") {
+        setReportOpen(false);
         setGpsError(null);
         setEarlyOutOpen(true);
         return;
       }
+      setReportOpen(false);
       await reload();
     } catch (e: any) {
       setGpsError(e?.message || "error");
@@ -235,22 +298,59 @@ export default function GuardDashboard() {
     }
   };
 
+  // Re-notify supervisors about a still-pending request (backend rate-limits).
+  const resendEarlyOut = async () => {
+    setBusy(true);
+    setGpsError(null);
+    try {
+      await guardService.requestClockOut();
+      await reload();
+    } catch (e: any) {
+      setGpsError(e?.message || "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Withdraw a stuck pending request so the guard is never blocked.
+  const cancelEarlyOut = async () => {
+    setBusy(true);
+    setGpsError(null);
+    try {
+      await guardService.cancelClockOutRequest();
+      await reload();
+    } catch (e: any) {
+      setGpsError(e?.message || "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <Screen
-      title={greeting}
-      titleClassName="text-base leading-tight"
-      subtitle={isClockedIn ? t("guard.onDuty") : t("guard.offDuty")}
+      largeTitle={greeting}
+      largeSubtitle={isClockedIn ? t("guard.onDuty") : t("guard.offDuty")}
+      compactTitle={guardName || firstName}
+      avatar={<Avatar name={guardName} className="h-7 w-7 text-[10px]" />}
       right={
-        <div
-          className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
-            isClockedIn
-              ? "border-online/40 bg-online-soft text-online"
-              : "border-line-2 text-muted"
-          }`}
-        >
-          <Shield size={13} />
-          {isClockedIn ? t("guard.onDuty") : t("guard.offDuty")}
-        </div>
+        isClockedIn ? (
+          <div className="rounded-xl border border-online/40 bg-online/5 px-3 py-1.5 text-right">
+            <span className="flex items-center justify-end gap-1.5 text-[11px] font-bold uppercase tracking-wide text-online">
+              <span className="pulse-dot inline-block h-2 w-2 rounded-full bg-online" />
+              {t("guard.onDuty")}
+            </span>
+            {punchInTime && (
+              <span className="mt-0.5 block text-[10px] text-muted">
+                {t("onduty.since", "Desde")} {fmtClock(punchInTime)}
+              </span>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 rounded-full border border-line-2 px-2.5 py-1 text-[11px] font-semibold text-muted">
+            <Shield size={13} />
+            {t("guard.offDuty")}
+          </div>
+        )
       }
       onRefresh={async () => {
         await Promise.all([reload(), perf.reload()]);
@@ -266,8 +366,10 @@ export default function GuardDashboard() {
           <OnDutyView
             data={data}
             busy={busy}
-            onClockOut={handleClockOut}
+            onClockOut={() => { setGpsError(null); setReportOpen(true); }}
             onRequestClockOut={() => { setGpsError(null); setEarlyOutOpen(true); }}
+            onResendRequest={resendEarlyOut}
+            onCancelRequest={cancelEarlyOut}
           />
           {gpsError && (
             <p className="mt-3 text-center text-xs text-critical">{gpsError}</p>
@@ -277,6 +379,12 @@ export default function GuardDashboard() {
             busy={busy}
             onCancel={() => setEarlyOutOpen(false)}
             onSubmit={submitEarlyOut}
+          />
+          <ClockOutReportModal
+            isOpen={reportOpen}
+            busy={busy}
+            onCancel={() => setReportOpen(false)}
+            onSubmit={(summary) => handleClockOut(summary)}
           />
         </>
       ) : (

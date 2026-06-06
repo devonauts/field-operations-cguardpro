@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Check } from "lucide-react";
 
 /**
  * Enterprise UI kit — reusable, theme-driven primitives for the worker app.
@@ -196,6 +196,97 @@ export function StatusPill({
       {dot && <span className="h-1.5 w-1.5 rounded-full bg-current" />}
       {children}
     </span>
+  );
+}
+
+/* ------------------------------------------------------- Verification chip */
+
+/** A status verification chip (e.g. "Inside Geofence ✓"). */
+export function StatusChip({
+  icon,
+  label,
+  ok = true,
+}: {
+  icon: ReactNode;
+  label: string;
+  ok?: boolean;
+}) {
+  return (
+    <div className="flex flex-1 items-center justify-center gap-1.5 text-[12px] font-medium">
+      <span className={ok ? "text-online" : "text-faint"}>{icon}</span>
+      <span className="text-ink/85">{label}</span>
+      {ok && <Check size={13} className="text-online" />}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------- Quick-action tile */
+
+/** A large tap target for a primary screen action (Visitors / Patrol / …). */
+export function QuickActionTile({
+  icon,
+  label,
+  tone = "gold",
+  onClick,
+}: {
+  icon: ReactNode;
+  label: string;
+  tone?: Tone;
+  onClick?: () => void;
+}) {
+  const ring: Record<Tone, string> = {
+    green: "border-online/25",
+    blue: "border-info/25",
+    amber: "border-gold/25",
+    purple: "border-route/25",
+    teal: "border-teal/25",
+    red: "border-critical/30 bg-critical/5",
+    gold: "border-gold/25",
+    neutral: "border-line",
+  };
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`pressable flex min-h-26 flex-col items-center justify-center gap-2.5 rounded-2xl border bg-surface/60 p-3 ${ring[tone]}`}
+    >
+      <span className={TONE_TEXT[tone]}>{icon}</span>
+      <span className="text-sm font-semibold text-ink">{label}</span>
+    </button>
+  );
+}
+
+/* ----------------------------------------------------------- Activity row */
+
+/** A timeline-style activity row: tinted ring icon · title + subtitle · time. */
+export function ActivityRow({
+  icon,
+  tone = "neutral",
+  title,
+  subtitle,
+  time,
+}: {
+  icon: ReactNode;
+  tone?: Tone;
+  title: string;
+  subtitle?: string;
+  time?: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 px-4 py-3">
+      <span
+        className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border ${TONE_TEXT[tone]} ${
+          tone === "neutral" ? "border-line" : "border-current/30"
+        }`}
+      >
+        {icon}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold text-ink">{title}</p>
+        {subtitle && <p className="truncate text-xs text-muted">{subtitle}</p>}
+      </div>
+      {time && <span className="shrink-0 text-xs text-muted">{time}</span>}
+    </div>
   );
 }
 

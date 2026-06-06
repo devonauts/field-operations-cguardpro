@@ -4,6 +4,7 @@ import { useHistory } from "react-router-dom";
 import { useIonAlert, useIonToast } from "@ionic/react";
 import {
   ShieldCheck,
+  Shield,
   MapPin,
   Clock,
   Loader2,
@@ -11,43 +12,41 @@ import {
   Siren,
   AlertTriangle,
   Footprints,
-  Building2,
   ClipboardCheck,
   CheckCircle2,
   ChevronRight,
   FileText,
   X,
+  Navigation,
+  Wifi,
+  Play,
+  User,
+  Bell,
+  Smartphone,
 } from "lucide-react";
-import { initialsOf } from "@/lib/normalize";
 import { useAsync } from "@/lib/useAsync";
-import { postSiteService } from "@/lib/services";
-import { incidentService } from "@/lib/services";
-import { postSiteLogoUrl, staticMapUrl } from "@/lib/station";
-import { fmtDateTime } from "@/lib/format";
+import { incidentService, guardService } from "@/lib/services";
 import { getCurrentPosition } from "@/lib/geo";
 import { IncidentForm } from "@/components/IncidentForm";
 import { VisitorModal } from "@/components/VisitorModal";
 import { ConsignaComplete } from "@/components/ConsignaComplete";
-import { consignasService, ConsignaItem, memosService, MemoItem } from "@/lib/rondas";
-
-function StationLogo({ logo, name }: { logo: string | null; name?: string }) {
-  const [errored, setErrored] = useState(false);
-  if (logo && !errored) {
-    return (
-      <img
-        src={logo}
-        alt=""
-        className="h-12 w-12 rounded-xl border border-line bg-surface object-cover"
-        onError={() => setErrored(true)}
-      />
-    );
-  }
-  return (
-    <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-gold/30 bg-gold-soft text-sm font-bold tracking-tight text-gold">
-      {initialsOf(name)}
-    </div>
-  );
-}
+import {
+  SectionCard,
+  SectionHeader,
+  StatusChip,
+  QuickActionTile,
+  ActivityRow,
+  Button,
+  IconTile,
+  Tone,
+} from "@/components/ui/kit";
+import {
+  consignasService,
+  ConsignaItem,
+  memosService,
+  MemoItem,
+  rondasService,
+} from "@/lib/rondas";
 
 function useElapsed(since: any): string {
   const [now, setNow] = useState(() => Date.now());
@@ -56,7 +55,7 @@ function useElapsed(since: any): string {
     return () => clearInterval(id);
   }, []);
   const start = new Date(since).getTime();
-  if (!since || Number.isNaN(start)) return "—";
+  if (!since || Number.isNaN(start)) return "00:00:00";
   const s = Math.max(0, Math.floor((now - start) / 1000));
   const h = String(Math.floor(s / 3600)).padStart(2, "0");
   const m = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
@@ -64,16 +63,60 @@ function useElapsed(since: any): string {
   return `${h}:${m}:${sec}`;
 }
 
+function fmtClock(d: any): string {
+  if (!d) return "—";
+  try {
+    return new Date(d).toLocaleTimeString(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return "—";
+  }
+}
+
+/* Activity event → icon / tone / friendly label. */
+const ACTIVITY_LABEL: Record<string, string> = {
+  "guard.checkin": "Registro de entrada",
+  "guard.checkout": "Registro de salida",
+  "visitor.arrival": "Visitante ingresó",
+  "visitor.departure": "Salida de visitante",
+  "patrol.completed": "Ronda completada",
+  "patrol.missed": "Ronda incompleta",
+  "incident.created": "Incidente reportado",
+  "incident.updated": "Incidente actualizado",
+  "device.mismatch": "Dispositivo no reconocido",
+};
+function activityVisual(type: string): { tone: Tone; icon: any } {
+  const t = (type || "").toLowerCase();
+  if (t.startsWith("guard")) return { tone: "green", icon: <User size={16} /> };
+  if (t.startsWith("visitor")) return { tone: "amber", icon: <User size={16} /> };
+  if (t.startsWith("patrol")) return { tone: "blue", icon: <Shield size={16} /> };
+  if (t.startsWith("incident")) return { tone: "red", icon: <AlertTriangle size={16} /> };
+  if (t.startsWith("device")) return { tone: "purple", icon: <Smartphone size={16} /> };
+  return { tone: "neutral", icon: <Bell size={16} /> };
+}
+const stripEmoji = (s: string) =>
+  (s || "").replace(/^[^A-Za-zÁÉÍÓÚÑ0-9]+/, "").trim();
+function nameFromTitle(title: string): string {
+  const i = (title || "").indexOf(":");
+  return i >= 0 ? title.slice(i + 1).trim() : "";
+}
+
 export default function OnDutyView({
   data,
   busy,
   onClockOut,
   onRequestClockOut,
+  onResendRequest,
+  onCancelRequest,
 }: {
   data: any;
   busy: boolean;
   onClockOut: () => void;
   onRequestClockOut: () => void;
+  onResendRequest?: () => void;
+  onCancelRequest?: () => void;
 }) {
   const { t } = useTranslation();
   const history = useHistory();
@@ -86,17 +129,19 @@ export default function OnDutyView({
 
   const { data: consignas, reload: reloadConsignas } = useAsync<ConsignaItem[]>(
     () => consignasService.orders().catch(() => []),
-    []
+    [],
   );
   const pendingConsignas = (consignas || []).filter((c) => !c.done).length;
 
   const { data: memos, reload: reloadMemos } = useAsync<MemoItem[]>(
     () => memosService.list().catch(() => []),
-    []
+    [],
   );
   const [memo, setMemo] = useState<MemoItem | null>(null);
   const [memoBusy, setMemoBusy] = useState(false);
-  const pendingMemos = (memos || []).filter((m) => !m.wasAccepted).length;
+
+  const { data: patrols } = useAsync<any[]>(() => rondasService.patrols().catch(() => []), []);
+  const { data: activity } = useAsync<any[]>(() => guardService.activity().catch(() => []), []);
 
   const acceptMemo = async () => {
     if (!memo) return;
@@ -114,25 +159,37 @@ export default function OnDutyView({
   };
 
   const station = data?.stations?.[0] || {};
-  const punchInTime =
-    data?.activeClockIn?.punchInTime || data?.activeClockIn?.createdAt;
+  const punchInTime = data?.activeClockIn?.punchInTime || data?.activeClockIn?.createdAt;
   const elapsed = useElapsed(punchInTime);
+  const stationName = station.stationName || station.name || "—";
 
-  const { data: postSite } = useAsync(
-    () =>
-      station.postSiteId
-        ? postSiteService.find(station.postSiteId).catch(() => null)
-        : Promise.resolve(null),
-    [station.postSiteId]
-  );
+  // Live verification chips.
+  const [gpsOk, setGpsOk] = useState<boolean | null>(null);
+  const [online, setOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
+  useEffect(() => {
+    getCurrentPosition()
+      .then(() => setGpsOk(true))
+      .catch(() => setGpsOk(false));
+    const on = () => setOnline(true);
+    const off = () => setOnline(false);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", off);
+    return () => {
+      window.removeEventListener("online", on);
+      window.removeEventListener("offline", off);
+    };
+  }, []);
 
-  const logo = postSiteLogoUrl(postSite);
-  const mapUrl = staticMapUrl(
-    postSite?.latitud ?? station.latitud,
-    postSite?.longitud ?? station.longitud
-  );
-  const stationName = station.stationName || station.name || postSite?.companyName || "—";
-  const address = postSite?.address || postSite?.city || "";
+  // Next patrol (best-effort from the guard's assignments).
+  const nextPatrol = (patrols || [])[0] || null;
+  const checkpoints =
+    nextPatrol?.checkpointCount ??
+    nextPatrol?.tagsCount ??
+    (Array.isArray(nextPatrol?.tags) ? nextPatrol.tags.length : null);
+  const nextStart = nextPatrol?.scheduledAt || nextPatrol?.startAt || nextPatrol?.startTime || null;
+  const minsToNext = nextStart
+    ? Math.max(0, Math.round((new Date(nextStart).getTime() - Date.now()) / 60000))
+    : null;
 
   const sendPanic = async () => {
     setPanicBusy(true);
@@ -162,12 +219,7 @@ export default function OnDutyView({
         postSiteId: station?.postSiteId,
         incidentAt: new Date().toISOString(),
       });
-      presentToast({
-        message: t("panic.sent"),
-        duration: 3000,
-        color: "danger",
-        position: "top",
-      });
+      presentToast({ message: t("panic.sent"), duration: 3000, color: "danger", position: "top" });
     } catch {
       presentToast({ message: "Error", duration: 2500, color: "danger", position: "top" });
     } finally {
@@ -185,155 +237,167 @@ export default function OnDutyView({
       ],
     });
 
-  const features = [
-    {
-      key: "visitors",
-      icon: <Users size={22} />,
-      tone: "gold",
-      onClick: () => setVisitorOpen(true),
-    },
-    {
-      key: "patrol",
-      icon: <Footprints size={22} />,
-      tone: "info",
-      onClick: () => history.push("/guard/patrol"),
-    },
-    {
-      key: "incident",
-      icon: <AlertTriangle size={22} />,
-      tone: "warning",
-      onClick: () => setIncidentOpen(true),
-    },
+  const quickActions: { key: string; icon: any; tone: Tone; onClick: () => void }[] = [
+    { key: "visitors", icon: <Users size={24} />, tone: "amber", onClick: () => setVisitorOpen(true) },
+    { key: "patrol", icon: <Footprints size={24} />, tone: "blue", onClick: () => history.push("/guard/patrol") },
+    { key: "incident", icon: <AlertTriangle size={24} />, tone: "red", onClick: () => setIncidentOpen(true) },
     {
       key: "panic",
-      icon: panicBusy ? <Loader2 size={22} className="animate-spin" /> : <Siren size={22} />,
-      tone: "danger",
+      icon: panicBusy ? <Loader2 size={24} className="animate-spin" /> : <Siren size={24} />,
+      tone: "red",
       onClick: confirmPanic,
     },
   ];
 
-  const toneCls: Record<string, string> = {
-    gold: "border-gold/30 text-gold",
-    info: "border-info/30 text-info",
-    warning: "border-high/30 text-high",
-    danger: "border-critical/40 text-critical bg-critical/5",
-  };
-
-  const iconWrapCls: Record<string, string> = {
-    gold: "bg-gold-soft text-gold",
-    info: "bg-info/10 text-info",
-    warning: "bg-high/10 text-high",
-    danger: "bg-critical/10 text-critical",
-  };
-
   return (
-    <div className="space-y-4">
-      {/* ---------- HERO ---------- */}
-      <div className="scanline glow-online relative overflow-hidden rounded-2xl border border-online/40">
-        {/* backdrop: place image (satellite map if available) → else placeholder */}
-        <div className="absolute inset-0">
-          {/* placeholder "place image": large building watermark + gradient wash */}
-          <div className="absolute inset-0 bg-gradient-to-br from-online/10 via-navy to-navy" />
-          <Building2
-            className="absolute -right-6 -top-6 text-online/10"
-            size={190}
-            strokeWidth={1}
-          />
-          {mapUrl && (
-            <img
-              src={mapUrl}
-              alt=""
-              className="h-full w-full object-cover opacity-35"
-              onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
-            />
-          )}
-          <div className="absolute inset-0 grid-overlay" />
-          <div className="absolute inset-0 bg-gradient-to-b from-navy/55 via-navy/80 to-navy" />
-        </div>
-
-        <div className="relative p-4">
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-2 rounded-full border border-online/50 bg-online/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-online">
-              <span className="pulse-dot inline-block h-2 w-2 rounded-full bg-online" />
-              {t("onduty.active")}
+    <div className="space-y-5">
+      {/* ---------- ACTIVE SHIFT ---------- */}
+      <div className="scanline glow-online relative overflow-hidden rounded-2xl border border-online/40 bg-gradient-to-br from-online/10 via-navy to-navy p-4">
+        <div className="grid-overlay absolute inset-0 opacity-60" />
+        <div className="relative">
+          <div className="flex items-start justify-between">
+            <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-online">
+              <Clock size={15} />
+              {t("onduty.activeShift", "Turno activo")}
             </span>
-            <StationLogo logo={logo} name={stationName} />
+            <span className="grid h-11 w-11 place-items-center rounded-xl border border-online/40 bg-online/10 text-online">
+              <ShieldCheck size={22} />
+            </span>
           </div>
 
-          <h2 className="mt-3 text-xl font-bold leading-tight text-ink">{stationName}</h2>
-          {address && (
-            <p className="mt-1 flex items-center gap-1.5 text-xs text-muted">
-              <MapPin size={13} className="text-gold" />
-              {address}
-            </p>
-          )}
+          <p className="mt-2 font-mono text-[44px] font-bold leading-none tracking-tight text-ink tabular-nums">
+            {elapsed}
+          </p>
+          <p className="mt-2 text-sm text-muted">
+            {t("onduty.started", "Inició")} {fmtClock(punchInTime)}
+          </p>
 
-          {/* live timer + inside-area chip */}
-          <div className="mt-3 flex items-end justify-between gap-3">
-            <div>
-              <p className="label-eyebrow">{t("onduty.timeOnDuty")}</p>
-              <p className="font-mono text-2xl font-bold tabular-nums text-online">{elapsed}</p>
-            </div>
-            <div className="text-right">
-              <p className="flex items-center justify-end gap-1.5 text-xs text-muted">
-                <Clock size={12} className="text-gold" />
-                {fmtDateTime(punchInTime)}
-              </p>
-              <span className="mt-1 inline-flex items-center gap-1.5 rounded-lg border border-online/30 bg-online/5 px-2.5 py-1 text-[11px] font-medium text-online">
-                <ShieldCheck size={12} />
-                {t("onduty.insideArea")}
-              </span>
-            </div>
+          <div className="mt-4 flex divide-x divide-online/20 border-t border-online/20 pt-3">
+            <StatusChip icon={<MapPin size={14} />} label={t("onduty.insideGeofence", "En geocerca")} ok />
+            <StatusChip
+              icon={<Navigation size={14} />}
+              label={t("onduty.gpsVerified", "GPS verificado")}
+              ok={gpsOk !== false}
+            />
+            <StatusChip
+              icon={<Wifi size={14} />}
+              label={t("onduty.deviceOnline", "Dispositivo en línea")}
+              ok={online}
+            />
           </div>
         </div>
       </div>
 
-      {/* ---------- STATION FEATURES ---------- */}
+      {/* ---------- NEXT PATROL ---------- */}
+      <div className="relative overflow-hidden rounded-2xl border border-info/40 bg-gradient-to-br from-info/10 via-navy to-navy p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-info">
+              <Footprints size={15} />
+              {t("onduty.nextPatrol", "Próxima ronda")}
+            </span>
+            <p className="mt-1.5 flex items-baseline gap-1.5">
+              <span className="text-3xl font-bold text-ink tabular-nums">
+                {minsToNext != null ? minsToNext : checkpoints != null ? checkpoints : "—"}
+              </span>
+              <span className="text-sm text-muted">
+                {minsToNext != null ? "min" : t("onduty.checkpointsWord", "puntos")}
+              </span>
+            </p>
+            <p className="mt-0.5 text-xs text-muted">
+              {checkpoints != null
+                ? t("onduty.checkpoints", "{{n}} puntos de control", { n: checkpoints })
+                : t("onduty.startRound", "Inicia tu ronda")}
+            </p>
+          </div>
+          <PatrolRoute />
+        </div>
+        <Button variant="primary" full className="mt-4 bg-info! text-white!" onClick={() => history.push("/guard/patrol")}>
+          <Play size={18} fill="currentColor" />
+          {t("onduty.startPatrol", "Iniciar ronda")}
+          <ChevronRight size={18} className="ml-auto" />
+        </Button>
+      </div>
+
+      {/* ---------- QUICK ACTIONS ---------- */}
       <div>
-        <p className="label-eyebrow mb-2">{t("onduty.stationFeatures")}</p>
-        <div className="grid grid-cols-2 gap-3">
-          {features.map((f) => (
-            <button
-              key={f.key}
-              onClick={f.onClick}
-              className={`card flex min-h-26 flex-col items-center justify-center gap-3 p-4 text-center transition active:scale-[0.98] ${toneCls[f.tone]}`}
-            >
-              <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-xl ${iconWrapCls[f.tone]}`}>
-                {f.icon}
-              </span>
-              <span className="text-base font-semibold tracking-tight text-ink">
-                {t(`features.${f.key}`)}
-              </span>
-            </button>
+        <SectionHeader title={t("onduty.quickActions", "Acciones rápidas")} />
+        <div className="grid grid-cols-4 gap-2.5">
+          {quickActions.map((a) => (
+            <QuickActionTile
+              key={a.key}
+              icon={a.icon}
+              label={t(`features.${a.key}`)}
+              tone={a.key === "visitors" ? "amber" : a.key === "patrol" ? "blue" : a.key === "incident" ? "amber" : "red"}
+              onClick={a.onClick}
+            />
           ))}
         </div>
       </div>
 
-      {/* ---------- CONSIGNAS ESPECÍFICAS ---------- */}
+      {/* ---------- RECENT ACTIVITY ---------- */}
+      {(activity || []).length > 0 && (
+        <div>
+          <SectionHeader
+            title={t("onduty.recentActivity", "Actividad reciente")}
+            action={
+              <button onClick={() => history.push("/guard/patrol")} className="text-xs font-semibold text-info active:opacity-70">
+                {t("onduty.viewAll", "Ver todo")}
+              </button>
+            }
+          />
+          <div className="card-elev divide-y divide-line overflow-hidden">
+            {(activity || []).slice(0, 6).map((a) => {
+              const v = activityVisual(a.eventType);
+              const title = ACTIVITY_LABEL[a.eventType] || stripEmoji(a.title) || t("onduty.event", "Evento");
+              const subtitle = nameFromTitle(a.title) || stripEmoji(a.subtitle || "");
+              return (
+                <ActivityRow
+                  key={a.id}
+                  tone={v.tone}
+                  icon={v.icon}
+                  title={title}
+                  subtitle={subtitle || undefined}
+                  time={fmtClock(a.at)}
+                />
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ---------- CONSIGNAS ---------- */}
       {(consignas || []).length > 0 && (
         <div>
-          <div className="mb-2 flex items-center justify-between">
-            <p className="label-eyebrow">{t("consignas.title", "Consignas de hoy")}</p>
-            {pendingConsignas > 0 && (
-              <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[11px] font-bold text-gold">
-                {t("consignas.pending", "{{n}} pendientes", { n: pendingConsignas })}
-              </span>
-            )}
-          </div>
-          <div className="space-y-2">
+          <SectionHeader
+            title={t("consignas.title", "Consignas de hoy")}
+            action={
+              pendingConsignas > 0 ? (
+                <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[11px] font-bold text-gold">
+                  {t("consignas.pending", "{{n}} pendientes", { n: pendingConsignas })}
+                </span>
+              ) : undefined
+            }
+          />
+          <div className="card-elev divide-y divide-line overflow-hidden">
             {(consignas || []).map((c) => (
               <button
                 key={c.id}
                 onClick={() => !c.done && setConsigna(c)}
-                className={`card flex w-full items-center gap-3 p-3 text-left ${c.done ? "opacity-60" : "active:opacity-80"}`}
+                className={`flex w-full items-center gap-3 px-4 py-3 text-left ${c.done ? "opacity-60" : "active:bg-white/3"}`}
               >
-                <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${c.done ? "bg-online-soft text-online" : "bg-gold-soft text-gold"}`}>
-                  {c.done ? <CheckCircle2 size={18} /> : <ClipboardCheck size={18} />}
-                </span>
+                <IconTile tone={c.done ? "green" : "amber"} size="sm">
+                  {c.done ? <CheckCircle2 size={16} /> : <ClipboardCheck size={16} />}
+                </IconTile>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold text-ink">{c.title}</span>
                   <span className="flex items-center gap-1 text-xs text-muted">
-                    {c.time && <><Clock size={11} />{c.time} · </>}
+                    {c.time && (
+                      <>
+                        <Clock size={11} />
+                        {c.time} ·{" "}
+                      </>
+                    )}
                     {c.done ? t("consignas.doneLabel", "Completada") : t("consignas.todo", "Por hacer")}
                   </span>
                 </span>
@@ -347,26 +411,21 @@ export default function OnDutyView({
       {/* ---------- MEMOS ---------- */}
       {(memos || []).length > 0 && (
         <div>
-          <div className="mb-2 flex items-center justify-between">
-            <p className="label-eyebrow">{t("memos.title", "Memos")}</p>
-            {pendingMemos > 0 && (
-              <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[11px] font-bold text-gold">
-                {t("memos.pending", "{{n}} sin leer", { n: pendingMemos })}
-              </span>
-            )}
-          </div>
-          <div className="space-y-2">
+          <SectionHeader title={t("memos.title", "Memos")} />
+          <div className="card-elev divide-y divide-line overflow-hidden">
             {(memos || []).map((m) => (
               <button
                 key={m.id}
                 onClick={() => setMemo(m)}
-                className={`card flex w-full items-center gap-3 p-3 text-left ${m.wasAccepted ? "opacity-60" : "active:opacity-80"}`}
+                className={`flex w-full items-center gap-3 px-4 py-3 text-left ${m.wasAccepted ? "opacity-60" : "active:bg-white/3"}`}
               >
-                <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${m.wasAccepted ? "bg-online-soft text-online" : "bg-gold-soft text-gold"}`}>
-                  {m.wasAccepted ? <CheckCircle2 size={18} /> : <FileText size={18} />}
-                </span>
+                <IconTile tone={m.wasAccepted ? "green" : "amber"} size="sm">
+                  {m.wasAccepted ? <CheckCircle2 size={16} /> : <FileText size={16} />}
+                </IconTile>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold text-ink">{m.subject || t("memos.untitled", "Memo")}</span>
+                  <span className="block truncate text-sm font-semibold text-ink">
+                    {m.subject || t("memos.untitled", "Memo")}
+                  </span>
                   <span className="flex items-center gap-1 text-xs text-muted">
                     {m.createdByName ? <>{m.createdByName} · </> : null}
                     {m.wasAccepted ? t("memos.read", "Leído") : t("memos.unread", "Sin leer")}
@@ -379,12 +438,14 @@ export default function OnDutyView({
         </div>
       )}
 
-      {/* ---------- CLOCK OUT (with early-out approval gate) ---------- */}
+      {/* ---------- CLOCK OUT ---------- */}
       <ClockOutControl
         data={data}
         busy={busy}
         onClockOut={onClockOut}
         onRequestClockOut={onRequestClockOut}
+        onResendRequest={onResendRequest}
+        onCancelRequest={onCancelRequest}
       />
 
       <IncidentForm
@@ -399,21 +460,25 @@ export default function OnDutyView({
         isOpen={!!consigna}
         consigna={consigna}
         onClose={() => setConsigna(null)}
-        onDone={() => { setConsigna(null); reloadConsignas(); }}
+        onDone={() => {
+          setConsigna(null);
+          reloadConsignas();
+        }}
       />
 
-      {/* ---------- MEMO READER / ACKNOWLEDGE ---------- */}
+      {/* ---------- MEMO READER ---------- */}
       {memo && (
-        <div className="fixed inset-0 z-50 flex items-end bg-black/40" onClick={() => setMemo(null)}>
+        <div className="fixed inset-0 z-50 flex items-end bg-black/50" onClick={() => setMemo(null)}>
           <div
-            className="w-full rounded-t-2xl bg-surface p-5 pb-8"
+            className="w-full rounded-t-2xl bg-surface p-5"
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 24px)" }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-start justify-between gap-3">
               <div className="flex items-center gap-2">
-                <span className="grid h-9 w-9 place-items-center rounded-lg bg-gold-soft text-gold">
-                  <FileText size={18} />
-                </span>
+                <IconTile tone="amber" size="sm">
+                  <FileText size={16} />
+                </IconTile>
                 <h3 className="text-base font-bold text-ink">{memo.subject || t("memos.untitled", "Memo")}</h3>
               </div>
               <button onClick={() => setMemo(null)} className="text-muted active:opacity-70">
@@ -433,13 +498,9 @@ export default function OnDutyView({
                 <CheckCircle2 size={18} /> {t("memos.alreadyRead", "Lectura confirmada")}
               </div>
             ) : (
-              <button
-                onClick={acceptMemo}
-                disabled={memoBusy}
-                className="btn-xl w-full bg-gold text-white active:opacity-80 disabled:opacity-50"
-              >
+              <Button variant="primary" full disabled={memoBusy} onClick={acceptMemo}>
                 {memoBusy ? <Loader2 size={18} className="animate-spin" /> : t("memos.confirmRead", "Confirmar lectura")}
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -448,69 +509,111 @@ export default function OnDutyView({
   );
 }
 
+/** Decorative dashed patrol route with checkpoints + play marker (matches mock). */
+function PatrolRoute() {
+  return (
+    <svg width="120" height="64" viewBox="0 0 120 64" className="shrink-0" aria-hidden>
+      <path
+        d="M10 46 L40 50 L70 22 L110 10"
+        fill="none"
+        stroke="#38bdf8"
+        strokeWidth="2"
+        strokeDasharray="4 5"
+        strokeLinecap="round"
+        opacity="0.7"
+      />
+      {[
+        [40, 50],
+        [70, 22],
+      ].map(([x, y]) => (
+        <circle key={`${x}`} cx={x} cy={y} r="5" fill="#0a0e16" stroke="#38bdf8" strokeWidth="2" />
+      ))}
+      <circle cx="10" cy="46" r="9" fill="#38bdf8" />
+      <path d="M7 42 L7 50 L14 46 Z" fill="#0a0e16" />
+      <path d="M110 10 l0 -8 m0 8 l6 0" stroke="#38bdf8" strokeWidth="2" />
+      <rect x="110" y="2" width="9" height="6" fill="#38bdf8" />
+    </svg>
+  );
+}
+
 /**
- * Clock-out control with the early-out approval gate. State machine driven by
- * guardMe data: clockOutRequest.status + clockOutThresholdMin + the active
- * record's scheduledEnd.
+ * Clock-out control with the early-out approval gate (unchanged behaviour).
  */
 function ClockOutControl({
   data,
   busy,
   onClockOut,
   onRequestClockOut,
+  onResendRequest,
+  onCancelRequest,
 }: {
   data: any;
   busy: boolean;
   onClockOut: () => void;
   onRequestClockOut: () => void;
+  onResendRequest?: () => void;
+  onCancelRequest?: () => void;
 }) {
   const { t } = useTranslation();
+  // Early-vs-normal is decided by the backend from the TURNO (single source of
+  // truth) — the worker only renders it. `isEarlyClockOut` is true while the
+  // guard is still on the clock before the turno's scheduled end (minus grace).
   const status: string | undefined = data?.clockOutRequest?.status;
-  const thresholdMin = Number(data?.clockOutThresholdMin ?? 0);
-  const scheduledEnd = data?.activeClockIn?.scheduledEnd
-    ? new Date(data.activeClockIn.scheduledEnd)
-    : null;
-  const minsToEnd = scheduledEnd
-    ? (scheduledEnd.getTime() - Date.now()) / 60000
-    : null;
-  const isEarly = minsToEnd != null && minsToEnd > thresholdMin;
+  const isEarly = !!data?.isEarlyClockOut;
+  const endLabel: string | null = data?.scheduledEndLabel || null;
+  const minsToEnd: number | null =
+    data?.minutesToScheduledEnd != null ? Number(data.minutesToScheduledEnd) : null;
   const canClockOut = !isEarly || status === "approved";
   const pending = isEarly && status === "pending";
 
   if (canClockOut) {
     const approved = status === "approved";
     return (
-      <button
-        onClick={onClockOut}
-        disabled={busy}
-        className={`btn-xl w-full text-white active:opacity-80 disabled:opacity-50 ${
-          approved ? "bg-online" : "bg-critical"
-        }`}
-      >
+      <Button variant={approved ? "primary" : "danger"} full disabled={busy} onClick={onClockOut}>
         {busy ? (
           <Loader2 size={18} className="animate-spin" />
         ) : (
           t(approved ? "onduty.clockOutApproved" : "onduty.clockOut")
         )}
-      </button>
+      </Button>
     );
   }
 
   if (pending) {
     return (
-      <div className="btn-xl w-full cursor-default border border-gold/40 bg-gold/5 text-gold">
-        <Loader2 size={16} className="animate-spin" />
-        {t("onduty.clockOutPending")}
+      <div className="space-y-2">
+        <div className="btn-xl w-full cursor-default border border-gold/40 bg-gold/5 text-gold">
+          <Loader2 size={16} className="animate-spin" />
+          {t("onduty.clockOutPending")}
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" full disabled={busy} onClick={() => onResendRequest?.()}>
+            {t("onduty.resendRequest", "Reenviar")}
+          </Button>
+          <Button variant="danger" full disabled={busy} onClick={() => onCancelRequest?.()}>
+            {t("onduty.cancelRequest", "Cancelar")}
+          </Button>
+        </div>
+        <p className="text-center text-[11px] text-muted">
+          {t("onduty.pendingHint", "Esperando aprobación del supervisor. Puedes reenviar o cancelar la solicitud.")}
+        </p>
       </div>
     );
   }
 
-  // Early, no pending request → offer to request approval.
+  const remaining =
+    minsToEnd != null && minsToEnd > 0
+      ? `${Math.floor(minsToEnd / 60)}h ${minsToEnd % 60}m`
+      : null;
   return (
     <div className="space-y-2">
       {status === "rejected" && (
-        <p className="text-center text-xs text-critical">
-          {t("onduty.clockOutRejected")}
+        <p className="text-center text-xs text-critical">{t("onduty.clockOutRejected")}</p>
+      )}
+      {endLabel && (
+        <p className="text-center text-xs text-muted">
+          {t("onduty.turnoEndsAt", "Tu turno termina a las {{time}}", { time: endLabel })}
+          {remaining ? ` · ${t("onduty.remaining", "faltan {{r}}", { r: remaining })}` : ""}
         </p>
       )}
       <button
@@ -518,15 +621,9 @@ function ClockOutControl({
         disabled={busy}
         className="btn-xl w-full bg-high text-white active:opacity-80 disabled:opacity-50"
       >
-        {busy ? (
-          <Loader2 size={18} className="animate-spin" />
-        ) : (
-          t("onduty.requestEarlyOut")
-        )}
+        {busy ? <Loader2 size={18} className="animate-spin" /> : t("onduty.requestEarlyOut")}
       </button>
-      <p className="text-center text-[11px] text-muted">
-        {t("onduty.earlyOutHint")}
-      </p>
+      <p className="text-center text-[11px] text-muted">{t("onduty.earlyOutHint")}</p>
     </div>
   );
 }

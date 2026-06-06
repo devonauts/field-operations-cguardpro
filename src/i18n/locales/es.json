@@ -542,5 +542,16 @@
     "rating": "Calificación",
     "notes": "Notas (opcional)",
     "save": "Guardar inspección"
+  },
+  "clockOutReport": {
+    "title": "Reporte de salida",
+    "hint": "Describe cómo transcurrió tu turno antes de marcar la salida.",
+    "summaryLabel": "Resumen del turno",
+    "summaryPlaceholder": "Ej. Turno sin novedades. Rondas completadas. Sin incidentes…",
+    "dictate": "Dictar",
+    "listening": "Escuchando…",
+    "speakNow": "Habla ahora…",
+    "required": "El resumen es obligatorio.",
+    "submit": "Enviar y marcar salida"
   }
 }
