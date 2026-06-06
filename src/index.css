@@ -1,0 +1,230 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------ */
+/* Design tokens — CGuardPro Worker App                                */
+/* Tailwind v4 @theme: each --color-* generates utilities (bg-/text-)  */
+/* ------------------------------------------------------------------ */
+@theme {
+  /* Surfaces */
+  --color-navy: #0a0e16;
+  --color-navy-50: #0c111b;
+  --color-surface: #12161f;
+  --color-surface-2: #161b26;
+  --color-line: #1f2630;
+  --color-line-2: #2a323e;
+
+  /* Brand gold/amber */
+  --color-gold: #d4a017;
+  --color-gold-strong: #c8860a;
+  --color-gold-hover: #b37809;
+  --color-gold-soft: rgba(212, 160, 23, 0.12);
+
+  /* Text */
+  --color-ink: #f5f7fa;
+  --color-muted: #8b93a1;
+  --color-faint: #5b6472;
+
+  /* Status */
+  --color-online: #22c55e;
+  --color-online-soft: rgba(34, 197, 94, 0.12);
+  --color-critical: #ef4444;
+  --color-high: #f97316;
+  --color-medium: #eab308;
+  --color-low: #94a3b8;
+  --color-info: #38bdf8;
+  --color-route: #a855f7;
+
+  --radius-card: 0.875rem;
+}
+
+html,
+body {
+  background: #0a0e16;
+  color: #f5f7fa;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Ionic content wrappers should inherit the navy background */
+ion-app,
+ion-content,
+ion-router-outlet {
+  background: #0a0e16;
+}
+
+/* Uppercase tracked label used across the design */
+.label-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #8b93a1;
+}
+
+/* Card surface from the Figma */
+.card {
+  background: #12161f;
+  border: 1px solid #1f2630;
+  border-radius: 0.875rem;
+}
+
+/* Hide scrollbars on horizontal scrollers but keep scrolling */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Futuristic touches                                                  */
+/* ------------------------------------------------------------------ */
+
+/* Big tappable action buttons — never clip the label */
+.btn-xl {
+  min-height: 54px;
+  padding: 0.9rem 1rem;
+  line-height: 1.15;
+  border-radius: 0.875rem;
+  font-weight: 600;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* Gold glow used on the on-duty hero + primary accents */
+.glow-gold {
+  box-shadow: 0 0 0 1px rgba(212, 160, 23, 0.25),
+    0 8px 40px -12px rgba(212, 160, 23, 0.45);
+}
+.glow-online {
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.3),
+    0 8px 44px -14px rgba(34, 197, 94, 0.5);
+}
+
+/* Faint tech grid overlay */
+.grid-overlay {
+  background-image:
+    linear-gradient(rgba(212, 160, 23, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(212, 160, 23, 0.06) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* Live pulsing dot (on-duty indicator) */
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55); }
+  70% { box-shadow: 0 0 0 9px rgba(34, 197, 94, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+.pulse-dot {
+  animation: pulse-ring 2s infinite;
+}
+
+/* Camera shutter button — a gold ring that pulses outward to invite the tap,
+   plus a springy press. The pulse stops while pressed and when disabled. */
+@keyframes shutter-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(212, 160, 23, 0.5); }
+  70%  { box-shadow: 0 0 0 16px rgba(212, 160, 23, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(212, 160, 23, 0); }
+}
+.shutter-btn:not(:disabled) {
+  animation: shutter-pulse 2s ease-out infinite;
+}
+.shutter-btn:active {
+  animation: none;
+  transform: scale(0.88);
+}
+
+/* Brief white flash over the viewfinder at the moment of capture. */
+@keyframes shutter-flash {
+  0%   { opacity: 0; }
+  12%  { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+.shutter-flash {
+  animation: shutter-flash 320ms ease-out forwards;
+}
+
+/* Sweeping scanline highlight on the hero */
+@keyframes sweep {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(220%); }
+}
+.scanline::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgba(212, 160, 23, 0.12) 50%,
+    transparent 70%
+  );
+  transform: translateX(-120%);
+  animation: sweep 6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Full-screen modals (forms) — prevents the footer/button being clipped by a
+   content-sized sheet. Header uses safe-top, footers add safe-bottom padding. */
+ion-modal {
+  --height: 100%;
+  --width: 100%;
+  --border-radius: 0;
+  --background: #0a0e16;
+}
+
+/* Respect device safe areas (notch / home indicator) inside Capacitor */
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Map Ionic's safe-area variables to the real device insets so the tab bar,
+   toolbars and content all clear the notch / home indicator. Without this,
+   Ionic falls back to 0 and the bottom tab bar is jammed against the home
+   indicator on devices with a tall safe area (e.g. iPhone 17 Pro Max). */
+:root {
+  --ion-safe-area-top: env(safe-area-inset-top);
+  --ion-safe-area-bottom: env(safe-area-inset-bottom);
+  --ion-safe-area-left: env(safe-area-inset-left);
+  --ion-safe-area-right: env(safe-area-inset-right);
+}
+
+/* Bottom tab bar: lift the buttons above the home indicator with comfortable
+   padding, and grow the bar by the safe-area inset instead of overlapping it. */
+ion-tab-bar {
+  height: auto;
+  min-height: 54px;
+  padding-top: 6px;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
+}
+ion-tab-button {
+  --padding-top: 4px;
+  --padding-bottom: 0;
+}
+
+/* Hide scrollbars everywhere — iOS WKWebView shows an ugly native scroll
+   indicator on the right while scrolling. Scrolling still works as normal. */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* old Edge */
+}
+*::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none;
+}
+/* Ionic's content scroller lives in shadow DOM — reach it via ::part. */
+ion-content::part(scroll) {
+  scrollbar-width: none;
+}
+ion-content::part(scroll)::-webkit-scrollbar {
+  display: none;
+}

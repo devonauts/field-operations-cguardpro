@@ -1,0 +1,297 @@
+import { api, tenantPath, asRows, unwrap, getToken } from "./api";
+import { setAppTimeZone } from "./format";
+
+// Adopt the tenant timezone from any guard payload that carries it, so all
+// time formatting renders in the tenant's local time.
+const adoptTz = (d: any) => {
+  if (d && d.timezone) setAppTimeZone(d.timezone);
+  return d;
+};
+
+/* ------------------------------------------------------------------ */
+/* Guard (field worker) — /tenant/:id/guard/me/*                       */
+/* ------------------------------------------------------------------ */
+export const guardService = {
+  dashboard: () => api.get(tenantPath("/guard/me")).then(unwrap).then(adoptTz),
+  schedule: () => api.get(tenantPath("/guard/me/schedule")).then(unwrap).then(adoptTz),
+  clockIn: (data: {
+    stationId: string;
+    latitude?: number;
+    longitude?: number;
+    shiftSchedule?: string;
+    selfiePhoto?: string;
+    address?: string;
+    battery?: number | null;
+    checklist?: any;
+    platform?: string;
+    device?: Record<string, any> | null;
+  }) =>
+    api
+      .post(tenantPath("/guard/me/clock-in"), {
+        // Tag the punch with the device platform for the Nómina audit trail.
+        data: { platform: navigator?.userAgent ? "worker-app" : undefined, ...data },
+      })
+      .then(unwrap),
+  /** Upload a clock-in selfie and return its stored privateUrl. */
+  uploadSelfie: async (file: File) =>
+    (await uploadToStorage(file, "guardShiftSelfie")).privateUrl,
+  clockOut: (data: {
+    latitude?: number;
+    longitude?: number;
+    observations?: string;
+  }) => api.post(tenantPath("/guard/me/clock-out"), { data }).then(unwrap),
+  /** Request supervisor approval to clock out early. */
+  requestClockOut: (data?: { reason?: string }) =>
+    api.post(tenantPath("/guard/me/clock-out/request"), { data: data || {} }).then(unwrap),
+  /** Active early-clock-out request status (or { request: null }). */
+  clockOutRequest: () =>
+    api.get(tenantPath("/guard/me/clock-out/request")).then(unwrap),
+  timeOff: () => api.get(tenantPath("/guard/me/time-off")).then(unwrap),
+  requestTimeOff: (data: {
+    type: string;
+    startDate: string;
+    endDate: string;
+    reason?: string;
+  }) => api.post(tenantPath("/guard/me/time-off"), { data }).then(unwrap),
+
+  // Station security test (sanitized random N questions).
+  quiz: () => api.get(tenantPath("/guard/me/quiz")).then(unwrap),
+  submitQuiz: (data: {
+    bankId: string;
+    stationId?: string | null;
+    startedAt?: string | null;
+    answers: Array<{ questionId: string; chosenIndex: number }>;
+  }) => api.post(tenantPath("/guard/me/quiz/submit"), { data }).then(unwrap),
+
+  // Backup pool: open (at-risk) shifts I can cover + volunteering.
+  backupOpen: () =>
+    api.get(tenantPath("/guard/me/backup/open")).then((r) => asRows(r)),
+  volunteerBackup: (data: {
+    shiftId?: string;
+    stationId?: string;
+    eventDate?: string;
+    notes?: string;
+  }) =>
+    api.post(tenantPath("/guard/me/backup/volunteer"), { data }).then(unwrap),
+};
+
+/* ------------------------------------------------------------------ */
+/* Performance capture (supervisor) — uniform, backup confirmation     */
+/* ------------------------------------------------------------------ */
+export const performanceService = {
+  // Uniform inspections (supervisor rates a guard/supervisor).
+  createInspection: (data: {
+    subjectUserId?: string;
+    securityGuardId?: string;
+    rating: number;
+    stars?: number;
+    notes?: string;
+    photos?: any[];
+    stationId?: string;
+    inspectionDate?: string;
+  }) => api.post(tenantPath("/uniform-inspection"), { data }).then(unwrap),
+  uniformHistory: (securityGuardId: string) =>
+    api
+      .get(tenantPath(`/security-guard/${securityGuardId}/uniform-inspections`))
+      .then((r) => asRows(r)),
+
+  // Backup events for supervisors to confirm/reject.
+  backupEvents: (status = "offered") =>
+    api
+      .get(tenantPath(`/backup-event?status=${encodeURIComponent(status)}`))
+      .then((r) => asRows(r)),
+  confirmBackup: (id: string) =>
+    api.post(tenantPath(`/backup-event/${id}/confirm`), {}).then(unwrap),
+  rejectBackup: (id: string) =>
+    api.post(tenantPath(`/backup-event/${id}/reject`), {}).then(unwrap),
+};
+
+/* ------------------------------------------------------------------ */
+/* Incidents — /tenant/:id/incident                                    */
+/* ------------------------------------------------------------------ */
+export const incidentService = {
+  list: (params?: Record<string, any>) => {
+    const qs = params
+      ? "?" +
+        new URLSearchParams(
+          Object.entries(params).reduce((acc, [k, v]) => {
+            if (v != null && v !== "") acc[k] = String(v);
+            return acc;
+          }, {} as Record<string, string>)
+        ).toString()
+      : "";
+    return api.get(tenantPath(`/incident${qs}`)).then((r) => ({
+      rows: asRows(r),
+      count: (r && (r.count ?? r.total)) ?? asRows(r).length,
+    }));
+  },
+  find: (id: string) => api.get(tenantPath(`/incident/${id}`)).then(unwrap),
+  create: (data: Record<string, any>) =>
+    api.post(tenantPath("/incident"), { data }).then(unwrap),
+  /** Guard-scoped report (panic/events) — no admin incidentCreate permission. */
+  createAsGuard: (data: Record<string, any>) =>
+    api.post(tenantPath("/guard/me/incident"), { data }).then(unwrap),
+  update: (id: string, data: Record<string, any>) =>
+    api.put(tenantPath(`/incident/${id}`), { data }).then(unwrap),
+  /** Upload evidence photo → descriptor for `imageUrl`/`idPhoto`. */
+  uploadPhoto: (file: File) => uploadToStorage(file, "incidentImageUrl"),
+};
+
+export const incidentTypeService = {
+  list: () => api.get(tenantPath("/incidentType")).then((r) => asRows(r)),
+};
+
+/* ------------------------------------------------------------------ */
+/* Operations KPIs / activities (supervisor dashboard)                 */
+/* These are tenant-scoped via the auth'd user, NOT the path.          */
+/* ------------------------------------------------------------------ */
+export const operationsService = {
+  kpis: (date?: string) =>
+    api
+      .get(`/operations/kpis${date ? `?date=${date}` : ""}`)
+      .then((r) => asRows(r)),
+  activities: (params?: { date?: string; since?: string }) => {
+    const qs = params
+      ? "?" + new URLSearchParams(params as Record<string, string>).toString()
+      : "";
+    return api.get(`/operations/activities${qs}`).then((r) => asRows(r));
+  },
+};
+
+/* ------------------------------------------------------------------ */
+/* Guards (supervisor views) — active locations, list                  */
+/* ------------------------------------------------------------------ */
+export const guardsService = {
+  activeLocations: () =>
+    api.get(tenantPath("/security-guard/active-locations")).then((r) => asRows(r)),
+  list: (params?: Record<string, any>) => {
+    const qs = params
+      ? "?" + new URLSearchParams(params as Record<string, string>).toString()
+      : "";
+    return api.get(tenantPath(`/security-guard${qs}`)).then((r) => ({
+      rows: asRows(r),
+      count: (r && (r.count ?? r.total)) ?? asRows(r).length,
+    }));
+  },
+  setOnDuty: (id: string, isOnDuty: boolean) =>
+    api.patch(tenantPath(`/security-guard/${id}/on-duty`), { isOnDuty }).then(unwrap),
+};
+
+// NOTE: the legacy `patrolService` (patrol / patrol-checkpoint / patrol-log)
+// was removed — patrols are consolidated on the siteTour system (see lib/rondas.ts).
+
+/* ------------------------------------------------------------------ */
+/* Shifts / schedule                                                   */
+/* ------------------------------------------------------------------ */
+export const shiftService = {
+  list: (params?: Record<string, any>) => {
+    const qs = params
+      ? "?" + new URLSearchParams(params as Record<string, string>).toString()
+      : "";
+    return api.get(tenantPath(`/guard-shift${qs}`)).then((r) => asRows(r));
+  },
+};
+
+/* ------------------------------------------------------------------ */
+/* Stations / posts                                                    */
+/* ------------------------------------------------------------------ */
+export const stationService = {
+  list: () => api.get(tenantPath("/station")).then((r) => asRows(r)),
+};
+
+/* ------------------------------------------------------------------ */
+/* Post site ("sitio de vigilancia") — logo, address, coordinates      */
+/* ------------------------------------------------------------------ */
+export const postSiteService = {
+  find: (id: string) => api.get(tenantPath(`/post-site/${id}`)).then(unwrap),
+};
+
+/* ------------------------------------------------------------------ */
+/* Visitor management (manejo de visitas) — visitor-log                */
+/* ------------------------------------------------------------------ */
+export interface VisitorPhoto {
+  name: string;
+  privateUrl: string;
+  mimeType: string;
+  sizeInBytes: number;
+  fileToken?: string;
+}
+
+/**
+ * Upload a file to backend storage (credentials → multipart upload) and return
+ * the file descriptor for linking on create (e.g. `idPhoto`/`imageUrl`).
+ */
+export async function uploadToStorage(
+  file: File,
+  storageId: string
+): Promise<VisitorPhoto> {
+  const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+  const cred = await api.get(
+    tenantPath(
+      `/file/credentials?filename=${encodeURIComponent(filename)}&storageId=${encodeURIComponent(storageId)}`
+    )
+  );
+  const uploadUrl = cred?.uploadCredentials?.url;
+  if (!uploadUrl) throw new Error("upload url unavailable");
+
+  const form = new FormData();
+  const fields = cred?.uploadCredentials?.fields || {};
+  Object.entries(fields).forEach(([k, v]) => form.append(k, v as string));
+  form.append("file", file, filename);
+
+  const token = getToken();
+  const resp = await fetch(uploadUrl, {
+    method: "POST",
+    body: form,
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    credentials: "include",
+  });
+  if (!resp.ok) throw new Error(`upload failed: ${resp.status}`);
+
+  return {
+    name: file.name,
+    privateUrl: cred.privateUrl,
+    mimeType: file.type || "image/jpeg",
+    sizeInBytes: file.size,
+    fileToken: cred.fileToken,
+  };
+}
+
+export const visitorService = {
+  list: (params?: Record<string, any>) => {
+    const qs = params
+      ? "?" + new URLSearchParams(params as Record<string, string>).toString()
+      : "";
+    return api.get(tenantPath(`/visitor-log${qs}`)).then((r) => asRows(r));
+  },
+  create: (data: Record<string, any>) =>
+    api.post(tenantPath("/visitor-log"), { data }).then(unwrap),
+  checkout: (id: string) =>
+    api
+      .put(tenantPath(`/visitor-log/${id}`), {
+        data: { exitTime: new Date().toISOString() },
+      })
+      .then(unwrap),
+
+  /** Upload an ID/visit photo and get the descriptor for `idPhoto`. */
+  uploadPhoto: (file: File) => uploadToStorage(file, "visitorLogIdPhoto"),
+};
+
+/* ------------------------------------------------------------------ */
+/* Notifications / announcements (tenant → guard)                      */
+/* ------------------------------------------------------------------ */
+export const notificationService = {
+  list: (params?: Record<string, any>) => {
+    const qs = params
+      ? "?" + new URLSearchParams(params as Record<string, string>).toString()
+      : "";
+    return api.get(tenantPath(`/notification${qs}`)).then((r) => asRows(r));
+  },
+};
+
+/* ------------------------------------------------------------------ */
+/* Reports / analytics                                                 */
+/* ------------------------------------------------------------------ */
+export const dashboardService = {
+  stats: () => api.get(tenantPath("/dashboard/stats")).then(unwrap),
+};

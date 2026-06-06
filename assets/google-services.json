@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "175301143649",
+    "project_id": "cguardpro-worker-app",
+    "storage_bucket": "cguardpro-worker-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:175301143649:android:4e266a6a4b3f0aae884e20",
+        "android_client_info": {
+          "package_name": "com.cguardpro.operaciones"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCnZxaVZY61x6CGcpwYPUkcuDKaH6XkexI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,73 @@
+/* ------------------------------------------------------------------ */
+/* Ionic theme — CGuardPro dark navy + gold (matches Figma design)     */
+/* ------------------------------------------------------------------ */
+
+:root {
+  /* Primary = gold/amber accent */
+  --ion-color-primary: #d4a017;
+  --ion-color-primary-rgb: 212, 160, 23;
+  --ion-color-primary-contrast: #0a0e16;
+  --ion-color-primary-contrast-rgb: 10, 14, 22;
+  --ion-color-primary-shade: #b37809;
+  --ion-color-primary-tint: #dcae33;
+
+  --ion-color-success: #22c55e;
+  --ion-color-success-rgb: 34, 197, 94;
+  --ion-color-success-contrast: #ffffff;
+  --ion-color-success-shade: #1ea34e;
+  --ion-color-success-tint: #3ccb6e;
+
+  --ion-color-warning: #eab308;
+  --ion-color-warning-rgb: 234, 179, 8;
+  --ion-color-warning-contrast: #0a0e16;
+  --ion-color-warning-shade: #ce9e07;
+  --ion-color-warning-tint: #ecbb21;
+
+  --ion-color-danger: #ef4444;
+  --ion-color-danger-rgb: 239, 68, 68;
+  --ion-color-danger-contrast: #ffffff;
+  --ion-color-danger-shade: #d23c3c;
+  --ion-color-danger-tint: #f15757;
+}
+
+/* Force dark UI everywhere (this app is dark-only, like the Figma). */
+:root,
+.ion-palette-dark,
+body {
+  --ion-background-color: #0a0e16;
+  --ion-background-color-rgb: 10, 14, 22;
+  --ion-text-color: #f5f7fa;
+  --ion-text-color-rgb: 245, 247, 250;
+
+  --ion-toolbar-background: #0c111b;
+  --ion-toolbar-color: #f5f7fa;
+  --ion-tab-bar-background: #0b0f18;
+  --ion-tab-bar-color: #8b93a1;
+  --ion-tab-bar-color-selected: #d4a017;
+
+  --ion-item-background: #12161f;
+  --ion-card-background: #12161f;
+
+  --ion-color-step-50: #14181f;
+  --ion-color-step-100: #1a1e26;
+  --ion-color-step-150: #20242c;
+  --ion-color-step-200: #262a33;
+  --ion-color-step-250: #2c3039;
+  --ion-color-step-300: #333740;
+  --ion-color-step-400: #4a4e57;
+  --ion-color-step-500: #61656e;
+  --ion-color-step-600: #787c85;
+  --ion-color-step-700: #8f939c;
+  --ion-color-step-800: #a6aab3;
+  --ion-color-step-900: #bdc1ca;
+}
+
+ion-content {
+  --background: #0a0e16;
+}
+
+/* Tighter, app-like ion typography */
+ion-toolbar {
+  --border-width: 0 0 1px 0;
+  --border-color: #1f2630;
+}

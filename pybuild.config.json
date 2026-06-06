@@ -1,0 +1,24 @@
+{
+  "javaHome17": "/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home",
+  "adb": "/usr/local/bin/adb",
+  "apps": {
+    "cguardpro": {
+      "dir": ".",
+      "appName": "CGuardPro",
+      "bundleId": "com.cguardpro.operaciones",
+      "android": {
+        "keystore": "android/cguardpro-release.keystore",
+        "keystorePassword": "ENV:CGUARDPRO_KEYSTORE_PASS",
+        "keyAlias": "cguardpro",
+        "keyPassword": "ENV:CGUARDPRO_KEY_PASS",
+        "dname": "CN=CGuardPro, O=CGuardPro, L=Quito, C=EC"
+      },
+      "ios": {
+        "teamId": "ENV:CGUARDPRO_TEAM_ID",
+        "ascApiKeyId": "ENV:ASC_KEY_ID",
+        "ascApiIssuerId": "ENV:ASC_ISSUER_ID",
+        "ascApiKeyPath": "~/.appstoreconnect/private_keys/AuthKey.p8"
+      }
+    }
+  }
+}

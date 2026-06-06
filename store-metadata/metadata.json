@@ -1,0 +1,27 @@
+{
+  "_comment": "AI-generated store metadata for CGuardPro. Used by `pyBuild ios` to push App Store Connect localizations, and as the source for Google Play listings. Edit freely.",
+  "primaryLocale": "es-ES",
+  "supportUrl": "https://cguardpro.com/soporte",
+  "marketingUrl": "https://cguardpro.com",
+  "privacyPolicyUrl": "https://cguardpro.com/privacidad",
+  "categoryPrimary": "BUSINESS",
+  "categorySecondary": "UTILITIES",
+  "locales": {
+    "es-ES": {
+      "name": "CGuardPro",
+      "subtitle": "Operaciones de seguridad en campo",
+      "promotionalText": "Marca entrada con GPS, realiza rondas con QR, registra visitas e incidentes — todo desde tu turno.",
+      "description": "CGuardPro es la app de campo para guardias de seguridad y supervisores. Diseñada para operaciones reales en puestos de vigilancia, centraliza el turno del guardia en una sola herramienta clara y rápida.\n\nGUARDIA\n• Marcar entrada y salida con validación de geocerca (GPS) en tu puesto.\n• Rondas de seguridad: inicia tu ronda con cronómetro, escanea el QR de cada punto de control y valida con ubicación, foto con marca de tiempo y notas. Reanuda automáticamente si pierdes señal o cierras la app.\n• Manejo de visitas: escanea la cédula, captura los datos y la foto, y asigna un gafete.\n• Reporte de incidentes de nivel empresarial con tipo, severidad, evidencia fotográfica y ubicación. Botón de pánico para alertas inmediatas.\n• Horario de turnos, permisos y avisos de la empresa.\n• Indicadores de tu desempeño: asistencia, puntualidad, cumplimiento y rondas.\n\nSUPERVISOR\n• Panel de operaciones, asistencia del personal, incidentes y seguimiento de rondas en vivo.\n\nNOTIFICACIONES\n• Recibe avisos cuando inicia o se completa una ronda; el cliente también puede ser notificado si la empresa lo habilita.\n\nCGuardPro funciona en español e inglés y está pensada para usarse con una sola mano, con botones grandes y pasos claros para el guardia en campo.",
+      "keywords": "seguridad,guardia,rondas,patrulla,vigilancia,checkpoint,QR,visitas,incidente,geocerca,turno,gafete",
+      "releaseNotes": "Primera versión: marcaje con GPS, rondas con QR (foto/ubicación), manejo de visitas con escaneo de cédula, reporte de incidentes y notificaciones."
+    },
+    "en-US": {
+      "name": "CGuardPro",
+      "subtitle": "Security guard field operations",
+      "promotionalText": "GPS clock-in, QR patrol rounds, visitor logs and incident reports — everything your shift needs.",
+      "description": "CGuardPro is the field app for security guards and supervisors. Built for real guarding operations, it puts the guard's entire shift into one clear, fast tool.\n\nGUARD\n• Clock in/out with GPS geofence validation at your post.\n• Patrol rounds: start a timed patrol, scan each checkpoint's QR, and validate with location, time-stamped photo, and notes. Auto-resumes if you lose signal or close the app.\n• Visitor management: scan the ID, capture details and a photo, and assign a badge.\n• Enterprise incident reporting with type, severity, photo evidence, and location. Panic button for immediate alerts.\n• Shift schedule, time-off requests, and company notices.\n• Your performance score: attendance, punctuality, completion, and patrols.\n\nSUPERVISOR\n• Operations dashboard, attendance, incidents, and live patrol tracking.\n\nNOTIFICATIONS\n• Get alerts when a patrol starts or completes; the client can also be notified if the company enables it.\n\nCGuardPro works in Spanish and English and is designed for one-handed use with large buttons and clear steps for the guard in the field.",
+      "keywords": "security,guard,patrol,rounds,checkpoint,QR,visitor,incident,geofence,shift,badge,clock in",
+      "releaseNotes": "First release: GPS clock-in, QR patrol rounds (photo/location), visitor management with ID scan, incident reporting, and notifications."
+    }
+  }
+}

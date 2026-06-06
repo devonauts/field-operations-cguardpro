@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# pyBuild android cguardpro   → signed .aab
+# pyBuild ios cguardpro       → upload to App Store Connect + metadata
+exec python3 "$(dirname "$0")/tools/pybuild.py" "$@"

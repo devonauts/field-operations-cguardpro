@@ -1,0 +1,127 @@
+// Lightweight fetch-based API client for the worker app.
+// Mirrors the conventions of the main frontend: JWT bearer in localStorage
+// ("authToken"), credentials included, JSON in/out, and graceful error shape.
+
+const API_BASE_URL = (
+  (import.meta.env.VITE_API_URL as string | undefined) ??
+  "https://api.cguardpro.com/api"
+).replace(/\/+$/, "");
+
+export const TOKEN_KEY = "authToken";
+export const TENANT_KEY = "tenantId";
+
+export class ApiError extends Error {
+  status: number;
+  data: unknown;
+  constructor(message: string, status: number, data: unknown) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.data = data;
+  }
+}
+
+export const getToken = () => localStorage.getItem(TOKEN_KEY);
+export const setToken = (t: string | null) =>
+  t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY);
+
+export const getTenantId = (): string => {
+  const t = localStorage.getItem(TENANT_KEY);
+  if (!t) throw new ApiError("Tenant not configured", 0, null);
+  return t;
+};
+export const setTenantId = (t: string | null) =>
+  t ? localStorage.setItem(TENANT_KEY, t) : localStorage.removeItem(TENANT_KEY);
+
+interface RequestOptions extends Omit<RequestInit, "body"> {
+  skipAuth?: boolean;
+  body?: unknown;
+}
+
+async function request<T = any>(
+  endpoint: string,
+  options: RequestOptions = {}
+): Promise<T> {
+  const { skipAuth, body, headers: extraHeaders, ...rest } = options;
+  const token = getToken();
+
+  const isForm = body instanceof FormData;
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    ...(isForm ? {} : { "Content-Type": "application/json" }),
+    ...((extraHeaders as Record<string, string>) || {}),
+  };
+  if (token && !skipAuth) headers.Authorization = `Bearer ${token}`;
+
+  const url = `${API_BASE_URL}${endpoint.startsWith("/") ? "" : "/"}${endpoint}`;
+
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      ...rest,
+      headers,
+      credentials: "include",
+      cache: "no-store",
+      body: isForm ? (body as FormData) : body != null ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    throw new ApiError("network.error", 0, null);
+  }
+
+  const contentType = res.headers.get("content-type") || "";
+  let data: any = null;
+  try {
+    if (res.status === 204 || res.status === 304) data = null;
+    else if (contentType.includes("application/json")) {
+      const text = await res.text();
+      data = text ? JSON.parse(text) : null;
+    } else {
+      data = await res.text().catch(() => null);
+    }
+  } catch {
+    data = null;
+  }
+
+  if (!res.ok && res.status !== 304) {
+    const msg =
+      (data && (data.message || data.error)) ||
+      (typeof data === "string" && !/<\s*!?doctype|<html/i.test(data) && data) ||
+      `Error ${res.status}`;
+    throw new ApiError(String(msg), res.status, data);
+  }
+
+  // Backend either returns the payload directly, or { rows, count } for lists,
+  // or occasionally { data: ... }. Callers normalize as needed.
+  return data as T;
+}
+
+export const api = {
+  get: <T = any>(e: string, o: RequestOptions = {}) =>
+    request<T>(e, { ...o, method: "GET" }),
+  post: <T = any>(e: string, body?: unknown, o: RequestOptions = {}) =>
+    request<T>(e, { ...o, method: "POST", body }),
+  put: <T = any>(e: string, body?: unknown, o: RequestOptions = {}) =>
+    request<T>(e, { ...o, method: "PUT", body }),
+  patch: <T = any>(e: string, body?: unknown, o: RequestOptions = {}) =>
+    request<T>(e, { ...o, method: "PATCH", body }),
+  delete: <T = any>(e: string, o: RequestOptions = {}) =>
+    request<T>(e, { ...o, method: "DELETE" }),
+};
+
+/** Build a tenant-scoped path: tenantPath("/guard/me") -> /tenant/<id>/guard/me */
+export const tenantPath = (suffix: string) =>
+  `/tenant/${getTenantId()}${suffix.startsWith("/") ? "" : "/"}${suffix}`;
+
+/** Normalize list responses ({rows} | {data} | array) into an array. */
+export function asRows<T = any>(resp: any): T[] {
+  if (Array.isArray(resp)) return resp;
+  if (resp && Array.isArray(resp.rows)) return resp.rows;
+  if (resp && Array.isArray(resp.data)) return resp.data;
+  if (resp && resp.data && Array.isArray(resp.data.rows)) return resp.data.rows;
+  return [];
+}
+
+/** Unwrap a possible { data: payload } envelope. */
+export function unwrap<T = any>(resp: any): T {
+  return resp && resp.data !== undefined ? resp.data : resp;
+}

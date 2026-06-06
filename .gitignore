@@ -1,0 +1,46 @@
+node_modules
+dist
+dist-ssr
+*.local
+.DS_Store
+
+# Env: keep the example, never commit the real one
+.env
+.env.local
+
+# Logs / IDE
+.idea
+*.log
+
+# Signing material & store keys — NEVER commit
+*.keystore
+*.jks
+*.p8
+ios/ExportOptions.plist
+
+# Build output (generated bundles/archives)
+build-output/
+
+# macOS resource-fork junk
+._*
+
+# ---- Capacitor native projects: keep SOURCE, ignore generated/build ----
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/captures/
+android/local.properties
+android/capacitor-cordova-android-plugins/
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+
+# iOS
+ios/App/Pods/
+ios/App/build/
+ios/App/output/
+ios/DerivedData/
+ios/App/App/public/
+ios/App/App/capacitor.config.json
+ios/App/App/config.xml

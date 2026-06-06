@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Install cguardpro  → build debug APK + install on the connected Android device
+exec python3 "$(dirname "$0")/tools/pybuild.py" install "$@"

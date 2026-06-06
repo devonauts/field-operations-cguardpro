@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">CGuardPro</string>
+    <string name="title_activity_main">CGuardPro</string>
+    <string name="package_name">com.cguardpro.operaciones</string>
+    <string name="custom_url_scheme">com.cguardpro.operaciones</string>
+</resources>
