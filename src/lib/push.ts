@@ -1,6 +1,7 @@
 import { Capacitor } from "@capacitor/core";
 import { rondasService } from "./rondas";
 import { getDeviceIdentity } from "./device";
+import { emitPush } from "./pushEvents";
 
 /**
  * Report this device's identity to the backend (device management: bind/flag).
@@ -39,6 +40,17 @@ export async function registerPush(): Promise<void> {
     });
     PushNotifications.addListener("registrationError", (e) => {
       console.warn("push registration error", e);
+    });
+    // Arrived while the app is in the foreground — fan the payload out to any
+    // subscribed screen so the UI can react immediately (e.g. an early-clock-out
+    // approval/rejection flipping the dashboard without waiting for the poll).
+    PushNotifications.addListener("pushNotificationReceived", (n) => {
+      emitPush(n?.data);
+    });
+    // The user tapped a notification (app was backgrounded/killed) — surface the
+    // same payload once we're back in the foreground.
+    PushNotifications.addListener("pushNotificationActionPerformed", (a) => {
+      emitPush(a?.notification?.data);
     });
     await PushNotifications.register();
   } catch (e) {

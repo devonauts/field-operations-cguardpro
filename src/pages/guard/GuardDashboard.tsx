@@ -31,6 +31,7 @@ import {
 } from "@/components/ui";
 import { useAsync } from "@/lib/useAsync";
 import { guardService } from "@/lib/services";
+import { onPush } from "@/lib/pushEvents";
 import { loadGuardPerformance, Tier, ComponentKey } from "@/lib/performance";
 import { pick, parseStationSchedule, formatDays } from "@/lib/normalize";
 import { fmtDateTime, fmtTime } from "@/lib/format";
@@ -89,9 +90,24 @@ export default function GuardDashboard() {
   const isClockedIn = !!data?.isClockedIn;
   const clockOutStatus: string | undefined = data?.clockOutRequest?.status;
 
+  // Toast announcing an early-clock-out decision. Shared by the poll fallback
+  // and the push listener so both paths surface the same message.
+  const showDecisionToast = (status: "approved" | "rejected") => {
+    presentToast({
+      message:
+        status === "approved"
+          ? t("onduty.clockOutApprovedToast", "Tu salida fue aprobada. Ya puedes marcar salida.")
+          : t("onduty.clockOutRejectedToast", "Tu solicitud de salida fue rechazada."),
+      duration: 3500,
+      color: status === "approved" ? "success" : "danger",
+      position: "top",
+    });
+  };
+
   // Live early-clock-out decision: while a request is PENDING, poll the
   // lightweight status endpoint so the UI flips to "approved/rejected" the
   // moment the supervisor decides — no manual refresh. Stops once resolved.
+  // This is the fallback; the push listener below is the instant path.
   useEffect(() => {
     if (!isClockedIn || clockOutStatus !== "pending") return;
     let active = true;
@@ -101,15 +117,7 @@ export default function GuardDashboard() {
         const s: string | undefined = r?.request?.status;
         if (active && s && s !== "pending") {
           await reload();
-          presentToast({
-            message:
-              s === "approved"
-                ? t("onduty.clockOutApprovedToast", "Tu salida fue aprobada. Ya puedes marcar salida.")
-                : t("onduty.clockOutRejectedToast", "Tu solicitud de salida fue rechazada."),
-            duration: 3500,
-            color: s === "approved" ? "success" : "danger",
-            position: "top",
-          });
+          showDecisionToast(s === "approved" ? "approved" : "rejected");
         }
       } catch {
         /* transient — try again next tick */
@@ -121,6 +129,26 @@ export default function GuardDashboard() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isClockedIn, clockOutStatus]);
+
+  // Instant early-clock-out decision: the backend pushes
+  // attendance.clockout_approved / attendance.clockout_rejected to this guard's
+  // device the moment a supervisor decides. Reload so the dashboard flips
+  // immediately (works in the foreground and when the guard taps the
+  // notification), and announce the outcome. The poll above remains a fallback
+  // for when push is unavailable (web/dev, denied permission, no FCM token).
+  useEffect(() => {
+    const off = onPush((d) => {
+      const type = d?.type;
+      if (type !== "attendance.clockout_approved" && type !== "attendance.clockout_rejected") {
+        return;
+      }
+      const status = type === "attendance.clockout_approved" ? "approved" : "rejected";
+      reload();
+      showDecisionToast(status);
+    });
+    return off;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Refresh when the app returns to the foreground (an approval may have landed
   // while it was backgrounded — interval timers are throttled there).
