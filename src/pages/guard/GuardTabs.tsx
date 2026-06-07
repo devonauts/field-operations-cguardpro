@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Redirect, Route, useHistory, useLocation } from "react-router-dom";
 import {
   IonTabs,
@@ -7,7 +8,7 @@ import {
   IonLabel,
 } from "@ionic/react";
 import { useTranslation } from "react-i18next";
-import { Home, Footprints, Radio, Map, User } from "lucide-react";
+import { Home, Footprints, Radio, MessageSquare, User } from "lucide-react";
 import GuardDashboard from "./GuardDashboard";
 import GuardSchedule from "./GuardSchedule";
 import GuardPatrol from "./GuardPatrol";
@@ -19,13 +20,32 @@ import GuardBackup from "./GuardBackup";
 import GuardShiftDetail from "./GuardShiftDetail";
 import GuardMap from "./GuardMap";
 import GuardRadio from "./GuardRadio";
+import GuardMessages from "./GuardMessages";
+import GuardThread from "./GuardThread";
 import Profile from "../shared/Profile";
+import { messageService } from "@/lib/services";
+import { onPush } from "@/lib/pushEvents";
 
 export default function GuardTabs() {
   const { t } = useTranslation();
   const history = useHistory();
   const location = useLocation();
   const radioActive = location.pathname === "/guard/radio";
+
+  // Unread badge on the Messages tab. Seeded from the inbox, bumped by push,
+  // cleared when the guard opens Messages. (emitPush only reaches mounted
+  // handlers, so this shell-level subscriber is what keeps the badge live.)
+  const [unread, setUnread] = useState(0);
+  useEffect(() => {
+    let active = true;
+    messageService.listThreads({ limit: 50 })
+      .then((r: any) => { if (active) setUnread((r?.rows || []).reduce((s: number, c: any) => s + (c.unreadCount || 0), 0)); })
+      .catch(() => {});
+    const off = onPush((d: any) => { if (d?.type === "message.new") setUnread((n) => n + 1); });
+    return () => { active = false; off(); };
+  }, []);
+  useEffect(() => { if (location.pathname.startsWith("/guard/messages")) setUnread(0); }, [location.pathname]);
+
   return (
     <>
     <IonTabs>
@@ -43,6 +63,8 @@ export default function GuardTabs() {
         <Route exact path="/guard/shift" component={GuardShiftDetail} />
         <Route exact path="/guard/map" component={GuardMap} />
         <Route exact path="/guard/radio" component={GuardRadio} />
+        <Route exact path="/guard/messages" component={GuardMessages} />
+        <Route exact path="/guard/messages/:conversationId" component={GuardThread} />
         <Route exact path="/guard">
           <Redirect to="/guard/dashboard" />
         </Route>
@@ -68,9 +90,16 @@ export default function GuardTabs() {
           <IonLabel className="radio-label">{t("nav.radio", "Radio")}</IonLabel>
         </IonTabButton>
 
-        <IonTabButton tab="map" href="/guard/map">
-          <Map size={22} />
-          <IonLabel>{t("nav.map", "Mapa")}</IonLabel>
+        <IonTabButton tab="messages" href="/guard/messages">
+          <span style={{ position: "relative", display: "inline-flex" }}>
+            <MessageSquare size={22} />
+            {unread > 0 && (
+              <span style={{ position: "absolute", top: -5, right: -8, minWidth: 16, height: 16, padding: "0 4px", borderRadius: 9999, background: "#ef4444", color: "#fff", fontSize: 9, fontWeight: 700, display: "grid", placeItems: "center" }}>
+                {unread > 99 ? "99+" : unread}
+              </span>
+            )}
+          </span>
+          <IonLabel>{t("nav.messages", "Mensajes")}</IonLabel>
         </IonTabButton>
         <IonTabButton tab="profile" href="/guard/profile">
           <User size={22} />

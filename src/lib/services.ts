@@ -302,6 +302,26 @@ export const notificationService = {
 };
 
 /* ------------------------------------------------------------------ */
+/* Internal messaging (CRM ↔ this guard)                               */
+/* ------------------------------------------------------------------ */
+export const messageService = {
+  /** My conversations: { rows, nextCursor }. */
+  listThreads: (params?: Record<string, any>) => {
+    const qs = params ? "?" + new URLSearchParams(params as Record<string, string>).toString() : "";
+    return api.get(tenantPath(`/guard/me/messages${qs}`)).then(unwrap);
+  },
+  /** A thread: { conversation, rows, nextCursor }. */
+  thread: (id: string, params?: Record<string, any>) => {
+    const qs = params ? "?" + new URLSearchParams(params as Record<string, string>).toString() : "";
+    return api.get(tenantPath(`/guard/me/messages/${id}${qs}`)).then(unwrap);
+  },
+  send: (id: string, body: string, clientMsgId: string) =>
+    api.post(tenantPath(`/guard/me/messages/${id}`), { data: { body, clientMsgId } }).then(unwrap),
+  markRead: (id: string) =>
+    api.post(tenantPath(`/guard/me/messages/${id}/read`), { data: {} }).then(unwrap),
+};
+
+/* ------------------------------------------------------------------ */
 /* Reports / analytics                                                 */
 /* ------------------------------------------------------------------ */
 export const dashboardService = {
