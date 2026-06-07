@@ -35,6 +35,7 @@ import {
 } from "@/components/ui";
 import { useAsync } from "@/lib/useAsync";
 import { guardService } from "@/lib/services";
+import { setDuty } from "@/lib/dutyState";
 import { onPush } from "@/lib/pushEvents";
 import { loadGuardPerformance, Tier, ComponentKey } from "@/lib/performance";
 import { pick, parseStationSchedule, formatDays } from "@/lib/normalize";
@@ -138,6 +139,11 @@ export default function GuardDashboard() {
   const nextShift = data?.nextShift;
   const isClockedIn = !!data?.isClockedIn;
   const clockOutStatus: string | undefined = data?.clockOutRequest?.status;
+
+  // Publish duty state to the shell (tab bar hides operational UI when off duty).
+  useEffect(() => {
+    if (data) setDuty(isClockedIn);
+  }, [data, isClockedIn]);
 
   // Toast announcing an early-clock-out decision. Shared by the poll fallback
   // and the push listener so both paths surface the same message.

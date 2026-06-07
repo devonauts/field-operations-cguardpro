@@ -26,12 +26,17 @@ import GuardPermissions from "./GuardPermissions";
 import Profile from "../shared/Profile";
 import { messageService } from "@/lib/services";
 import { onPush } from "@/lib/pushEvents";
+import { getDuty, subscribeDuty } from "@/lib/dutyState";
 
 export default function GuardTabs() {
   const { t } = useTranslation();
   const history = useHistory();
   const location = useLocation();
   const radioActive = location.pathname === "/guard/radio";
+
+  // Off duty the app is purely informative: hide operational UI (Radio, Patrol).
+  const [onDuty, setOnDuty] = useState(getDuty());
+  useEffect(() => subscribeDuty(setOnDuty), []);
 
   // Unread badge on the Messages tab. Seeded from the inbox, bumped by push,
   // cleared when the guard opens Messages. (emitPush only reaches mounted
@@ -80,17 +85,22 @@ export default function GuardTabs() {
           <Home size={22} />
           <IonLabel>{t("nav.home", "Inicio")}</IonLabel>
         </IonTabButton>
-        <IonTabButton tab="patrol" href="/guard/patrol">
-          <Footprints size={22} />
-          <IonLabel>{t("nav.patrol", "Ronda")}</IonLabel>
-        </IonTabButton>
+        {/* Operational tabs — ON DUTY only (off duty the app is informative). */}
+        {onDuty && (
+          <IonTabButton tab="patrol" href="/guard/patrol">
+            <Footprints size={22} />
+            <IonLabel>{t("nav.patrol", "Ronda")}</IonLabel>
+          </IonTabButton>
+        )}
 
         {/* Center slot — reserves the column + label; the raised gold push-to-talk
-            button is rendered as a floating overlay below so it isn't clipped. */}
-        <IonTabButton tab="radio" href="/guard/radio" className="tab-radio-slot">
-          <span className="radio-slot-spacer" />
-          <IonLabel className="radio-label">{t("nav.radio", "Radio")}</IonLabel>
-        </IonTabButton>
+            button is rendered as a floating overlay below. ON DUTY only. */}
+        {onDuty && (
+          <IonTabButton tab="radio" href="/guard/radio" className="tab-radio-slot">
+            <span className="radio-slot-spacer" />
+            <IonLabel className="radio-label">{t("nav.radio", "Radio")}</IonLabel>
+          </IonTabButton>
+        )}
 
         <IonTabButton tab="messages" href="/guard/messages">
           <span style={{ position: "relative", display: "inline-flex" }}>
@@ -110,15 +120,17 @@ export default function GuardTabs() {
       </IonTabBar>
     </IonTabs>
 
-    {/* Floating push-to-talk — sits ON TOP of the tab bar so it's never clipped */}
-    <button
-      type="button"
-      aria-label={t("nav.radio", "Radio")}
-      onClick={() => history.push("/guard/radio")}
-      className={`radio-fab-float${radioActive ? " is-active" : ""}`}
-    >
-      <Radio size={26} strokeWidth={2.2} />
-    </button>
+    {/* Floating push-to-talk — ON DUTY only; sits ON TOP of the tab bar. */}
+    {onDuty && (
+      <button
+        type="button"
+        aria-label={t("nav.radio", "Radio")}
+        onClick={() => history.push("/guard/radio")}
+        className={`radio-fab-float${radioActive ? " is-active" : ""}`}
+      >
+        <Radio size={26} strokeWidth={2.2} />
+      </button>
+    )}
     </>
   );
 }
