@@ -14,6 +14,8 @@ const adoptTz = (d: any) => {
 export const guardService = {
   dashboard: () => api.get(tenantPath("/guard/me")).then(unwrap).then(adoptTz),
   schedule: () => api.get(tenantPath("/guard/me/schedule")).then(unwrap).then(adoptTz),
+  /** Summary of my most recent completed shift (off-duty "last shift" card). */
+  lastShift: () => api.get(tenantPath("/guard/me/last-shift")).then(unwrap),
   clockIn: (data: {
     stationId: string;
     latitude?: number;

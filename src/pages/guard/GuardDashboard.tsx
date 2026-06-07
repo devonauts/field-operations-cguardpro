@@ -18,6 +18,10 @@ import {
   Gift,
   ChevronRight,
   LogIn,
+  Moon,
+  Power,
+  AlertTriangle,
+  Footprints,
 } from "lucide-react";
 import { Screen } from "@/components/Screen";
 import {
@@ -177,6 +181,15 @@ export default function GuardDashboard() {
       : null;
   const clockInTargets: any[] =
     stations.length > 0 ? stations : shiftStation?.id ? [shiftStation] : [];
+  // The hero CLOCK-IN button binds to the station of the shift the guard is
+  // about to work (so a multi-post guard taps once for the right post); any
+  // other assigned posts fall to secondary buttons below it.
+  const primaryTarget: any =
+    (shiftStation?.id && clockInTargets.find((s) => s.id === shiftStation.id)) ||
+    clockInTargets[0] ||
+    null;
+  const extraTargets: any[] = clockInTargets.filter((s) => s !== primaryTarget);
+  const upcomingShift = currentShift || nextShift;
   const guardName = guard?.fullName || guard?.name || "";
   const firstName = guardName.trim().split(/\s+/)[0] || "";
   const hour = new Date().getHours();
@@ -418,12 +431,26 @@ export default function GuardDashboard() {
       ) : (
         /* ====================== OFF-DUTY VIEW ===================== */
         <div className="space-y-4">
-          {/* Clock-in card */}
-          <Card className="p-4">
+          {/* Current status */}
+          <CurrentStatusCard
+            postsCount={stations.length}
+            hours={perf.data?.stats?.hoursWorked}
+          />
+
+          {/* Last completed shift summary */}
+          <LastShiftCard />
+
+          {/* Next (or current) shift */}
+          {upcomingShift && (
+            <NextShiftCard shift={upcomingShift} isCurrent={!!currentShift} />
+          )}
+
+          {/* Clock-in hero */}
+          <div className="space-y-2.5">
             {clockInTargets.length > 0 ? (
-              <div className="space-y-2.5">
+              <>
                 {shiftForClockIn && (
-                  <div className="flex items-center gap-2 text-xs text-muted">
+                  <div className="flex items-center justify-center gap-2 text-xs text-muted">
                     <Clock size={14} className="shrink-0 text-gold" />
                     <span className="font-medium text-ink">
                       {t("guard.clockInForShift", {
@@ -434,66 +461,62 @@ export default function GuardDashboard() {
                     </span>
                   </div>
                 )}
-                {clockInTargets.map((st) => (
+                <button
+                  onClick={() => primaryTarget && beginClockIn(primaryTarget)}
+                  disabled={busy || !primaryTarget}
+                  className="btn-xl glow-gold w-full bg-gradient-to-b from-gold to-gold-strong text-navy active:from-gold-hover active:to-gold-hover disabled:opacity-50"
+                >
+                  {busy ? (
+                    <Loader2 size={20} className="animate-spin" />
+                  ) : (
+                    <>
+                      <Power size={20} className="shrink-0" strokeWidth={2.5} />
+                      <span className="text-base font-bold uppercase tracking-wide">
+                        {t("guard.clockInNow", "Marcar entrada")}
+                      </span>
+                    </>
+                  )}
+                </button>
+                {extraTargets.map((st) => (
                   <button
                     key={st.id}
                     onClick={() => beginClockIn(st)}
                     disabled={busy}
-                    className="btn-xl w-full bg-gold-strong text-navy active:bg-gold-hover disabled:opacity-50"
+                    className="btn-xl w-full border border-gold/40 bg-gold/5 text-gold active:bg-gold/10 disabled:opacity-50"
                   >
-                    {busy ? (
-                      <Loader2 size={18} className="animate-spin" />
-                    ) : (
-                      <>
-                        <LogIn size={18} className="shrink-0" />
-                        {t("guard.clockInAt", {
-                          station: st.stationName || st.name,
-                        })}
-                      </>
-                    )}
+                    <LogIn size={18} className="shrink-0" />
+                    {t("guard.clockInAt", {
+                      station: st.stationName || st.name,
+                    })}
                   </button>
                 ))}
-              </div>
+                <p className="text-center text-[11px] text-muted">
+                  {t(
+                    "guard.clockInHint",
+                    "Puedes marcar entrada hasta 15 minutos antes de tu turno.",
+                  )}
+                </p>
+              </>
             ) : (
-              <div className="flex items-center gap-2.5 py-1 text-muted">
-                <XCircle size={18} className="shrink-0" />
-                <p className="text-xs">{t("guard.noStations")}</p>
-              </div>
+              <Card className="p-4">
+                <div className="flex items-center gap-2.5 py-1 text-muted">
+                  <XCircle size={18} className="shrink-0" />
+                  <p className="text-xs">{t("guard.noStations")}</p>
+                </div>
+              </Card>
             )}
             {busy && (
-              <p className="mt-2 text-center text-xs text-muted">
+              <p className="text-center text-xs text-muted">
                 {t("guard.gettingLocation")}
               </p>
             )}
             {gpsError && (
-              <p className="mt-2 text-xs text-critical">{gpsError}</p>
+              <p className="text-center text-xs text-critical">{gpsError}</p>
             )}
-          </Card>
+          </div>
 
           {/* Performance */}
           <PerformanceSection perf={perf} />
-
-          {/* Shifts */}
-          <Card className="p-4">
-            <SectionTitle icon={<Clock size={16} />}>
-              {t("guard.shifts")}
-            </SectionTitle>
-            {currentShift ? (
-              <ShiftRow
-                accent="online"
-                label={t("guard.currentShift")}
-                shift={currentShift}
-              />
-            ) : nextShift ? (
-              <ShiftRow
-                accent="info"
-                label={t("guard.nextShift")}
-                shift={nextShift}
-              />
-            ) : (
-              <p className="text-xs text-muted">{t("guard.noShifts")}</p>
-            )}
-          </Card>
 
           {/* Posts */}
           {stations.length > 0 && (
@@ -580,28 +603,198 @@ export default function GuardDashboard() {
   );
 }
 
-function ShiftRow({
-  accent,
-  label,
-  shift,
-}: {
-  accent: "online" | "info";
-  label: string;
-  shift: any;
-}) {
-  const tone =
-    accent === "online"
-      ? "border-online/40 bg-online/10 text-online"
-      : "border-info/40 bg-info/10 text-info";
+/* Ticks once a minute so the "next shift" countdown stays live without a full
+   dashboard reload. */
+function useNowTick(intervalMs = 30000): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), intervalMs);
+    return () => clearInterval(id);
+  }, [intervalMs]);
+  return now;
+}
+
+const MONTHS_ES = [
+  "ENE", "FEB", "MAR", "ABR", "MAY", "JUN",
+  "JUL", "AGO", "SEP", "OCT", "NOV", "DIC",
+];
+
+function countdownLabel(target: Date, now: number): string {
+  const mins = Math.max(0, Math.round((target.getTime() - now) / 60000));
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h >= 24) return `EN ${Math.floor(h / 24)}D ${h % 24}H`;
+  if (h > 0) return `EN ${h}H ${String(m).padStart(2, "0")}M`;
+  return `EN ${m}M`;
+}
+
+function dayLabel(target: Date, t: any): string {
+  const startOfDay = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const diffDays = Math.round((startOfDay(target) - startOfDay(new Date())) / 86400000);
+  const weekday = target.toLocaleDateString(undefined, { weekday: "long" });
+  const cap = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+  if (diffDays <= 0) return `${t("guard.today", "Hoy")} · ${cap}`;
+  if (diffDays === 1) return `${t("guard.tomorrow", "Mañana")} · ${cap}`;
+  return cap;
+}
+
+function fmtDuration(mins?: number): string {
+  const m = Math.max(0, Math.round(Number(mins) || 0));
+  const h = Math.floor(m / 60);
+  return h > 0 ? `${h}h ${m % 60}m` : `${m}m`;
+}
+
+/* Summary of the guard's last completed shift — duration, checkpoints, incidents,
+   distance — sourced from GET /guard/me/last-shift. Hidden until there is data. */
+function LastShiftCard() {
+  const { t } = useTranslation();
+  const { data } = useAsync<any>(() => guardService.lastShift().catch(() => null), []);
+  if (!data || !data.hasData) return null;
+
+  const cells: { value: string; label: string; tone: "ink" | "online" | "gold" }[] = [
+    { value: fmtDuration(data.durationMinutes), label: t("guard.duration", "Duración"), tone: "ink" },
+    {
+      value: String(data.checkpoints ?? 0),
+      label: t("guard.checkpoints", "Puntos"),
+      tone: (data.checkpoints ?? 0) > 0 ? "online" : "ink",
+    },
+    {
+      value: String(data.incidents ?? 0).padStart(2, "0"),
+      label: t("guard.incidents", "Incidentes"),
+      tone: (data.incidents ?? 0) > 0 ? "gold" : "ink",
+    },
+    { value: `${data.distanceKm ?? 0} km`, label: t("guard.distance", "Distancia"), tone: "ink" },
+  ];
+  const toneClass = (tone: string) =>
+    tone === "online" ? "text-online" : tone === "gold" ? "text-gold" : "text-ink";
+
   return (
-    <div className={`rounded-lg border p-3 ${tone}`}>
-      <p className="text-xs font-medium">{label}</p>
-      <p className="text-sm font-medium text-ink">
-        {shift?.station?.stationName || shift?.stationName || "—"}
-      </p>
-      <p className="text-xs text-muted">
-        {fmtTime(shift?.startTime)} — {fmtTime(shift?.endTime)}
-      </p>
+    <div className="card-elev p-4">
+      <div className="flex items-center justify-between">
+        <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-muted">
+          <ClipboardCheck size={15} className="text-gold" />
+          {t("guard.lastShift", "Último turno")}
+        </span>
+        {data.punchOutLabel && (
+          <span className="text-[11px] tabular-nums text-faint">{data.punchOutLabel}</span>
+        )}
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2.5">
+        {cells.map((c) => (
+          <div key={c.label} className="rounded-xl border border-line bg-navy/40 p-3">
+            <p className={`text-lg font-bold tabular-nums ${toneClass(c.tone)}`}>{c.value}</p>
+            <p className="mt-0.5 text-[10px] uppercase leading-tight tracking-wide text-muted">
+              {c.label}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* OFF-DUTY status hero — mirrors the on-duty card's language (label, status pill,
+   stat row) but in a dormant gold/grey key. */
+function CurrentStatusCard({
+  postsCount,
+  hours,
+}: {
+  postsCount: number;
+  hours?: number | null;
+}) {
+  const { t } = useTranslation();
+  const stats: { value: string; label: string; tone?: "online" }[] = [
+    { value: String(postsCount), label: t("guard.assignedPosts", "Puestos") },
+    {
+      value: hours != null ? `${hours}h` : "—",
+      label: t("guard.hours30", "Horas · 30d"),
+    },
+    {
+      value: t("guard.secured", "Seguro"),
+      label: t("guard.allZones", "Zonas"),
+      tone: "online",
+    },
+  ];
+  return (
+    <div className="card-elev relative overflow-hidden p-4">
+      <div className="grid-overlay absolute inset-0 opacity-40" />
+      <div className="relative">
+        <div className="flex items-start justify-between">
+          <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-gold">
+            <Moon size={15} />
+            {t("guard.currentStatus", "Estado actual")}
+          </span>
+          <span className="rounded-full border border-line-2 bg-surface-2 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-faint">
+            {t("guard.inactive", "Inactivo")}
+          </span>
+        </div>
+        <p className="mt-3 text-3xl font-bold leading-none tracking-tight text-muted">
+          {t("guard.offDuty", "Fuera de turno")}
+        </p>
+        <div className="mt-4 grid grid-cols-3 divide-x divide-line border-t border-line pt-3">
+          {stats.map((s) => (
+            <div key={s.label} className="px-2 text-center first:pl-0 last:pr-0">
+              <p
+                className={`text-lg font-bold tabular-nums ${
+                  s.tone === "online" ? "text-online" : "text-ink"
+                }`}
+              >
+                {s.value}
+              </p>
+              <p className="mt-0.5 text-[10px] uppercase leading-tight tracking-wide text-muted">
+                {s.label}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* Upcoming-shift card with a live countdown + gold date chip. Reused for an
+   already-running shift the guard hasn't clocked into yet (isCurrent). */
+function NextShiftCard({ shift, isCurrent }: { shift: any; isCurrent: boolean }) {
+  const { t } = useTranslation();
+  const now = useNowTick(30000);
+  const start = shift?.startTime ? new Date(shift.startTime) : null;
+  if (!start || Number.isNaN(start.getTime())) return null;
+  const station = shift?.station?.stationName || shift?.stationName || "—";
+  const timeRange = `${shift?.startTimeLabel || fmtTime(shift?.startTime)} – ${
+    shift?.endTimeLabel || fmtTime(shift?.endTime)
+  }`;
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-gold/30 bg-gradient-to-br from-gold/10 via-navy to-navy p-4">
+      <div className="flex items-center justify-between">
+        <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-gold">
+          <Clock size={15} />
+          {isCurrent
+            ? t("guard.currentShift", "Turno actual")
+            : t("guard.nextShift", "Próximo turno")}
+        </span>
+        <span className="text-xs font-bold uppercase tracking-wide text-gold tabular-nums">
+          {isCurrent ? t("guard.inProgress", "En curso") : countdownLabel(start, now)}
+        </span>
+      </div>
+      <div className="mt-3 flex items-center gap-3">
+        <div className="grid h-14 w-14 shrink-0 place-items-center rounded-xl border border-gold/30 bg-gold/10 leading-none">
+          <span className="text-[10px] font-bold uppercase tracking-wide text-gold">
+            {MONTHS_ES[start.getMonth()]}
+          </span>
+          <span className="mt-0.5 text-xl font-bold tabular-nums text-ink">
+            {String(start.getDate()).padStart(2, "0")}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-ink">{dayLabel(start, t)}</p>
+          <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
+            <span className="tabular-nums">{timeRange}</span>
+            <span className="text-faint">·</span>
+            <span className="truncate">{station}</span>
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
