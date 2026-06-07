@@ -39,14 +39,11 @@ import { onPush } from "@/lib/pushEvents";
 import { loadGuardPerformance, Tier, ComponentKey } from "@/lib/performance";
 import { pick, parseStationSchedule, formatDays } from "@/lib/normalize";
 import { fmtDateTime, fmtTime } from "@/lib/format";
-import { getCurrentPosition } from "@/lib/geo";
 import { getDeviceIdentity } from "@/lib/device";
 import { logError } from "@/lib/errorLog";
 import OnDutyView from "./OnDutyView";
 import { StartShiftModal, ChecklistResult } from "@/components/StartShiftModal";
 import { SelfieClockIn, SelfieResult } from "@/components/SelfieClockIn";
-import { EarlyClockOutModal } from "@/components/EarlyClockOutModal";
-import { ClockOutReportModal } from "@/components/ClockOutReportModal";
 
 const TIER_COLOR: Record<Tier, string> = {
   excellent: "#22c55e",
@@ -64,6 +61,56 @@ const COMPONENT_COLOR: Record<ComponentKey, string> = {
   training: "#f97316",
 };
 
+/** The C-Guard Pro shield-and-eye glyph (gold), drawn inline to avoid an asset. */
+function BrandMark() {
+  return (
+    <svg width="30" height="34" viewBox="0 0 30 34" aria-hidden className="shrink-0">
+      <path
+        d="M15 2 L27 6 V16 C27 24 21 30 15 32 C9 30 3 24 3 16 V6 Z"
+        fill="none"
+        stroke="#d4a017"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <ellipse cx="15" cy="16" rx="7" ry="4.5" fill="none" stroke="#d4a017" strokeWidth="2" />
+      <circle cx="15" cy="16" r="2.3" fill="#d4a017" />
+    </svg>
+  );
+}
+
+/** Branded operations header shown while the guard is clocked in (per design). */
+function OnDutyHeader({ guardName, sector }: { guardName: string; sector: string | null }) {
+  const { t } = useTranslation();
+  return (
+    <div className="px-4 pb-1 pt-3">
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-2.5">
+          <BrandMark />
+          <div className="leading-tight">
+            <p className="text-[17px] font-extrabold tracking-tight text-ink">
+              C-Guard <span className="text-gold">Pro</span>
+            </p>
+            <p className="label-eyebrow">{t("brand.tagline", "Security Operations")}</p>
+          </div>
+        </div>
+        <span className="relative">
+          <Avatar name={guardName} className="h-11 w-11 text-sm ring-2 ring-gold/40" />
+          <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-navy bg-online" />
+        </span>
+      </div>
+
+      <div className="mt-3 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide">
+        <span className="pulse-dot inline-block h-1.5 w-1.5 rounded-full bg-online" />
+        <span className="text-online">{t("guard.onDuty", "En servicio")}</span>
+        {sector && <span className="text-gold">· {sector}</span>}
+      </div>
+      <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-ink">
+        {guardName || t("guard.guard", "Guardia")}
+      </h1>
+    </div>
+  );
+}
+
 export default function GuardDashboard() {
   const { t } = useTranslation();
   const [presentToast] = useIonToast();
@@ -71,8 +118,6 @@ export default function GuardDashboard() {
   const perf = useAsync(() => loadGuardPerformance(30));
   const [busy, setBusy] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
-  const [earlyOutOpen, setEarlyOutOpen] = useState(false);
-  const [reportOpen, setReportOpen] = useState(false);
   // Clock-in flow: pick station → start-shift checklist → geo-stamped selfie → submit
   const [flowStep, setFlowStep] = useState<"idle" | "checklist" | "selfie">("idle");
   const [flowStation, setFlowStation] = useState<any | null>(null);
@@ -291,107 +336,29 @@ export default function GuardDashboard() {
     }
   };
 
-  const handleClockOut = async (summary?: string) => {
-    setBusy(true);
-    try {
-      let coords: { latitude?: number; longitude?: number } = {};
-      try {
-        // TESTING: skip GPS so clock-out works far from any station.
-        if (import.meta.env.VITE_DISABLE_GEOLOCATION !== "true") {
-          const pos = await getCurrentPosition();
-          coords = { latitude: pos.latitude, longitude: pos.longitude };
-        }
-      } catch {
-        /* GPS optional on clock-out */
-      }
-      // The end-of-shift report summary travels as the clock-out observations.
-      const res = await guardService.clockOut({ ...coords, observations: summary });
-      // Early clock-out needs supervisor approval first. Instead of failing
-      // silently, prompt the guard for a reason and submit an approval request.
-      if (res && res.success === false && res.error === "approval_required") {
-        setReportOpen(false);
-        setGpsError(null);
-        setEarlyOutOpen(true);
-        return;
-      }
-      setReportOpen(false);
-      await reload();
-    } catch (e: any) {
-      setGpsError(e?.message || "error");
-    } finally {
-      setBusy(false);
-    }
-  };
+  // Clock-out (incl. the early-out approval gate) now lives on the shift-detail
+  // screen via <ClockOutFlow>, reached by tapping the CURRENT SHIFT card.
 
-  // Guard requests permission to clock out early WITH a reason; the supervisor
-  // approves/rejects in the CRM. The reason rides along on the clockOutRequest.
-  const submitEarlyOut = async (reason: string) => {
-    setBusy(true);
-    setGpsError(null);
-    try {
-      await guardService.requestClockOut({ reason });
-      setEarlyOutOpen(false);
-      await reload();
-    } catch (e: any) {
-      setGpsError(e?.message || "error");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  // Re-notify supervisors about a still-pending request (backend rate-limits).
-  const resendEarlyOut = async () => {
-    setBusy(true);
-    setGpsError(null);
-    try {
-      await guardService.requestClockOut();
-      await reload();
-    } catch (e: any) {
-      setGpsError(e?.message || "error");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  // Withdraw a stuck pending request so the guard is never blocked.
-  const cancelEarlyOut = async () => {
-    setBusy(true);
-    setGpsError(null);
-    try {
-      await guardService.cancelClockOutRequest();
-      await reload();
-    } catch (e: any) {
-      setGpsError(e?.message || "error");
-    } finally {
-      setBusy(false);
-    }
-  };
+  const sector = stations[0]?.stationName || stations[0]?.name || null;
 
   return (
     <Screen
+      // On duty: the design's branded operations header. Off duty: the usual
+      // collapsing large title.
+      header={
+        isClockedIn ? (
+          <OnDutyHeader guardName={guardName || firstName} sector={sector} />
+        ) : undefined
+      }
       largeTitle={greeting}
-      largeSubtitle={isClockedIn ? t("guard.onDuty") : t("guard.offDuty")}
+      largeSubtitle={t("guard.offDuty")}
       compactTitle={guardName || firstName}
       avatar={<Avatar name={guardName} className="h-7 w-7 text-[10px]" />}
       right={
-        isClockedIn ? (
-          <div className="rounded-xl border border-online/40 bg-online/5 px-3 py-1.5 text-right">
-            <span className="flex items-center justify-end gap-1.5 text-[11px] font-bold uppercase tracking-wide text-online">
-              <span className="pulse-dot inline-block h-2 w-2 rounded-full bg-online" />
-              {t("guard.onDuty")}
-            </span>
-            {punchInTime && (
-              <span className="mt-0.5 block text-[10px] text-muted">
-                {t("onduty.since", "Desde")} {fmtClock(punchInTime)}
-              </span>
-            )}
-          </div>
-        ) : (
-          <div className="flex items-center gap-1.5 rounded-full border border-line-2 px-2.5 py-1 text-[11px] font-semibold text-muted">
-            <Shield size={13} />
-            {t("guard.offDuty")}
-          </div>
-        )
+        <div className="flex items-center gap-1.5 rounded-full border border-line-2 px-2.5 py-1 text-[11px] font-semibold text-muted">
+          <Shield size={13} />
+          {t("guard.offDuty")}
+        </div>
       }
       onRefresh={async () => {
         await Promise.all([reload(), perf.reload()]);
@@ -403,31 +370,7 @@ export default function GuardDashboard() {
         <EmptyState title={t("app.noData")} hint={error} />
       ) : isClockedIn ? (
         /* ====================== ON-DUTY VIEW ====================== */
-        <>
-          <OnDutyView
-            data={data}
-            busy={busy}
-            onClockOut={() => { setGpsError(null); setReportOpen(true); }}
-            onRequestClockOut={() => { setGpsError(null); setEarlyOutOpen(true); }}
-            onResendRequest={resendEarlyOut}
-            onCancelRequest={cancelEarlyOut}
-          />
-          {gpsError && (
-            <p className="mt-3 text-center text-xs text-critical">{gpsError}</p>
-          )}
-          <EarlyClockOutModal
-            isOpen={earlyOutOpen}
-            busy={busy}
-            onCancel={() => setEarlyOutOpen(false)}
-            onSubmit={submitEarlyOut}
-          />
-          <ClockOutReportModal
-            isOpen={reportOpen}
-            busy={busy}
-            onCancel={() => setReportOpen(false)}
-            onSubmit={(summary) => handleClockOut(summary)}
-          />
-        </>
+        <OnDutyView data={data} />
       ) : (
         /* ====================== OFF-DUTY VIEW ===================== */
         <div className="space-y-4">

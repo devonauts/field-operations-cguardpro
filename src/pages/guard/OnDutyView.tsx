@@ -1,629 +1,404 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHistory } from "react-router-dom";
-import { useIonAlert, useIonToast } from "@ionic/react";
-import {
-  ShieldCheck,
-  Shield,
-  MapPin,
-  Clock,
-  Loader2,
-  Users,
-  Siren,
-  AlertTriangle,
-  Footprints,
-  ClipboardCheck,
-  CheckCircle2,
-  ChevronRight,
-  FileText,
-  X,
-  Navigation,
-  Wifi,
-  Play,
-  User,
-  Bell,
-  Smartphone,
-} from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { useAsync } from "@/lib/useAsync";
 import { incidentService, guardService } from "@/lib/services";
-import { getCurrentPosition } from "@/lib/geo";
-import { IncidentForm } from "@/components/IncidentForm";
-import { VisitorModal } from "@/components/VisitorModal";
-import { ConsignaComplete } from "@/components/ConsignaComplete";
-import {
-  SectionCard,
-  SectionHeader,
-  StatusChip,
-  QuickActionTile,
-  ActivityRow,
-  Button,
-  IconTile,
-  Tone,
-} from "@/components/ui/kit";
-import {
-  consignasService,
-  ConsignaItem,
-  memosService,
-  MemoItem,
-  rondasService,
-} from "@/lib/rondas";
+import { rondasService } from "@/lib/rondas";
 
-function useElapsed(since: any): string {
+/* ----------------------------------------------------------------- helpers */
+
+function useElapsed(since: any): { clock: string; hours: number; mins: number } {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
   const start = new Date(since).getTime();
-  if (!since || Number.isNaN(start)) return "00:00:00";
+  if (!since || Number.isNaN(start)) return { clock: "00:00:00", hours: 0, mins: 0 };
   const s = Math.max(0, Math.floor((now - start) / 1000));
-  const h = String(Math.floor(s / 3600)).padStart(2, "0");
-  const m = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
-  const sec = String(s % 60).padStart(2, "0");
-  return `${h}:${m}:${sec}`;
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return { clock: `${pad(h)}:${pad(m)}:${pad(s % 60)}`, hours: h, mins: m };
 }
 
 function fmtClock(d: any): string {
   if (!d) return "—";
   try {
-    return new Date(d).toLocaleTimeString(undefined, {
-      hour: "numeric",
-      minute: "2-digit",
-    });
+    return new Date(d).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false });
   } catch {
     return "—";
   }
 }
 
-/* Activity event → icon / tone / friendly label. */
-const ACTIVITY_LABEL: Record<string, string> = {
-  "guard.checkin": "Registro de entrada",
-  "guard.checkout": "Registro de salida",
-  "visitor.arrival": "Visitante ingresó",
-  "visitor.departure": "Salida de visitante",
-  "patrol.completed": "Ronda completada",
-  "patrol.missed": "Ronda incompleta",
-  "incident.created": "Incidente reportado",
-  "incident.updated": "Incidente actualizado",
-  "device.mismatch": "Dispositivo no reconocido",
-};
-function activityVisual(type: string): { tone: Tone; icon: any } {
-  const t = (type || "").toLowerCase();
-  if (t.startsWith("guard")) return { tone: "green", icon: <User size={16} /> };
-  if (t.startsWith("visitor")) return { tone: "amber", icon: <User size={16} /> };
-  if (t.startsWith("patrol")) return { tone: "blue", icon: <Shield size={16} /> };
-  if (t.startsWith("incident")) return { tone: "red", icon: <AlertTriangle size={16} /> };
-  if (t.startsWith("device")) return { tone: "purple", icon: <Smartphone size={16} /> };
-  return { tone: "neutral", icon: <Bell size={16} /> };
-}
-const stripEmoji = (s: string) =>
-  (s || "").replace(/^[^A-Za-zÁÉÍÓÚÑ0-9]+/, "").trim();
-function nameFromTitle(title: string): string {
-  const i = (title || "").indexOf(":");
-  return i >= 0 ? title.slice(i + 1).trim() : "";
+function timeAgo(d: any, t: any): string {
+  const then = new Date(d).getTime();
+  if (Number.isNaN(then)) return "";
+  const mins = Math.max(0, Math.round((Date.now() - then) / 60000));
+  if (mins < 1) return t("time.now", "ahora");
+  if (mins < 60) return `${mins} min`;
+  const h = Math.floor(mins / 60);
+  if (h < 24) return `${h} h`;
+  return `${Math.floor(h / 24)} d`;
 }
 
-export default function OnDutyView({
-  data,
-  busy,
-  onClockOut,
-  onRequestClockOut,
-  onResendRequest,
-  onCancelRequest,
+const isOpenIncident = (i: any) => {
+  const s = String(i?.status || "").toLowerCase();
+  return s !== "cerrado" && s !== "closed" && s !== "resuelto";
+};
+const isCritical = (i: any) => {
+  const p = String(i?.priority || "").toLowerCase();
+  return i?.isPanic || p === "critical" || p === "alto" || p === "high";
+};
+
+/* ------------------------------------------------------------------- card */
+
+/** A whole-card tap target (avoids nested buttons; inner CTAs are visual). */
+function NavCard({
+  onClick,
+  className = "",
+  children,
 }: {
-  data: any;
-  busy: boolean;
-  onClockOut: () => void;
-  onRequestClockOut: () => void;
-  onResendRequest?: () => void;
-  onCancelRequest?: () => void;
+  onClick: () => void;
+  className?: string;
+  children: React.ReactNode;
 }) {
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
+      className={`pressable cursor-pointer ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------- view */
+
+export default function OnDutyView({ data }: { data: any }) {
   const { t } = useTranslation();
   const history = useHistory();
-  const [presentAlert] = useIonAlert();
-  const [presentToast] = useIonToast();
-  const [incidentOpen, setIncidentOpen] = useState(false);
-  const [visitorOpen, setVisitorOpen] = useState(false);
-  const [panicBusy, setPanicBusy] = useState(false);
-  const [consigna, setConsigna] = useState<ConsignaItem | null>(null);
 
-  const { data: consignas, reload: reloadConsignas } = useAsync<ConsignaItem[]>(
-    () => consignasService.orders().catch(() => []),
-    [],
-  );
-  const pendingConsignas = (consignas || []).filter((c) => !c.done).length;
-
-  const { data: memos, reload: reloadMemos } = useAsync<MemoItem[]>(
-    () => memosService.list().catch(() => []),
-    [],
-  );
-  const [memo, setMemo] = useState<MemoItem | null>(null);
-  const [memoBusy, setMemoBusy] = useState(false);
-
-  const { data: patrols } = useAsync<any[]>(() => rondasService.patrols().catch(() => []), []);
-  const { data: activity } = useAsync<any[]>(() => guardService.activity().catch(() => []), []);
-
-  const acceptMemo = async () => {
-    if (!memo) return;
-    setMemoBusy(true);
-    try {
-      await memosService.accept(memo.id);
-      setMemo(null);
-      reloadMemos();
-      presentToast({ message: t("memos.confirmed", "Lectura confirmada"), duration: 1500, color: "success" });
-    } catch {
-      presentToast({ message: t("memos.confirmError", "No se pudo confirmar"), duration: 2000, color: "danger" });
-    } finally {
-      setMemoBusy(false);
-    }
-  };
-
-  const station = data?.stations?.[0] || {};
+  const stations: any[] = data?.stations || [];
+  const station = stations[0] || {};
   const punchInTime = data?.activeClockIn?.punchInTime || data?.activeClockIn?.createdAt;
   const elapsed = useElapsed(punchInTime);
-  const stationName = station.stationName || station.name || "—";
+  const shiftStart = punchInTime ? new Date(punchInTime).getTime() : 0;
 
-  // Live verification chips.
-  const [gpsOk, setGpsOk] = useState<boolean | null>(null);
-  const [online, setOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
-  useEffect(() => {
-    getCurrentPosition()
-      .then(() => setGpsOk(true))
-      .catch(() => setGpsOk(false));
-    const on = () => setOnline(true);
-    const off = () => setOnline(false);
-    window.addEventListener("online", on);
-    window.addEventListener("offline", off);
-    return () => {
-      window.removeEventListener("online", on);
-      window.removeEventListener("offline", off);
+  const schedStart = data?.activeClockIn?.scheduledStart || data?.currentShift?.startTime;
+  const schedEnd =
+    data?.activeClockIn?.scheduledEnd || data?.scheduledEnd || data?.currentShift?.endTime;
+  const minsToEnd =
+    data?.minutesToScheduledEnd != null ? Math.max(0, Math.round(Number(data.minutesToScheduledEnd))) : null;
+  const remainingLabel =
+    minsToEnd != null ? `${Math.floor(minsToEnd / 60)}h ${minsToEnd % 60}m` : null;
+
+  // Incidents (tenant feed) — scoped to this shift for the counters/alerts.
+  const { data: incRes } = useAsync<{ rows: any[]; count: number }>(
+    () => incidentService.list({ limit: 25 }).catch(() => ({ rows: [], count: 0 })),
+    [],
+  );
+  const incidents = incRes?.rows || [];
+  const shiftIncidents = incidents.filter(
+    (i) => new Date(i.incidentAt || i.createdAt || i.date).getTime() >= shiftStart,
+  );
+  const incidentCount = shiftIncidents.length;
+  const alerts = (shiftIncidents.length ? shiftIncidents : incidents).slice(0, 2);
+  const alertBadge = (shiftIncidents.length ? shiftIncidents : incidents).filter(isOpenIncident).length;
+
+  // Patrol progress.
+  const { data: patrols } = useAsync<any[]>(() => rondasService.patrols().catch(() => []), []);
+  const { data: scans } = useAsync<any[]>(() => rondasService.scans({ limit: 100 }).catch(() => []), []);
+  const activePatrol = (patrols || [])[0] || null;
+  const tagsList: any[] = Array.isArray(activePatrol?.tags) ? activePatrol.tags : [];
+  const totalCheckpoints =
+    activePatrol?.checkpointCount ??
+    activePatrol?.tagsCount ??
+    (tagsList.length || null);
+  const shiftScans = (scans || []).filter((s) => new Date(s.scannedAt).getTime() >= shiftStart);
+  const scannedCount = Math.min(shiftScans.length, totalCheckpoints ?? shiftScans.length);
+  const scannedIds = new Set(
+    shiftScans.map((s) => s.tagIdentifier || s.tag?.tagIdentifier).filter(Boolean),
+  );
+  const nextTag = tagsList.find((tg) => !scannedIds.has(tg.tagIdentifier)) || null;
+  const routeName =
+    activePatrol?.siteTour?.name || activePatrol?.name || activePatrol?.routeName || null;
+  const routeCode = activePatrol?.code || activePatrol?.routeCode || null;
+
+  // Team on duty at my sitio de servicio (post site) — guards across all the
+  // sitio's stations, nobody from other sitios.
+  const { data: team } = useAsync<any>(() => guardService.team().catch(() => null), []);
+  // Zones the guard covers, with a real status from open incidents at each.
+  const zones = stations.map((st) => {
+    const open = incidents.some(
+      (i) => isOpenIncident(i) && (i.stationId === st.id || i.station?.id === st.id),
+    );
+    const crit = incidents.some(
+      (i) => isOpenIncident(i) && isCritical(i) && (i.stationId === st.id || i.station?.id === st.id),
+    );
+    return {
+      name: st.stationName || st.name,
+      status: crit ? "alert" : open ? "patrol" : "clear",
     };
-  }, []);
-
-  // Next patrol (best-effort from the guard's assignments).
-  const nextPatrol = (patrols || [])[0] || null;
-  const checkpoints =
-    nextPatrol?.checkpointCount ??
-    nextPatrol?.tagsCount ??
-    (Array.isArray(nextPatrol?.tags) ? nextPatrol.tags.length : null);
-  const nextStart = nextPatrol?.scheduledAt || nextPatrol?.startAt || nextPatrol?.startTime || null;
-  const minsToNext = nextStart
-    ? Math.max(0, Math.round((new Date(nextStart).getTime() - Date.now()) / 60000))
-    : null;
-
-  const sendPanic = async () => {
-    setPanicBusy(true);
-    try {
-      let loc = stationName;
-      let lat: number | undefined;
-      let lng: number | undefined;
-      try {
-        const pos = await getCurrentPosition();
-        lat = pos.latitude;
-        lng = pos.longitude;
-        loc = `${stationName} (${pos.latitude.toFixed(5)}, ${pos.longitude.toFixed(5)})`;
-      } catch {
-        /* location optional */
-      }
-      await incidentService.createAsGuard({
-        isPanic: true,
-        subject: t("panic.subject"),
-        title: t("panic.subject"),
-        content: `${t("panic.subject")} — ${stationName}`,
-        priority: "critical",
-        status: "abierto",
-        location: loc,
-        latitude: lat,
-        longitude: lng,
-        stationId: station?.id,
-        postSiteId: station?.postSiteId,
-        incidentAt: new Date().toISOString(),
-      });
-      presentToast({ message: t("panic.sent"), duration: 3000, color: "danger", position: "top" });
-    } catch {
-      presentToast({ message: "Error", duration: 2500, color: "danger", position: "top" });
-    } finally {
-      setPanicBusy(false);
-    }
-  };
-
-  const confirmPanic = () =>
-    presentAlert({
-      header: t("panic.title"),
-      message: t("panic.message"),
-      buttons: [
-        { text: t("app.cancel"), role: "cancel" },
-        { text: t("panic.confirm"), role: "destructive", handler: sendPanic },
-      ],
-    });
-
-  const quickActions: { key: string; icon: any; tone: Tone; onClick: () => void }[] = [
-    { key: "visitors", icon: <Users size={24} />, tone: "amber", onClick: () => setVisitorOpen(true) },
-    { key: "patrol", icon: <Footprints size={24} />, tone: "blue", onClick: () => history.push("/guard/patrol") },
-    { key: "incident", icon: <AlertTriangle size={24} />, tone: "red", onClick: () => setIncidentOpen(true) },
-    {
-      key: "panic",
-      icon: panicBusy ? <Loader2 size={24} className="animate-spin" /> : <Siren size={24} />,
-      tone: "red",
-      onClick: confirmPanic,
-    },
-  ];
+  });
+  const activeCount = team?.count ?? zones.length ?? 1;
+  const sector = station.stationName || station.name || "—";
 
   return (
-    <div className="space-y-5">
-      {/* ---------- ACTIVE SHIFT ---------- */}
-      <div className="scanline glow-online relative overflow-hidden rounded-2xl border border-online/40 bg-gradient-to-br from-online/10 via-navy to-navy p-4">
-        <div className="grid-overlay absolute inset-0 opacity-60" />
-        <div className="relative">
+    <div className="space-y-4">
+      {/* ============================ CURRENT SHIFT ============================ */}
+      <NavCard
+        onClick={() => history.push("/guard/shift")}
+        className="glow-gold relative overflow-hidden rounded-2xl border border-gold/20 bg-gradient-to-br from-gold/10 via-surface to-navy"
+      >
+        <span className="absolute inset-y-0 left-0 w-1 bg-gold" />
+        <div className="grid-overlay absolute inset-0 opacity-40" />
+        <div className="relative p-4 pl-5">
           <div className="flex items-start justify-between">
-            <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-online">
-              <Clock size={15} />
-              {t("onduty.activeShift", "Turno activo")}
-            </span>
-            <span className="grid h-11 w-11 place-items-center rounded-xl border border-online/40 bg-online/10 text-online">
-              <ShieldCheck size={22} />
+            <span className="label-eyebrow">{t("onduty.currentShift", "Turno actual")}</span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-online/40 bg-online/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-online">
+              <span className="pulse-dot inline-block h-1.5 w-1.5 rounded-full bg-online" />
+              {t("guard.onDuty", "En servicio")}
             </span>
           </div>
 
-          <p className="mt-2 font-mono text-[44px] font-bold leading-none tracking-tight text-ink tabular-nums">
-            {elapsed}
+          <p className="mt-2 font-mono text-[44px] font-bold leading-none tracking-tight text-gold tabular-nums">
+            {elapsed.clock}
           </p>
           <p className="mt-2 text-sm text-muted">
-            {t("onduty.started", "Inició")} {fmtClock(punchInTime)}
+            {schedStart && schedEnd ? (
+              <>
+                {t("onduty.shiftWord", "Turno")} {fmtClock(schedStart)} – {fmtClock(schedEnd)}
+                {remainingLabel && (
+                  <> · {t("onduty.remainingShort", "{{r}} restante", { r: remainingLabel })}</>
+                )}
+              </>
+            ) : (
+              <>
+                {t("onduty.started", "Inició")} {fmtClock(punchInTime)}
+              </>
+            )}
           </p>
 
-          <div className="mt-4 flex divide-x divide-online/20 border-t border-online/20 pt-3">
-            <StatusChip icon={<MapPin size={14} />} label={t("onduty.insideGeofence", "En geocerca")} ok />
-            <StatusChip
-              icon={<Navigation size={14} />}
-              label={t("onduty.gpsVerified", "GPS verificado")}
-              ok={gpsOk !== false}
-            />
-            <StatusChip
-              icon={<Wifi size={14} />}
-              label={t("onduty.deviceOnline", "Dispositivo en línea")}
-              ok={online}
+          <div className="mt-4 grid grid-cols-3 divide-x divide-gold/15 border-t border-gold/15 pt-3">
+            <ShiftStat value={`${elapsed.hours}h ${String(elapsed.mins).padStart(2, "0")}m`} label={t("onduty.elapsed", "Transcurrido")} />
+            <ShiftStat value={String(incidentCount).padStart(2, "0")} label={t("onduty.incidents", "Incidentes")} tone={incidentCount > 0 ? "gold" : "ink"} />
+            <ShiftStat
+              value={totalCheckpoints != null ? `${scannedCount}/${totalCheckpoints}` : "—"}
+              label={t("onduty.checkpointsWord", "Puntos")}
             />
           </div>
         </div>
-      </div>
+      </NavCard>
 
-      {/* ---------- NEXT PATROL ---------- */}
-      <div className="relative overflow-hidden rounded-2xl border border-info/40 bg-gradient-to-br from-info/10 via-navy to-navy p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-info">
-              <Footprints size={15} />
-              {t("onduty.nextPatrol", "Próxima ronda")}
-            </span>
-            <p className="mt-1.5 flex items-baseline gap-1.5">
-              <span className="text-3xl font-bold text-ink tabular-nums">
-                {minsToNext != null ? minsToNext : checkpoints != null ? checkpoints : "—"}
-              </span>
-              <span className="text-sm text-muted">
-                {minsToNext != null ? "min" : t("onduty.checkpointsWord", "puntos")}
-              </span>
-            </p>
-            <p className="mt-0.5 text-xs text-muted">
-              {checkpoints != null
-                ? t("onduty.checkpoints", "{{n}} puntos de control", { n: checkpoints })
-                : t("onduty.startRound", "Inicia tu ronda")}
-            </p>
+      {/* ============================ ACTIVE PATROL =========================== */}
+      <NavCard
+        onClick={() => history.push("/guard/patrol")}
+        className="card-elev overflow-hidden p-4"
+      >
+        <div className="flex items-center justify-between">
+          <span className="label-eyebrow">{t("onduty.activePatrol", "Ronda activa")}</span>
+          <span className="text-xs font-bold uppercase tracking-wide text-gold">
+            {routeCode || routeName || t("onduty.noRoute", "Sin ruta")}
+          </span>
+        </div>
+
+        <div className="mt-3 rounded-xl border border-gold/25 bg-gold/5 p-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="label-eyebrow">{t("onduty.nextCheckpoint", "Próximo punto")}</p>
+              <p className="mt-1 truncate text-[15px] font-bold text-ink">
+                {nextTag?.name || (totalCheckpoints && scannedCount >= totalCheckpoints
+                  ? t("onduty.allCleared", "Ronda completa")
+                  : t("onduty.startRound", "Inicia tu ronda"))}
+              </p>
+              {(nextTag?.zone || nextTag?.location) && (
+                <p className="mt-0.5 truncate text-xs text-muted">{nextTag.zone || nextTag.location}</p>
+              )}
+            </div>
+            <ShieldRoute />
           </div>
-          <PatrolRoute />
         </div>
-        <Button variant="primary" full className="mt-4 bg-info! text-white!" onClick={() => history.push("/guard/patrol")}>
-          <Play size={18} fill="currentColor" />
-          {t("onduty.startPatrol", "Iniciar ronda")}
-          <ChevronRight size={18} className="ml-auto" />
-        </Button>
-      </div>
 
-      {/* ---------- QUICK ACTIONS ---------- */}
-      <div>
-        <SectionHeader title={t("onduty.quickActions", "Acciones rápidas")} />
-        <div className="grid grid-cols-4 gap-2.5">
-          {quickActions.map((a) => (
-            <QuickActionTile
-              key={a.key}
-              icon={a.icon}
-              label={t(`features.${a.key}`)}
-              tone={a.key === "visitors" ? "amber" : a.key === "patrol" ? "blue" : a.key === "incident" ? "amber" : "red"}
-              onClick={a.onClick}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* ---------- RECENT ACTIVITY ---------- */}
-      {(activity || []).length > 0 && (
-        <div>
-          <SectionHeader
-            title={t("onduty.recentActivity", "Actividad reciente")}
-            action={
-              <button onClick={() => history.push("/guard/patrol")} className="text-xs font-semibold text-info active:opacity-70">
-                {t("onduty.viewAll", "Ver todo")}
-              </button>
-            }
-          />
-          <div className="card-elev divide-y divide-line overflow-hidden">
-            {(activity || []).slice(0, 6).map((a) => {
-              const v = activityVisual(a.eventType);
-              const title = ACTIVITY_LABEL[a.eventType] || stripEmoji(a.title) || t("onduty.event", "Evento");
-              const subtitle = nameFromTitle(a.title) || stripEmoji(a.subtitle || "");
+        {/* Progress dots */}
+        {totalCheckpoints != null && totalCheckpoints > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            {Array.from({ length: Math.min(totalCheckpoints, 16) }).map((_, i) => {
+              const done = i < scannedCount;
               return (
-                <ActivityRow
-                  key={a.id}
-                  tone={v.tone}
-                  icon={v.icon}
-                  title={title}
-                  subtitle={subtitle || undefined}
-                  time={fmtClock(a.at)}
+                <span
+                  key={i}
+                  className={
+                    done
+                      ? "h-2.5 w-2.5 rounded-full bg-gold shadow-[0_0_6px_rgba(212,160,23,0.7)]"
+                      : "h-2.5 w-2.5 rounded-full border border-line-2"
+                  }
                 />
               );
             })}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* ---------- CONSIGNAS ---------- */}
-      {(consignas || []).length > 0 && (
-        <div>
-          <SectionHeader
-            title={t("consignas.title", "Consignas de hoy")}
-            action={
-              pendingConsignas > 0 ? (
-                <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[11px] font-bold text-gold">
-                  {t("consignas.pending", "{{n}} pendientes", { n: pendingConsignas })}
-                </span>
-              ) : undefined
-            }
-          />
-          <div className="card-elev divide-y divide-line overflow-hidden">
-            {(consignas || []).map((c) => (
-              <button
-                key={c.id}
-                onClick={() => !c.done && setConsigna(c)}
-                className={`flex w-full items-center gap-3 px-4 py-3 text-left ${c.done ? "opacity-60" : "active:bg-white/3"}`}
-              >
-                <IconTile tone={c.done ? "green" : "amber"} size="sm">
-                  {c.done ? <CheckCircle2 size={16} /> : <ClipboardCheck size={16} />}
-                </IconTile>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold text-ink">{c.title}</span>
-                  <span className="flex items-center gap-1 text-xs text-muted">
-                    {c.time && (
-                      <>
-                        <Clock size={11} />
-                        {c.time} ·{" "}
-                      </>
+        <div className="mt-3 flex items-center justify-between">
+          <p className="text-xs text-muted">
+            {totalCheckpoints != null
+              ? t("onduty.checkpointsCleared", "{{a}} de {{b}} puntos completados", {
+                  a: scannedCount,
+                  b: totalCheckpoints,
+                })
+              : t("onduty.openPatrol", "Abrir ronda")}
+          </p>
+          <span className="flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-gold">
+            {t("onduty.continue", "Continuar")} <ChevronRight size={15} />
+          </span>
+        </div>
+      </NavCard>
+
+      {/* ============================= LIVE ALERTS ============================ */}
+      <NavCard
+        onClick={() => history.push("/guard/incidents")}
+        className="card-elev overflow-hidden p-4"
+      >
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-2">
+            <span className="label-eyebrow">{t("onduty.liveAlerts", "Alertas")}</span>
+            {alertBadge > 0 && (
+              <span className="grid h-5 min-w-5 place-items-center rounded-full bg-critical px-1.5 text-[11px] font-bold text-white">
+                {alertBadge}
+              </span>
+            )}
+          </span>
+          <span className="flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-gold">
+            {t("onduty.viewAll", "Ver todo")} <ChevronRight size={15} />
+          </span>
+        </div>
+
+        {alerts.length > 0 ? (
+          <div className="mt-3 divide-y divide-line">
+            {alerts.map((a) => {
+              const crit = isCritical(a);
+              return (
+                <div key={a.id} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
+                  <span className={`mt-0.5 h-9 w-1 shrink-0 rounded-full ${crit ? "bg-critical" : "bg-gold"}`} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[15px] font-semibold text-ink">
+                      {a.title || a.subject || t("onduty.event", "Evento")}
+                    </p>
+                    {(a.location || a.station?.stationName) && (
+                      <p className="truncate text-xs text-muted">{a.location || a.station?.stationName}</p>
                     )}
-                    {c.done ? t("consignas.doneLabel", "Completada") : t("consignas.todo", "Por hacer")}
+                  </div>
+                  <span className={`shrink-0 text-xs font-semibold tabular-nums ${crit ? "text-critical" : "text-muted"}`}>
+                    {timeAgo(a.incidentAt || a.createdAt || a.date, t)}
                   </span>
-                </span>
-                {!c.done && <ChevronRight size={18} className="shrink-0 text-faint" />}
-              </button>
-            ))}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-muted">{t("onduty.noAlerts", "Sin alertas activas.")}</p>
+        )}
+      </NavCard>
+
+      {/* ============================ TEAM ON DUTY =========================== */}
+      <NavCard
+        onClick={() => history.push("/guard/map")}
+        className="card-elev overflow-hidden p-4"
+      >
+        <div className="flex items-center justify-between">
+          <span className="label-eyebrow">{t("onduty.teamOnDuty", "Equipo en servicio")}</span>
+          <span className="text-xs font-bold uppercase tracking-wide text-online">
+            {t("onduty.activeCount", "{{n}} activos", { n: activeCount })}
+          </span>
+        </div>
+
+        <div className="mt-3 flex items-center gap-4">
+          <Radar zones={zones} />
+          <div className="min-w-0 flex-1 space-y-2">
+            {(zones.length ? zones : [{ name: sector, status: "clear" }]).slice(0, 4).map((z, i) => {
+              const color =
+                z.status === "alert" ? "bg-critical" : z.status === "patrol" ? "bg-gold" : "bg-online";
+              const label =
+                z.status === "alert"
+                  ? t("onduty.zoneAlert", "alerta")
+                  : z.status === "patrol"
+                    ? t("onduty.zonePatrol", "ronda")
+                    : t("onduty.zoneClear", "despejado");
+              return (
+                <div key={i} className="flex items-center gap-2 text-sm">
+                  <span className={`h-2 w-2 shrink-0 rounded-full ${color}`} />
+                  <span className="truncate text-ink">{z.name}</span>
+                  <span className="text-muted">— {label}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
-      )}
-
-      {/* ---------- MEMOS ---------- */}
-      {(memos || []).length > 0 && (
-        <div>
-          <SectionHeader title={t("memos.title", "Memos")} />
-          <div className="card-elev divide-y divide-line overflow-hidden">
-            {(memos || []).map((m) => (
-              <button
-                key={m.id}
-                onClick={() => setMemo(m)}
-                className={`flex w-full items-center gap-3 px-4 py-3 text-left ${m.wasAccepted ? "opacity-60" : "active:bg-white/3"}`}
-              >
-                <IconTile tone={m.wasAccepted ? "green" : "amber"} size="sm">
-                  {m.wasAccepted ? <CheckCircle2 size={16} /> : <FileText size={16} />}
-                </IconTile>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold text-ink">
-                    {m.subject || t("memos.untitled", "Memo")}
-                  </span>
-                  <span className="flex items-center gap-1 text-xs text-muted">
-                    {m.createdByName ? <>{m.createdByName} · </> : null}
-                    {m.wasAccepted ? t("memos.read", "Leído") : t("memos.unread", "Sin leer")}
-                  </span>
-                </span>
-                <ChevronRight size={18} className="shrink-0 text-faint" />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ---------- CLOCK OUT ---------- */}
-      <ClockOutControl
-        data={data}
-        busy={busy}
-        onClockOut={onClockOut}
-        onRequestClockOut={onRequestClockOut}
-        onResendRequest={onResendRequest}
-        onCancelRequest={onCancelRequest}
-      />
-
-      <IncidentForm
-        isOpen={incidentOpen}
-        onClose={() => setIncidentOpen(false)}
-        onCreated={() => setIncidentOpen(false)}
-        asGuard
-        station={station}
-      />
-      <VisitorModal isOpen={visitorOpen} onClose={() => setVisitorOpen(false)} station={station} />
-      <ConsignaComplete
-        isOpen={!!consigna}
-        consigna={consigna}
-        onClose={() => setConsigna(null)}
-        onDone={() => {
-          setConsigna(null);
-          reloadConsignas();
-        }}
-      />
-
-      {/* ---------- MEMO READER ---------- */}
-      {memo && (
-        <div className="fixed inset-0 z-50 flex items-end bg-black/50" onClick={() => setMemo(null)}>
-          <div
-            className="w-full rounded-t-2xl bg-surface p-5"
-            style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 24px)" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-3 flex items-start justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <IconTile tone="amber" size="sm">
-                  <FileText size={16} />
-                </IconTile>
-                <h3 className="text-base font-bold text-ink">{memo.subject || t("memos.untitled", "Memo")}</h3>
-              </div>
-              <button onClick={() => setMemo(null)} className="text-muted active:opacity-70">
-                <X size={20} />
-              </button>
-            </div>
-            {memo.createdByName && (
-              <p className="mb-2 text-xs text-muted">
-                {t("memos.from", "De")}: {memo.createdByName}
-              </p>
-            )}
-            {memo.content && (
-              <p className="mb-5 whitespace-pre-wrap text-sm leading-relaxed text-ink/90">{memo.content}</p>
-            )}
-            {memo.wasAccepted ? (
-              <div className="flex items-center justify-center gap-2 rounded-xl bg-online-soft py-3 text-sm font-semibold text-online">
-                <CheckCircle2 size={18} /> {t("memos.alreadyRead", "Lectura confirmada")}
-              </div>
-            ) : (
-              <Button variant="primary" full disabled={memoBusy} onClick={acceptMemo}>
-                {memoBusy ? <Loader2 size={18} className="animate-spin" /> : t("memos.confirmRead", "Confirmar lectura")}
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
+      </NavCard>
     </div>
   );
 }
 
-/** Decorative dashed patrol route with checkpoints + play marker (matches mock). */
-function PatrolRoute() {
+/* --------------------------------------------------------------- fragments */
+
+function ShiftStat({ value, label, tone = "ink" }: { value: string; label: string; tone?: "ink" | "gold" }) {
   return (
-    <svg width="120" height="64" viewBox="0 0 120 64" className="shrink-0" aria-hidden>
+    <div className="px-2 text-center first:pl-0 last:pr-0">
+      <p className={`text-lg font-bold tabular-nums ${tone === "gold" ? "text-gold" : "text-ink"}`}>{value}</p>
+      <p className="mt-0.5 text-[10px] uppercase leading-tight tracking-wide text-muted">{label}</p>
+    </div>
+  );
+}
+
+/** Small decorative route glyph for the active-patrol card. */
+function ShieldRoute() {
+  return (
+    <svg width="64" height="40" viewBox="0 0 64 40" className="shrink-0" aria-hidden>
       <path
-        d="M10 46 L40 50 L70 22 L110 10"
+        d="M6 30 L22 32 L40 14 L58 6"
         fill="none"
-        stroke="#38bdf8"
+        stroke="#d4a017"
         strokeWidth="2"
-        strokeDasharray="4 5"
+        strokeDasharray="3 4"
         strokeLinecap="round"
-        opacity="0.7"
+        opacity="0.8"
       />
-      {[
-        [40, 50],
-        [70, 22],
-      ].map(([x, y]) => (
-        <circle key={`${x}`} cx={x} cy={y} r="5" fill="#0a0e16" stroke="#38bdf8" strokeWidth="2" />
+      {[[22, 32], [40, 14]].map(([x, y]) => (
+        <circle key={x} cx={x} cy={y} r="3.5" fill="#0a0e16" stroke="#d4a017" strokeWidth="2" />
       ))}
-      <circle cx="10" cy="46" r="9" fill="#38bdf8" />
-      <path d="M7 42 L7 50 L14 46 Z" fill="#0a0e16" />
-      <path d="M110 10 l0 -8 m0 8 l6 0" stroke="#38bdf8" strokeWidth="2" />
-      <rect x="110" y="2" width="9" height="6" fill="#38bdf8" />
+      <circle cx="6" cy="30" r="5" fill="#d4a017" />
+      <circle cx="58" cy="6" r="4" fill="none" stroke="#d4a017" strokeWidth="2" />
     </svg>
   );
 }
 
-/**
- * Clock-out control with the early-out approval gate (unchanged behaviour).
- */
-function ClockOutControl({
-  data,
-  busy,
-  onClockOut,
-  onRequestClockOut,
-  onResendRequest,
-  onCancelRequest,
-}: {
-  data: any;
-  busy: boolean;
-  onClockOut: () => void;
-  onRequestClockOut: () => void;
-  onResendRequest?: () => void;
-  onCancelRequest?: () => void;
-}) {
-  const { t } = useTranslation();
-  // Early-vs-normal is decided by the backend from the TURNO (single source of
-  // truth) — the worker only renders it. `isEarlyClockOut` is true while the
-  // guard is still on the clock before the turno's scheduled end (minus grace).
-  const status: string | undefined = data?.clockOutRequest?.status;
-  const isEarly = !!data?.isEarlyClockOut;
-  const endLabel: string | null = data?.scheduledEndLabel || null;
-  const minsToEnd: number | null =
-    data?.minutesToScheduledEnd != null ? Number(data.minutesToScheduledEnd) : null;
-  const canClockOut = !isEarly || status === "approved";
-  const pending = isEarly && status === "pending";
-
-  if (canClockOut) {
-    const approved = status === "approved";
-    return (
-      <Button variant={approved ? "primary" : "danger"} full disabled={busy} onClick={onClockOut}>
-        {busy ? (
-          <Loader2 size={18} className="animate-spin" />
-        ) : (
-          t(approved ? "onduty.clockOutApproved" : "onduty.clockOut")
-        )}
-      </Button>
-    );
-  }
-
-  if (pending) {
-    return (
-      <div className="space-y-2">
-        <div className="btn-xl w-full cursor-default border border-gold/40 bg-gold/5 text-gold">
-          <Loader2 size={16} className="animate-spin" />
-          {t("onduty.clockOutPending")}
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" full disabled={busy} onClick={() => onResendRequest?.()}>
-            {t("onduty.resendRequest", "Reenviar")}
-          </Button>
-          <Button variant="danger" full disabled={busy} onClick={() => onCancelRequest?.()}>
-            {t("onduty.cancelRequest", "Cancelar")}
-          </Button>
-        </div>
-        <p className="text-center text-[11px] text-muted">
-          {t("onduty.pendingHint", "Esperando aprobación del supervisor. Puedes reenviar o cancelar la solicitud.")}
-        </p>
-      </div>
-    );
-  }
-
-  const remaining =
-    minsToEnd != null && minsToEnd > 0
-      ? `${Math.floor(minsToEnd / 60)}h ${minsToEnd % 60}m`
-      : null;
+/** Tactical radar with the guard at center + dots per covered zone. */
+function Radar({ zones }: { zones: { name: string; status: string }[] }) {
+  const pts = [
+    [38, 30],
+    [78, 38],
+    [30, 74],
+    [80, 80],
+  ];
   return (
-    <div className="space-y-2">
-      {status === "rejected" && (
-        <p className="text-center text-xs text-critical">{t("onduty.clockOutRejected")}</p>
-      )}
-      {endLabel && (
-        <p className="text-center text-xs text-muted">
-          {t("onduty.turnoEndsAt", "Tu turno termina a las {{time}}", { time: endLabel })}
-          {remaining ? ` · ${t("onduty.remaining", "faltan {{r}}", { r: remaining })}` : ""}
-        </p>
-      )}
-      <button
-        onClick={onRequestClockOut}
-        disabled={busy}
-        className="btn-xl w-full bg-high text-white active:opacity-80 disabled:opacity-50"
-      >
-        {busy ? <Loader2 size={18} className="animate-spin" /> : t("onduty.requestEarlyOut")}
-      </button>
-      <p className="text-center text-[11px] text-muted">{t("onduty.earlyOutHint")}</p>
-    </div>
+    <svg width="104" height="104" viewBox="0 0 110 110" className="shrink-0" aria-hidden>
+      <rect x="1" y="1" width="108" height="108" rx="14" fill="#0d111a" stroke="#1f2630" />
+      {[40, 26, 12].map((r) => (
+        <circle key={r} cx="55" cy="55" r={r} fill="none" stroke="#d4a017" strokeOpacity="0.18" />
+      ))}
+      <line x1="55" y1="15" x2="55" y2="95" stroke="#d4a017" strokeOpacity="0.12" />
+      <line x1="15" y1="55" x2="95" y2="55" stroke="#d4a017" strokeOpacity="0.12" />
+      {zones.slice(0, 4).map((z, i) => {
+        const [x, y] = pts[i] || pts[0];
+        const fill = z.status === "alert" ? "#ef4444" : z.status === "patrol" ? "#d4a017" : "#22c55e";
+        return <circle key={i} cx={x} cy={y} r="4" fill={fill} />;
+      })}
+      <circle cx="55" cy="55" r="5" fill="#d4a017" />
+      <circle cx="55" cy="55" r="9" fill="none" stroke="#d4a017" strokeOpacity="0.5" />
+    </svg>
   );
 }

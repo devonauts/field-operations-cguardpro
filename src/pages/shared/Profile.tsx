@@ -15,6 +15,7 @@ import {
   Star,
   User,
   CalendarOff,
+  Bell,
   Globe,
   Bug,
   Check,
@@ -226,6 +227,20 @@ export default function Profile() {
             title={t("profile.personalInfo", "Información personal")}
             subtitle={t("profile.personalInfoSub", "Actualiza tus datos de contacto")}
             onClick={() => setSheet("phone")}
+          />
+          <MenuRow
+            tone="blue"
+            icon={<CalendarDays size={18} />}
+            title={t("nav.schedule", "Horario")}
+            subtitle={t("profile.scheduleSub", "Tus próximos turnos")}
+            onClick={() => history.push("/guard/schedule")}
+          />
+          <MenuRow
+            tone="amber"
+            icon={<Bell size={18} />}
+            title={t("nav.notices", "Avisos")}
+            subtitle={t("profile.noticesSub", "Memos y comunicados")}
+            onClick={() => history.push("/guard/notices")}
           />
           <MenuRow
             tone="purple"

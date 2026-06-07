@@ -7,7 +7,7 @@ import {
   IonLabel,
 } from "@ionic/react";
 import { useTranslation } from "react-i18next";
-import { Home, CalendarDays, Bell, CalendarOff, User } from "lucide-react";
+import { Home, Footprints, Radio, Map, User } from "lucide-react";
 import GuardDashboard from "./GuardDashboard";
 import GuardSchedule from "./GuardSchedule";
 import GuardPatrol from "./GuardPatrol";
@@ -16,6 +16,9 @@ import GuardNotices from "./GuardNotices";
 import GuardTimeOff from "./GuardTimeOff";
 import GuardQuiz from "./GuardQuiz";
 import GuardBackup from "./GuardBackup";
+import GuardShiftDetail from "./GuardShiftDetail";
+import GuardMap from "./GuardMap";
+import GuardRadio from "./GuardRadio";
 import Profile from "../shared/Profile";
 
 export default function GuardTabs() {
@@ -30,9 +33,12 @@ export default function GuardTabs() {
         <Route exact path="/guard/quiz" component={GuardQuiz} />
         <Route exact path="/guard/backup" component={GuardBackup} />
         <Route exact path="/guard/profile" component={Profile} />
-        {/* Station-scoped — reachable only from the on-duty view, not the tab bar */}
+        {/* Tab destinations + the detail screens reached from dashboard cards */}
         <Route exact path="/guard/patrol" component={GuardPatrol} />
         <Route exact path="/guard/incidents" component={GuardIncidents} />
+        <Route exact path="/guard/shift" component={GuardShiftDetail} />
+        <Route exact path="/guard/map" component={GuardMap} />
+        <Route exact path="/guard/radio" component={GuardRadio} />
         <Route exact path="/guard">
           <Redirect to="/guard/dashboard" />
         </Route>
@@ -44,23 +50,28 @@ export default function GuardTabs() {
       <IonTabBar slot="bottom">
         <IonTabButton tab="dashboard" href="/guard/dashboard">
           <Home size={22} />
-          <IonLabel>{t("nav.dashboard")}</IonLabel>
+          <IonLabel>{t("nav.home", "Inicio")}</IonLabel>
         </IonTabButton>
-        <IonTabButton tab="schedule" href="/guard/schedule">
-          <CalendarDays size={22} />
-          <IonLabel>{t("nav.schedule")}</IonLabel>
+        <IonTabButton tab="patrol" href="/guard/patrol">
+          <Footprints size={22} />
+          <IonLabel>{t("nav.patrol", "Ronda")}</IonLabel>
         </IonTabButton>
-        <IonTabButton tab="notices" href="/guard/notices">
-          <Bell size={22} />
-          <IonLabel>{t("nav.notices")}</IonLabel>
+
+        {/* Center push-to-talk — raised gold control (design signature) */}
+        <IonTabButton tab="radio" href="/guard/radio" className="tab-radio">
+          <span className="radio-fab">
+            <Radio size={24} strokeWidth={2.2} />
+          </span>
+          <IonLabel className="radio-label">{t("nav.radio", "Radio")}</IonLabel>
         </IonTabButton>
-        <IonTabButton tab="timeoff" href="/guard/time-off">
-          <CalendarOff size={22} />
-          <IonLabel>{t("nav.timeOff")}</IonLabel>
+
+        <IonTabButton tab="map" href="/guard/map">
+          <Map size={22} />
+          <IonLabel>{t("nav.map", "Mapa")}</IonLabel>
         </IonTabButton>
         <IonTabButton tab="profile" href="/guard/profile">
           <User size={22} />
-          <IonLabel>{t("nav.profile")}</IonLabel>
+          <IonLabel>{t("nav.you", "Perfil")}</IonLabel>
         </IonTabButton>
       </IonTabBar>
     </IonTabs>

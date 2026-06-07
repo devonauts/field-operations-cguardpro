@@ -40,6 +40,7 @@ export function Screen({
   largeSubtitle,
   compactTitle,
   avatar,
+  header,
 }: {
   title?: string;
   titleClassName?: string;
@@ -56,6 +57,8 @@ export function Screen({
   compactTitle?: string;
   /** Optional leading element (e.g. avatar) shown in the collapsed bar. */
   avatar?: ReactNode;
+  /** Fully custom header node (takes precedence over title/largeTitle). */
+  header?: ReactNode;
 }) {
   const history = useHistory();
   const goBack = () => {
@@ -86,6 +89,19 @@ export function Screen({
       />
     </IonRefresher>
   );
+
+  // -------------------------------------------------- Custom header mode
+  if (header) {
+    return (
+      <IonPage>
+        <IonContent forceOverscroll={REFRESH_MODE === "ios"}>
+          {refresher}
+          <div className="safe-top">{header}</div>
+          <div className="px-4 pb-6 pt-1 safe-bottom">{children}</div>
+        </IonContent>
+      </IonPage>
+    );
+  }
 
   // -------------------------------------------------- Large-title mode
   if (largeTitle) {

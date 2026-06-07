@@ -245,6 +245,36 @@ ion-tab-button {
   --padding-bottom: 0;
 }
 
+/* Center RADIO tab — a raised gold push-to-talk control that lifts above the
+   bar with a navy cut-out ring + glow (the design's signature element). */
+ion-tab-bar {
+  overflow: visible;
+}
+.tab-radio {
+  overflow: visible;
+}
+.tab-radio .radio-fab {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 54px;
+  width: 54px;
+  margin-top: -26px;
+  border-radius: 9999px;
+  color: #0a0e16;
+  background: radial-gradient(circle at 50% 32%, #e9bb46, #c8860a);
+  box-shadow:
+    0 0 0 6px #0a0e16,
+    0 0 0 7px rgba(212, 160, 23, 0.45),
+    0 0 0 12px rgba(212, 160, 23, 0.12),
+    0 10px 28px -6px rgba(212, 160, 23, 0.85);
+}
+.tab-radio .radio-label {
+  color: #d4a017 !important;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
 /* Hide scrollbars everywhere — iOS WKWebView shows an ugly native scroll
    indicator on the right while scrolling. Scrolling still works as normal. */
 * {
