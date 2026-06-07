@@ -157,20 +157,24 @@ export default function GuardPatrol() {
     setPendingCp(cp);
   };
 
-  /** Submit (or queue when offline) a checkpoint scan. */
+  /** Server-side location verdict returned by the scan endpoint. */
+  type ScanLocation = { validLocation: boolean | null; distanceMeters: number | null; radiusM: number; verified: boolean };
+
+  /** Submit (or queue when offline) a checkpoint scan. Returns the server's
+   *  location-verification verdict so the guard sees if they were on-site. */
   const submitScan = async (cp: RondaCheckpoint, p: {
     coords: Coords | null; notes: string; status: CheckpointScanStatus; photoDataUrl?: string;
-  }): Promise<"ok" | "queued"> => {
+  }): Promise<{ status: "ok" | "queued"; location?: ScanLocation }> => {
     const markDone = () => {
       setScanned((s) => { const n = new Set(s).add(cp.tagIdentifier); persistScanned(n); return n; });
     };
-    const tryOnline = async () => {
+    const tryOnline = async (): Promise<ScanLocation | undefined> => {
       let photoPrivateUrl: string | undefined, photoFileToken: string | undefined;
       if (p.photoDataUrl) {
         const up = await rondasService.uploadPhoto(dataUrlToFile(p.photoDataUrl, `ronda-${Date.now()}.jpg`));
         photoPrivateUrl = up.privateUrl; photoFileToken = up.fileToken;
       }
-      await rondasService.scan({
+      const resp: any = await rondasService.scan({
         tagIdentifier: cp.tagIdentifier,
         latitude: p.coords?.latitude, longitude: p.coords?.longitude, stationId: station?.id,
         scannedData: {
@@ -178,12 +182,13 @@ export default function GuardPatrol() {
           photoPrivateUrl, photoFileToken, device: navigator.userAgent, appVersion: "0.1.0",
         },
       });
+      return resp?.location as ScanLocation | undefined;
     };
     if (!navigator.onLine) {
-      queueScan(cp, p); markDone(); return "queued";
+      queueScan(cp, p); markDone(); return { status: "queued" };
     }
-    try { await tryOnline(); markDone(); return "ok"; }
-    catch { queueScan(cp, p); markDone(); return "queued"; }
+    try { const location = await tryOnline(); markDone(); return { status: "ok", location }; }
+    catch { queueScan(cp, p); markDone(); return { status: "queued" }; }
   };
 
   const queueScan = (cp: RondaCheckpoint, p: { coords: Coords | null; notes: string; status: CheckpointScanStatus; photoDataUrl?: string; }) => {
@@ -352,10 +357,23 @@ export default function GuardPatrol() {
           onSubmit={async (p) => {
             const r = await submitScan(pendingCp, p);
             setPendingCp(null);
-            present({
-              message: r === "queued" ? t("rondas.offlineSaved") : t("rondas.scanned"),
-              duration: 2500, color: r === "queued" ? "warning" : "success", position: "top",
-            });
+            const loc = r.location;
+            if (r.status === "ok" && loc?.verified && loc.validLocation === false) {
+              // Server confirmed the guard was NOT within the checkpoint geofence.
+              present({
+                message: t("rondas.outOfLocationServer", {
+                  dist: loc.distanceMeters != null ? Math.round(Number(loc.distanceMeters)) : "?",
+                  max: loc.radiusM,
+                  defaultValue: "Escaneo registrado FUERA de ubicación: {{dist}} m del punto (máx {{max}} m).",
+                }),
+                duration: 5000, color: "danger", position: "top",
+              });
+            } else {
+              present({
+                message: r.status === "queued" ? t("rondas.offlineSaved") : t("rondas.scanned"),
+                duration: 2500, color: r.status === "queued" ? "warning" : "success", position: "top",
+              });
+            }
           }}
         />
       )}
