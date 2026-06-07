@@ -250,6 +250,13 @@ export default function Profile() {
             onClick={() => history.push("/guard/time-off")}
           />
           <MenuRow
+            tone="green"
+            icon={<ShieldCheck size={18} />}
+            title={t("profile.permissions", "Permisos del dispositivo")}
+            subtitle={t("profile.permissionsSub", "Ubicación, cámara y notificaciones")}
+            onClick={() => history.push("/guard/permissions")}
+          />
+          <MenuRow
             tone="blue"
             icon={<Globe size={18} />}
             title={t("profile.language", "Idioma")}
