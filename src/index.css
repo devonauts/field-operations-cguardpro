@@ -245,34 +245,51 @@ ion-tab-button {
   --padding-bottom: 0;
 }
 
-/* Center RADIO tab — a raised gold push-to-talk control that lifts above the
-   bar with a navy cut-out ring + glow (the design's signature element). */
-ion-tab-bar {
-  overflow: visible;
+/* Center RADIO control. The IonTabButton keeps the column + gold label; the
+   actual button is a FLOATING overlay (below) so it lifts above the bar without
+   being clipped by the tab bar's bounds. */
+.tab-radio-slot .radio-slot-spacer {
+  display: block;
+  height: 22px; /* reserves the space the floating button hovers over */
+  width: 1px;
 }
-.tab-radio {
-  overflow: visible;
-}
-.tab-radio .radio-fab {
-  position: relative;
-  display: grid;
-  place-items: center;
-  height: 54px;
-  width: 54px;
-  margin-top: -26px;
-  border-radius: 9999px;
-  color: #0a0e16;
-  background: radial-gradient(circle at 50% 32%, #e9bb46, #c8860a);
-  box-shadow:
-    0 0 0 6px #0a0e16,
-    0 0 0 7px rgba(212, 160, 23, 0.45),
-    0 0 0 12px rgba(212, 160, 23, 0.12),
-    0 10px 28px -6px rgba(212, 160, 23, 0.85);
-}
-.tab-radio .radio-label {
+.tab-radio-slot .radio-label {
   color: #d4a017 !important;
   font-weight: 700;
-  margin-top: 6px;
+}
+
+/* Raised gold push-to-talk button, floating on top of the tab bar. The thick
+   navy ring makes it read as a cut-out lifting out of the bar. Sits below
+   Ionic overlays/modals (z-index ~20000) so it never covers them. */
+.radio-fab-float {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 24px);
+  transform: translateX(-50%);
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  height: 58px;
+  width: 58px;
+  border-radius: 9999px;
+  color: #0a0e16;
+  background: radial-gradient(circle at 50% 30%, #e9bb46, #c8860a);
+  box-shadow:
+    0 0 0 6px #0a0e16,
+    0 0 0 7px rgba(212, 160, 23, 0.5),
+    0 0 0 13px rgba(212, 160, 23, 0.12),
+    0 10px 30px -6px rgba(212, 160, 23, 0.85);
+  transition: transform 0.12s ease;
+}
+.radio-fab-float:active {
+  transform: translateX(-50%) scale(0.93);
+}
+.radio-fab-float.is-active {
+  box-shadow:
+    0 0 0 6px #0a0e16,
+    0 0 0 8px rgba(212, 160, 23, 0.85),
+    0 0 0 14px rgba(212, 160, 23, 0.18),
+    0 10px 34px -6px rgba(212, 160, 23, 0.95);
 }
 
 /* Hide scrollbars everywhere — iOS WKWebView shows an ugly native scroll

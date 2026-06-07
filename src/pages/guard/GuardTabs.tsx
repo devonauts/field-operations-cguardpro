@@ -1,4 +1,4 @@
-import { Redirect, Route } from "react-router-dom";
+import { Redirect, Route, useHistory, useLocation } from "react-router-dom";
 import {
   IonTabs,
   IonTabBar,
@@ -23,7 +23,11 @@ import Profile from "../shared/Profile";
 
 export default function GuardTabs() {
   const { t } = useTranslation();
+  const history = useHistory();
+  const location = useLocation();
+  const radioActive = location.pathname === "/guard/radio";
   return (
+    <>
     <IonTabs>
       <IonRouterOutlet>
         <Route exact path="/guard/dashboard" component={GuardDashboard} />
@@ -57,11 +61,10 @@ export default function GuardTabs() {
           <IonLabel>{t("nav.patrol", "Ronda")}</IonLabel>
         </IonTabButton>
 
-        {/* Center push-to-talk — raised gold control (design signature) */}
-        <IonTabButton tab="radio" href="/guard/radio" className="tab-radio">
-          <span className="radio-fab">
-            <Radio size={24} strokeWidth={2.2} />
-          </span>
+        {/* Center slot — reserves the column + label; the raised gold push-to-talk
+            button is rendered as a floating overlay below so it isn't clipped. */}
+        <IonTabButton tab="radio" href="/guard/radio" className="tab-radio-slot">
+          <span className="radio-slot-spacer" />
           <IonLabel className="radio-label">{t("nav.radio", "Radio")}</IonLabel>
         </IonTabButton>
 
@@ -75,5 +78,16 @@ export default function GuardTabs() {
         </IonTabButton>
       </IonTabBar>
     </IonTabs>
+
+    {/* Floating push-to-talk — sits ON TOP of the tab bar so it's never clipped */}
+    <button
+      type="button"
+      aria-label={t("nav.radio", "Radio")}
+      onClick={() => history.push("/guard/radio")}
+      className={`radio-fab-float${radioActive ? " is-active" : ""}`}
+    >
+      <Radio size={26} strokeWidth={2.2} />
+    </button>
+    </>
   );
 }

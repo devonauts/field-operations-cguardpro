@@ -224,8 +224,21 @@ export default function GuardDashboard() {
           name: shiftForClockIn.station?.stationName,
         }
       : null;
-  const clockInTargets: any[] =
+  // Rest-day gate: the backend says which stations the guard may clock into
+  // right now (active assignment OR a shift today). On a rest day this is empty
+  // → no clock-in, so the guard never takes a selfie just to be rejected.
+  // Older servers omit the field → fall back to the previous behaviour.
+  const eligibleIds: string[] | null = Array.isArray(data?.clockInStationIds)
+    ? data.clockInStationIds
+    : null;
+  const canClockIn: boolean = data?.canClockIn !== false;
+  const allTargets: any[] =
     stations.length > 0 ? stations : shiftStation?.id ? [shiftStation] : [];
+  const clockInTargets: any[] = !canClockIn
+    ? []
+    : eligibleIds
+      ? allTargets.filter((s) => eligibleIds.includes(s.id))
+      : allTargets;
   // The hero CLOCK-IN button binds to the station of the shift the guard is
   // about to work (so a multi-post guard taps once for the right post); any
   // other assigned posts fall to secondary buttons below it.
@@ -328,9 +341,7 @@ export default function GuardDashboard() {
         messageCode: e?.data?.messageCode,
         body: e?.data,
       });
-      setGpsError(
-        e?.data?.messageCode || e?.data?.message || e?.message || t("guard.geofenceError"),
-      );
+      setGpsError(clockInErrorMessage(e, t));
     } finally {
       setBusy(false);
     }
@@ -440,6 +451,25 @@ export default function GuardDashboard() {
                   )}
                 </p>
               </>
+            ) : !canClockIn ? (
+              /* Rest day — not scheduled today, clock-in disabled. */
+              <Card className="border border-line p-4">
+                <div className="flex items-start gap-3">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-surface-2 text-muted">
+                    <Moon size={18} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-ink">
+                      {t("guard.restDayTitle", "Día de descanso")}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted">
+                      {nextShift
+                        ? t("guard.restDayNext", "No tienes turno hoy. Tu próximo turno aparece abajo.")
+                        : t("guard.restDayNone", "No tienes un turno programado hoy. No es necesario marcar entrada.")}
+                    </p>
+                  </div>
+                </div>
+              </Card>
             ) : (
               <Card className="p-4">
                 <div className="flex items-center gap-2.5 py-1 text-muted">
@@ -580,6 +610,30 @@ function dayLabel(target: Date, t: any): string {
   if (diffDays <= 0) return `${t("guard.today", "Hoy")} · ${cap}`;
   if (diffDays === 1) return `${t("guard.tomorrow", "Mañana")} · ${cap}`;
   return cap;
+}
+
+/** Turn a clock-in failure into a friendly, localized message — never a raw code. */
+function clockInErrorMessage(e: any, t: any): string {
+  const code: string | undefined = e?.data?.messageCode;
+  const friendly: Record<string, string> = {
+    "guard.notAssignedToStation": t(
+      "guard.errNotScheduled",
+      "No estás programado para este puesto hoy. Si es tu día de descanso, no necesitas marcar entrada.",
+    ),
+    "guard.locationRequired": t("guard.errLocation", "Activa el GPS para marcar entrada."),
+    "guard.stationRequired": t("guard.errStation", "Selecciona un puesto válido."),
+    "guard.profileNotFound": t(
+      "guard.errProfile",
+      "No encontramos tu perfil de guardia. Contacta a tu supervisor.",
+    ),
+  };
+  const generic = t(
+    "guard.errGeneric",
+    "No se pudo marcar entrada. Verifica tu turno e inténtalo de nuevo.",
+  );
+  if (code && friendly[code]) return friendly[code];
+  if (code) return t(code, { defaultValue: generic });
+  return e?.data?.message || e?.message || generic;
 }
 
 function fmtDuration(mins?: number): string {
