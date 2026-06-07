@@ -28,4 +28,13 @@ export const AuthService = {
       { skipAuth: true }
     );
   },
+
+  /** Set a new password from a reset token (deep-linked from email/push). */
+  resetPassword(token: string, password: string): Promise<void> {
+    return api.put(
+      "/auth/password-reset",
+      { token, password },
+      { skipAuth: true }
+    );
+  },
 };

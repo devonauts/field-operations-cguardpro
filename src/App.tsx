@@ -1,13 +1,34 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { IonApp, IonSpinner } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
+import { App as CapApp } from "@capacitor/app";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { registerPush, reportDevice } from "./lib/push";
 import AnimatedSplash from "./components/AnimatedSplash";
 import Login from "./pages/Login";
+import ResetPassword from "./pages/ResetPassword";
 import GuardTabs from "./pages/guard/GuardTabs";
 import SupervisorTabs from "./pages/supervisor/SupervisorTabs";
 import { SUPERVISOR_ROLE } from "./lib/roles";
+
+/**
+ * Extract a password-reset token from a deep link. Handles both the custom
+ * scheme (cguardpro://reset-password?token=…) and the universal/web link
+ * (https://app.cguardpro.com/guard-reset?token=…).
+ */
+function parseResetToken(url?: string | null): string | null {
+  if (!url) return null;
+  if (!/reset-password|guard-reset/i.test(url)) return null;
+  try {
+    const u = new URL(url);
+    const token = u.searchParams.get("token");
+    if (token) return token;
+  } catch {
+    /* custom-scheme URLs may not parse in all engines — fall through */
+  }
+  const m = /[?&]token=([^&#]+)/.exec(url);
+  return m ? decodeURIComponent(m[1]) : null;
+}
 
 function Gate() {
   const { loading, isAuthenticated, role } = useAuth();
@@ -35,12 +56,54 @@ function Gate() {
 }
 
 export default function App() {
+  const [resetToken, setResetToken] = useState<string | null>(null);
+
+  // Listen for reset deep links (cold start + while running) and the web URL.
+  useEffect(() => {
+    let sub: { remove: () => void } | undefined;
+    (async () => {
+      try {
+        const launch = await CapApp.getLaunchUrl();
+        const tk = parseResetToken(launch?.url);
+        if (tk) setResetToken(tk);
+      } catch {
+        /* not native / no launch url */
+      }
+      try {
+        sub = await CapApp.addListener("appUrlOpen", (data: { url: string }) => {
+          const tk = parseResetToken(data?.url);
+          if (tk) setResetToken(tk);
+        });
+      } catch {
+        /* listener unavailable on web */
+      }
+    })();
+    // Web/PWA fallback (opened in a browser with ?token=).
+    try {
+      const tk = parseResetToken(window.location.href);
+      if (tk) setResetToken(tk);
+    } catch {
+      /* ignore */
+    }
+    return () => {
+      try {
+        sub?.remove();
+      } catch {
+        /* ignore */
+      }
+    };
+  }, []);
+
   return (
     <IonApp>
       <AnimatedSplash />
       <AuthProvider>
         <IonReactRouter>
-          <Gate />
+          {resetToken ? (
+            <ResetPassword token={resetToken} onDone={() => setResetToken(null)} />
+          ) : (
+            <Gate />
+          )}
         </IonReactRouter>
       </AuthProvider>
     </IonApp>

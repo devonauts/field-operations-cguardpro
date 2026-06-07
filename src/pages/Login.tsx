@@ -3,6 +3,7 @@ import { IonPage, IonContent } from "@ionic/react";
 import { useTranslation } from "react-i18next";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { AuthService } from "@/lib/auth";
 import brandLogo from "../assets/brand-logo.png";
 
 export default function Login() {
@@ -11,7 +12,22 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const onForgot = async () => {
+    if (!email.trim()) {
+      setError(t("auth.forgot.needEmail", "Escribe tu correo arriba y vuelve a tocar aquí."));
+      return;
+    }
+    setError(null);
+    try {
+      await AuthService.sendPasswordResetEmail(email.trim());
+    } catch {
+      /* don't reveal whether the email exists */
+    }
+    setForgotSent(true);
+  };
   const [submitting, setSubmitting] = useState(false);
 
   const onSubmit = async (e: FormEvent) => {
@@ -101,6 +117,16 @@ export default function Login() {
                 ) : (
                   t("auth.signIn")
                 )}
+              </button>
+
+              <button
+                type="button"
+                onClick={onForgot}
+                className="w-full pt-1 text-center text-sm font-medium text-gold-strong"
+              >
+                {forgotSent
+                  ? t("auth.forgot.sent", "Si el correo existe, te enviamos un enlace.")
+                  : t("auth.forgot.link", "¿Olvidaste tu contraseña?")}
               </button>
             </form>
 
