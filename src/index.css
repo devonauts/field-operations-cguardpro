@@ -62,6 +62,15 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Full-height chat layout: make IonContent's shadow scroll container a flex
+   column so a child with flex-1 fills the viewport (a plain height:100% child
+   of IonContent does NOT resolve — its scroll host has no explicit height).
+   This is the reliable Ionic pattern for chat-style screens. */
+ion-content.chat-fill::part(scroll) {
+  display: flex;
+  flex-direction: column;
+}
+
 /* Ionic content wrappers should inherit the navy background */
 ion-app,
 ion-content,

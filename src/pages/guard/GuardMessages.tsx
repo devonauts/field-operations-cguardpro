@@ -27,7 +27,7 @@ export default function GuardMessages() {
   }, []);
 
   return (
-    <Screen back title={t("messages.title", "Mensajes")} onRefresh={async () => { await reload(); }}>
+    <Screen title={t("messages.title", "Mensajes")} onRefresh={async () => { await reload(); }}>
       {loading ? (
         <Loader />
       ) : rows.length === 0 ? (
