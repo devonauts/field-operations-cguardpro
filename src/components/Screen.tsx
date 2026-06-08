@@ -41,6 +41,7 @@ export function Screen({
   compactTitle,
   avatar,
   header,
+  fill,
 }: {
   title?: string;
   titleClassName?: string;
@@ -50,6 +51,8 @@ export function Screen({
   onRefresh?: () => Promise<void> | void;
   back?: boolean;
   backHref?: string;
+  /** Full-height, non-scrolling page (the child owns its own scroll/layout — e.g. chat). */
+  fill?: boolean;
   /** When set, renders the collapsing iOS-style large title instead of `title`. */
   largeTitle?: string;
   largeSubtitle?: string;
@@ -152,6 +155,39 @@ export function Screen({
           </div>
 
           <div className="px-4 pb-6 pt-1 safe-bottom">{children}</div>
+        </IonContent>
+      </IonPage>
+    );
+  }
+
+  // -------------------------------------------------- Fill mode (full-height, child owns scroll — e.g. chat)
+  if (fill) {
+    return (
+      <IonPage>
+        <IonContent scrollY={false} forceOverscroll={false}>
+          <div className="flex h-full flex-col">
+            <div className="safe-top bg-navy-50 border-b border-line shrink-0">
+              <div className="flex items-start justify-between gap-3 px-4 pb-3 pt-3">
+                <div className="flex min-w-0 items-start gap-1.5">
+                  {back && (
+                    <button
+                      onClick={goBack}
+                      aria-label="Atrás"
+                      className="-ml-1.5 mt-0.5 shrink-0 rounded-full p-1.5 text-ink active:bg-white/10"
+                    >
+                      <ChevronLeft size={22} />
+                    </button>
+                  )}
+                  <div className="min-w-0">
+                    <h1 className={`font-bold text-ink ${titleClassName}`}>{title}</h1>
+                    {subtitle && <p className="mt-0.5 truncate text-xs text-muted">{subtitle}</p>}
+                  </div>
+                </div>
+                {right && <div className="shrink-0">{right}</div>}
+              </div>
+            </div>
+            <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+          </div>
         </IonContent>
       </IonPage>
     );
