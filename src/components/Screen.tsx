@@ -161,34 +161,34 @@ export function Screen({
   }
 
   // -------------------------------------------------- Fill mode (full-height, child owns scroll — e.g. chat)
+  // Render directly inside IonPage (which is position:absolute inset:0 + flex
+  // column) instead of IonContent — a percentage-height child of IonContent does
+  // not reliably fill (shadow-DOM scroll host), which collapses the chat to zero
+  // height. IonPage's own flex box gives us a dependable full-height layout.
   if (fill) {
     return (
       <IonPage>
-        <IonContent scrollY={false} forceOverscroll={false}>
-          <div className="flex h-full flex-col">
-            <div className="safe-top bg-navy-50 border-b border-line shrink-0">
-              <div className="flex items-start justify-between gap-3 px-4 pb-3 pt-3">
-                <div className="flex min-w-0 items-start gap-1.5">
-                  {back && (
-                    <button
-                      onClick={goBack}
-                      aria-label="Atrás"
-                      className="-ml-1.5 mt-0.5 shrink-0 rounded-full p-1.5 text-ink active:bg-white/10"
-                    >
-                      <ChevronLeft size={22} />
-                    </button>
-                  )}
-                  <div className="min-w-0">
-                    <h1 className={`font-bold text-ink ${titleClassName}`}>{title}</h1>
-                    {subtitle && <p className="mt-0.5 truncate text-xs text-muted">{subtitle}</p>}
-                  </div>
-                </div>
-                {right && <div className="shrink-0">{right}</div>}
+        <div className="safe-top bg-navy-50 border-b border-line shrink-0">
+          <div className="flex items-start justify-between gap-3 px-4 pb-3 pt-3">
+            <div className="flex min-w-0 items-start gap-1.5">
+              {back && (
+                <button
+                  onClick={goBack}
+                  aria-label="Atrás"
+                  className="-ml-1.5 mt-0.5 shrink-0 rounded-full p-1.5 text-ink active:bg-white/10"
+                >
+                  <ChevronLeft size={22} />
+                </button>
+              )}
+              <div className="min-w-0">
+                <h1 className={`font-bold text-ink ${titleClassName}`}>{title}</h1>
+                {subtitle && <p className="mt-0.5 truncate text-xs text-muted">{subtitle}</p>}
               </div>
             </div>
-            <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+            {right && <div className="shrink-0">{right}</div>}
           </div>
-        </IonContent>
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col bg-navy">{children}</div>
       </IonPage>
     );
   }
