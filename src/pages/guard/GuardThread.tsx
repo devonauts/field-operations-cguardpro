@@ -19,6 +19,10 @@ const newId = () =>
 export default function GuardThread() {
   const { t } = useTranslation();
   const { conversationId } = useParams<{ conversationId: string }>();
+  // Ionic keeps this page mounted through back-transitions, after which
+  // useParams yields undefined while timers/listeners still fire. Treat any
+  // missing/"undefined" id as invalid so we never hit /messages/undefined.
+  const validId = !!conversationId && conversationId !== "undefined";
   const [conversation, setConversation] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [draft, setDraft] = useState("");
@@ -29,6 +33,7 @@ export default function GuardThread() {
   const scrollDown = () => setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }), 50);
 
   const load = useCallback(async (markRead = false) => {
+    if (!validId) { setLoading(false); return; }
     try {
       const res: any = await messageService.thread(conversationId, { limit: 60 });
       setConversation(res?.conversation || null);
@@ -38,12 +43,13 @@ export default function GuardThread() {
     } catch {
       /* keep prior state */
     } finally { setLoading(false); }
-  }, [conversationId]);
+  }, [conversationId, validId]);
 
   useEffect(() => { load(true); }, [load]);
 
   // Push nudge for THIS thread + foreground poll + resume-reload. DB is truth.
   useEffect(() => {
+    if (!validId) return;
     const off = onPush((d: any) => {
       if (d?.type === "message.new" && String(d.conversationId) === String(conversationId)) {
         load(true);
@@ -57,11 +63,11 @@ export default function GuardThread() {
       sub.then((h) => h.remove()).catch(() => {});
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversationId]);
+  }, [conversationId, validId]);
 
   const send = async () => {
     const body = draft.trim();
-    if (!body || sending || conversation?.isOneWay) return;
+    if (!body || sending || conversation?.isOneWay || !validId) return;
     setSending(true);
     setDraft("");
     // Optimistic append.

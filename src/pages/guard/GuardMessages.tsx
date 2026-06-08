@@ -17,7 +17,7 @@ export default function GuardMessages() {
   const { t } = useTranslation();
   const history = useHistory();
   const { data, loading, reload } = useAsync<any>(() => messageService.listThreads({ limit: 50 }).catch(() => ({ rows: [] })));
-  const rows: any[] = data?.rows || [];
+  const rows: any[] = (data?.rows || []).filter((c: any) => c && c.id);
 
   // A new message arriving anywhere refreshes the inbox.
   useEffect(() => {
