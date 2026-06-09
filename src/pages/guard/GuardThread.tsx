@@ -90,8 +90,6 @@ export default function GuardThread() {
   return (
     <Screen
       fill
-      back
-      backHref="/guard/messages"
       title={conversation?.subject || t("messages.title", "Mensajes")}
     >
       {/* Scrolling message list — fills the space between header and composer. */}
