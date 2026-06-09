@@ -94,7 +94,7 @@ export function VisitorModal({
   );
 }
 
-function VisitorFlow({ station, onClose }: { station: any; onClose: () => void }) {
+export function VisitorFlow({ station, onClose, embedded }: { station: any; onClose: () => void; embedded?: boolean }) {
   const { t } = useTranslation();
   const [mode, setMode] = useState<Mode>("list");
   const [photos, setPhotos] = useState<CapturedImage[]>([]);
@@ -201,9 +201,11 @@ function VisitorFlow({ station, onClose }: { station: any; onClose: () => void }
           </button>
         )}
         <h2 className="flex-1 text-base font-semibold text-ink">{headerTitle}</h2>
-        <button onClick={onClose} className="text-muted">
-          <X size={22} />
-        </button>
+        {!embedded && (
+          <button onClick={onClose} className="text-muted">
+            <X size={22} />
+          </button>
+        )}
       </div>
 
       <input ref={cameraInput} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => onWebPick(e.target.files?.[0])} />

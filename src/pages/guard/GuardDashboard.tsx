@@ -829,6 +829,7 @@ function PerformanceSection({ perf }: { perf: ReturnType<typeof useAsync<any>> }
   ];
 
   const quickActions = [
+    { icon: <Footprints size={18} />, label: t("nav.patrol", "Ronda"), to: "/guard/patrol" },
     { icon: <ClipboardCheck size={18} />, label: t("nav.quiz"), to: "/guard/quiz" },
     { icon: <LifeBuoy size={18} />, label: t("nav.backup"), to: "/guard/backup" },
   ];
