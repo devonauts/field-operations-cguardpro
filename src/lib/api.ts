@@ -44,7 +44,40 @@ interface RequestOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
 }
 
+/** True when the failure was a connectivity error (no response reached us). */
+export const isNetworkError = (e: unknown): boolean =>
+  e instanceof ApiError && e.status === 0;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const backoff = (attempt: number) => Math.min(2500, 250 * 2 ** (attempt - 1));
+
 async function request<T = any>(
+  endpoint: string,
+  options: RequestOptions = {}
+): Promise<T> {
+  const method = (options.method || "GET").toUpperCase();
+  // Auto-retry only idempotent reads — retrying a POST/PUT/PATCH/DELETE on a flaky
+  // connection risks a double submit (e.g. two clock-ins). Mutations bubble the
+  // network error up so the caller / offline queue can decide.
+  const idempotent = method === "GET" || method === "HEAD";
+  const maxAttempts = idempotent ? 3 : 1;
+
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await doRequest<T>(endpoint, options);
+    } catch (e) {
+      lastErr = e;
+      const transient =
+        e instanceof ApiError && (e.status === 0 || e.status === 429 || e.status >= 500);
+      if (!transient || attempt >= maxAttempts) throw e;
+      await sleep(backoff(attempt)); // 250ms, 500ms, …
+    }
+  }
+  throw lastErr;
+}
+
+async function doRequest<T = any>(
   endpoint: string,
   options: RequestOptions = {}
 ): Promise<T> {
@@ -71,7 +104,7 @@ async function request<T = any>(
       body: isForm ? (body as FormData) : body != null ? JSON.stringify(body) : undefined,
     });
   } catch {
-    throw new ApiError("network.error", 0, null);
+    throw new ApiError("Sin conexión. Verifica tu red e inténtalo de nuevo.", 0, null);
   }
 
   const contentType = res.headers.get("content-type") || "";

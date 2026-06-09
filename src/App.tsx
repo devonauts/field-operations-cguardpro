@@ -5,6 +5,8 @@ import { App as CapApp } from "@capacitor/app";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { registerPush, reportDevice } from "./lib/push";
 import AnimatedSplash from "./components/AnimatedSplash";
+import { StatusBanner } from "./components/StatusBanner";
+import { startDeviceStatus } from "./lib/deviceStatus";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import GuardTabs from "./pages/guard/GuardTabs";
@@ -58,6 +60,9 @@ function Gate() {
 export default function App() {
   const [resetToken, setResetToken] = useState<string | null>(null);
 
+  // Start network + battery monitoring once for the whole app.
+  useEffect(() => { startDeviceStatus(); }, []);
+
   // Listen for reset deep links (cold start + while running) and the web URL.
   useEffect(() => {
     let sub: { remove: () => void } | undefined;
@@ -97,6 +102,7 @@ export default function App() {
   return (
     <IonApp>
       <AnimatedSplash />
+      <StatusBanner />
       <AuthProvider>
         <IonReactRouter>
           {resetToken ? (
