@@ -334,6 +334,22 @@ export const messageService = {
 export type MessageAttachment = { url: string; type: "image" | "video"; name?: string; sizeInBytes?: number };
 
 /* ------------------------------------------------------------------ */
+/* Radio check (pase de novedades) — the guard answers a roll-call     */
+/* ------------------------------------------------------------------ */
+export const radioCheckService = {
+  /** My active radio-check request, if any: { entry } | { entry: null }. */
+  pending: () => api.get(tenantPath("/guard/me/radio-check/pending")).then(unwrap),
+  /** Reply with a voice clip (audioUrl), a canned line, or free text. */
+  reply: (
+    entryId: string,
+    payload: { audioUrl?: string; cannedText?: string; text?: string; clientMsgId?: string },
+  ) => api.post(tenantPath(`/guard/me/radio-check/entries/${entryId}/reply`), { data: payload }).then(unwrap),
+  /** Upload a recorded voice clip; returns its stored privateUrl. */
+  uploadAudio: async (file: File): Promise<string> =>
+    (await uploadToStorage(file, "radioCheckAudio")).privateUrl,
+};
+
+/* ------------------------------------------------------------------ */
 /* Reports / analytics                                                 */
 /* ------------------------------------------------------------------ */
 export const dashboardService = {

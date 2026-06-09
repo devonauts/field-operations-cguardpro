@@ -48,7 +48,11 @@ export default function GuardTabs() {
     messageService.listThreads({ limit: 50 })
       .then((r: any) => { if (active) setUnread((r?.rows || []).reduce((s: number, c: any) => s + (c.unreadCount || 0), 0)); })
       .catch(() => {});
-    const off = onPush((d: any) => { if (d?.type === "message.new") setUnread((n) => n + 1); });
+    const off = onPush((d: any) => {
+      if (d?.type === "message.new") setUnread((n) => n + 1);
+      // A radio-check request: jump the guard straight to the Radio screen.
+      if (d?.type === "radio.check_request") history.push("/guard/radio");
+    });
     return () => { active = false; off(); };
   }, []);
   useEffect(() => { if (location.pathname.startsWith("/guard/messages")) setUnread(0); }, [location.pathname]);
