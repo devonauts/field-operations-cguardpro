@@ -315,11 +315,23 @@ export const messageService = {
     const qs = params ? "?" + new URLSearchParams(params as Record<string, string>).toString() : "";
     return api.get(tenantPath(`/guard/me/messages/${id}${qs}`)).then(unwrap);
   },
-  send: (id: string, body: string, clientMsgId: string) =>
-    api.post(tenantPath(`/guard/me/messages/${id}`), { data: { body, clientMsgId } }).then(unwrap),
+  send: (id: string, body: string, clientMsgId: string, attachments?: MessageAttachment[]) =>
+    api.post(tenantPath(`/guard/me/messages/${id}`), { data: { body, clientMsgId, attachments: attachments && attachments.length ? attachments : undefined } }).then(unwrap),
   markRead: (id: string) =>
     api.post(tenantPath(`/guard/me/messages/${id}/read`), { data: {} }).then(unwrap),
+  /** Upload an image/video and return its attachment descriptor. */
+  uploadAttachment: async (file: File): Promise<MessageAttachment> => {
+    const up = await uploadToStorage(file, "messageAttachments");
+    return {
+      url: up.privateUrl,
+      type: (file.type || "").startsWith("video") ? "video" : "image",
+      name: file.name,
+      sizeInBytes: file.size,
+    };
+  },
 };
+
+export type MessageAttachment = { url: string; type: "image" | "video"; name?: string; sizeInBytes?: number };
 
 /* ------------------------------------------------------------------ */
 /* Reports / analytics                                                 */

@@ -2,10 +2,15 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams, useLocation } from "react-router-dom";
 import { App as CapacitorApp } from "@capacitor/app";
-import { Send, Loader2 } from "lucide-react";
+import { Send, Loader2, Paperclip, Play, X } from "lucide-react";
 import { Screen } from "@/components/Screen";
-import { messageService } from "@/lib/services";
+import { messageService, type MessageAttachment } from "@/lib/services";
 import { onPush } from "@/lib/pushEvents";
+
+const API_BASE = ((import.meta.env.VITE_API_URL as string | undefined) ?? "https://api.cguardpro.com/api").replace(/\/+$/, "");
+/** Displayable URL for a stored private attachment (works in <img>/<video>). */
+const fileUrl = (u?: string | null) =>
+  !u ? "" : /^https?:\/\//i.test(u) ? u : `${API_BASE}/file/download?privateUrl=${encodeURIComponent(u)}`;
 
 const fmt = (d?: string | null) => {
   if (!d) return "";
@@ -38,7 +43,10 @@ export default function GuardThread() {
   const [loading, setLoading] = useState(true);
   const [sendError, setSendError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [pending, setPending] = useState<MessageAttachment[]>([]);
+  const [uploading, setUploading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const scrollDown = () => setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }), 50);
 
@@ -78,23 +86,45 @@ export default function GuardThread() {
 
   const send = async () => {
     const body = draft.trim();
-    if (!body || sending || conversation?.isOneWay || !validId) return;
+    if ((!body && pending.length === 0) || sending || uploading || conversation?.isOneWay || !validId) return;
+    const atts = pending;
     setSending(true);
     setSendError(null);
     setDraft("");
+    setPending([]);
     // Optimistic append.
-    const temp = { id: `tmp_${Date.now()}`, senderType: "guard", body, createdAt: new Date().toISOString(), _pending: true };
+    const temp = { id: `tmp_${Date.now()}`, senderType: "guard", body, attachments: atts, createdAt: new Date().toISOString(), _pending: true };
     setMessages((m) => [...m, temp]);
     scrollDown();
     try {
-      await messageService.send(conversationId, body, newId());
+      await messageService.send(conversationId, body, newId(), atts);
       await load();
     } catch (e: any) {
       // Surface the failure instead of silently dropping it, and restore the draft.
       setMessages((m) => m.filter((x) => x.id !== temp.id));
       setDraft(body);
+      setPending(atts);
       setSendError(e?.message || t("messages.sendFailed", "No se pudo enviar. Reintenta."));
     } finally { setSending(false); }
+  };
+
+  const onPickFiles = async (files: FileList | null) => {
+    if (!files || !files.length || !validId) return;
+    setUploading(true);
+    setSendError(null);
+    try {
+      for (const file of Array.from(files).slice(0, 10)) {
+        if (!/^image\/|^video\//.test(file.type)) { setSendError(t("messages.onlyMedia", "Solo imágenes o videos.")); continue; }
+        if (file.size > 100 * 1024 * 1024) { setSendError(t("messages.tooBig", "Máximo 100 MB.")); continue; }
+        const att = await messageService.uploadAttachment(file);
+        setPending((p) => [...p, att]);
+      }
+    } catch (e: any) {
+      setSendError(e?.message || t("messages.uploadFailed", "No se pudo subir el archivo."));
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
   };
 
   return (
@@ -124,7 +154,20 @@ export default function GuardThread() {
               <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                 <div className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-sm ${mine ? "bg-gold text-navy" : "bg-surface-2 text-ink"} ${m._pending ? "opacity-60" : ""}`}>
                   {!mine && m.senderName && <p className="mb-0.5 text-[10px] font-semibold opacity-70">{m.senderName}</p>}
-                  <p className="whitespace-pre-wrap break-words">{m.body}</p>
+                  {Array.isArray(m.attachments) && m.attachments.length > 0 && (
+                    <div className="mb-1 grid gap-1.5">
+                      {m.attachments.map((a: any, i: number) => (
+                        a.type === "video" ? (
+                          <video key={i} src={fileUrl(a.url)} controls preload="metadata" className="max-h-64 w-full rounded-lg bg-black/30" />
+                        ) : (
+                          <a key={i} href={fileUrl(a.url)} target="_blank" rel="noreferrer">
+                            <img src={fileUrl(a.url)} alt={a.name || "imagen"} loading="lazy" className="max-h-64 w-full rounded-lg object-cover" />
+                          </a>
+                        )
+                      ))}
+                    </div>
+                  )}
+                  {m.body && <p className="whitespace-pre-wrap break-words">{m.body}</p>}
                   <p className={`mt-0.5 text-right text-[10px] ${mine ? "text-navy/60" : "text-muted"}`}>{fmt(m.createdAt)}</p>
                 </div>
               </div>
@@ -147,7 +190,30 @@ export default function GuardThread() {
           style={{ paddingBottom: "max(env(safe-area-inset-bottom), 0.5rem)" }}
         >
           {sendError && <p className="mb-1 text-[11px] text-critical">{sendError}</p>}
+          {pending.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-2">
+              {pending.map((a, i) => (
+                <div key={i} className="relative h-16 w-16 overflow-hidden rounded-lg border border-line-2">
+                  {a.type === "video" ? (
+                    <div className="flex h-full w-full items-center justify-center bg-black/60 text-white"><Play size={18} /></div>
+                  ) : (
+                    <img src={fileUrl(a.url)} alt="" className="h-full w-full object-cover" />
+                  )}
+                  <button onClick={() => setPending((p) => p.filter((_, j) => j !== i))} className="absolute right-0 top-0 grid h-5 w-5 place-items-center rounded-bl bg-black/70 text-white"><X size={12} /></button>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="flex items-end gap-2">
+            <input ref={fileRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={(e) => onPickFiles(e.target.files)} />
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              aria-label={t("messages.attach", "Adjuntar")}
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-line-2 text-muted active:bg-white/5 disabled:opacity-50"
+            >
+              {uploading ? <Loader2 size={18} className="animate-spin" /> : <Paperclip size={18} />}
+            </button>
             <textarea
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
@@ -157,7 +223,7 @@ export default function GuardThread() {
             />
             <button
               onClick={send}
-              disabled={sending || !draft.trim()}
+              disabled={sending || uploading || (!draft.trim() && pending.length === 0)}
               className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gold-strong text-navy active:bg-gold-hover disabled:opacity-50"
             >
               {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
