@@ -228,7 +228,6 @@ export default function GuardPatrol() {
 
   return (
     <Screen
-      back
       title={t("rondas.title")}
       subtitle={route?.name || t("rondas.subtitle")}
       onRefresh={reload}

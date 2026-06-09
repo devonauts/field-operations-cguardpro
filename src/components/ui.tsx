@@ -96,11 +96,22 @@ export function StatusBadge({ status }: { status: IncidentStatus }) {
 /* Avatar with initials */
 export function Avatar({
   name,
+  src,
   className = "",
 }: {
   name?: string;
+  src?: string | null;
   className?: string;
 }) {
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={name || ""}
+        className={`shrink-0 rounded-full bg-surface-2 object-cover ${className}`}
+      />
+    );
+  }
   return (
     <div
       className={`flex shrink-0 items-center justify-center rounded-full bg-surface-2 text-[11px] font-bold text-muted ${className}`}

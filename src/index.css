@@ -221,6 +221,14 @@ ion-modal {
   --border-radius: 0;
   --background: #0a0e16;
 }
+/* Make the modal's content part a full-height flex column so form bodies that use
+   `flex h-full` (IncidentForm, VisitorModal) fill the screen instead of collapsing
+   to a shrunken box — the same reason a height:100% child of IonContent collapses. */
+ion-modal::part(content) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
 
 /* Respect device safe areas (notch / home indicator) inside Capacitor */
 .safe-top {

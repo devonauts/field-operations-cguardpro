@@ -77,6 +77,11 @@ export default function Profile() {
   const station = stations[0] || {};
 
   const name = guard.fullName || user?.fullName || user?.name || user?.email || "—";
+  // Profile picture: the clock-in selfie is persisted as the user avatar.
+  const avatarSrc =
+    (user as any)?.avatars?.[0]?.downloadUrl ||
+    (guard as any)?.avatars?.[0]?.downloadUrl ||
+    null;
   const email = guard.email || user?.email || "—";
   const phone = guard.phone || "—";
   const isSupervisor = role === SUPERVISOR_ROLE;
@@ -144,7 +149,7 @@ export default function Profile() {
         <SectionCard>
           <div className="flex items-start gap-4">
             <div className="relative shrink-0">
-              <Avatar name={name} className="h-16 w-16 text-base" />
+              <Avatar name={name} src={avatarSrc} className="h-16 w-16 text-base" />
               <span
                 className={`absolute -right-0.5 -top-0.5 h-4 w-4 rounded-full border-2 border-surface ${
                   isClockedIn ? "bg-online" : "bg-faint"
