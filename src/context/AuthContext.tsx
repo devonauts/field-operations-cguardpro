@@ -7,7 +7,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { AuthService, Credentials } from "@/lib/auth";
-import { ApiError, setToken, setTenantId, getToken } from "@/lib/api";
+import { ApiError, setToken, setTenantId, getToken, setUnauthorizedHandler } from "@/lib/api";
 import {
   hasAllowedRole,
   resolveWorkerRole,
@@ -123,6 +123,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     setRole(null);
   };
+
+  // Sign out automatically when any authenticated request gets a 401 — e.g. this
+  // device's session was ended by a login elsewhere (single active session).
+  useEffect(() => {
+    setUnauthorizedHandler(() => signOut());
+    return () => setUnauthorizedHandler(null);
+  }, []);
 
   // Re-fetch the signed-in profile (used by pull-to-refresh on the Profile tab).
   const refreshUser = async () => {

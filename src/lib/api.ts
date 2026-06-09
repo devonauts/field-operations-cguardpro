@@ -25,6 +25,12 @@ export const getToken = () => localStorage.getItem(TOKEN_KEY);
 export const setToken = (t: string | null) =>
   t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY);
 
+// Called when an authenticated request is rejected (401) — e.g. this device's
+// session was ended by a login elsewhere (single active session). The auth
+// context registers a handler that signs the user out → app returns to login.
+let onUnauthorized: (() => void) | null = null;
+export const setUnauthorizedHandler = (fn: (() => void) | null) => { onUnauthorized = fn; };
+
 export const getTenantId = (): string => {
   const t = localStorage.getItem(TENANT_KEY);
   if (!t) throw new ApiError("Tenant not configured", 0, null);
@@ -83,6 +89,12 @@ async function request<T = any>(
   }
 
   if (!res.ok && res.status !== 304) {
+    // An authenticated request rejected with 401 → the token is no longer valid
+    // (e.g. signed out by a login on another device). Sign out so the app returns
+    // to the login screen instead of erroring on every action.
+    if (res.status === 401 && token && !skipAuth) {
+      try { onUnauthorized?.(); } catch { /* ignore */ }
+    }
     const msg =
       (data && (data.message || data.error)) ||
       (typeof data === "string" && !/<\s*!?doctype|<html/i.test(data) && data) ||
