@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import { App as CapacitorApp } from "@capacitor/app";
 import { Send, Loader2 } from "lucide-react";
 import { Screen } from "@/components/Screen";
@@ -18,10 +18,18 @@ const newId = () =>
 
 export default function GuardThread() {
   const { t } = useTranslation();
-  const { conversationId } = useParams<{ conversationId: string }>();
-  // Ionic keeps this page mounted through back-transitions, after which
-  // useParams yields undefined while timers/listeners still fire. Treat any
-  // missing/"undefined" id as invalid so we never hit /messages/undefined.
+  const { conversationId: paramId } = useParams<{ conversationId: string }>();
+  const location = useLocation();
+  // Ionic keeps this page mounted through transitions and its tab outlet
+  // transiently yields an undefined route param — which left the thread never
+  // loading (load + poll + push listener are all gated on a valid id). Derive
+  // the id from the URL as a fallback so it loads reliably; after back-nav the
+  // URL is /guard/messages (no id segment) so it correctly stays empty and we
+  // never hit /messages/undefined.
+  const conversationId =
+    paramId && paramId !== "undefined"
+      ? paramId
+      : location.pathname.match(/\/guard\/messages\/([^/?#]+)/)?.[1] || "";
   const validId = !!conversationId && conversationId !== "undefined";
   const [conversation, setConversation] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
@@ -29,6 +37,7 @@ export default function GuardThread() {
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scrollDown = () => setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }), 50);
@@ -39,10 +48,11 @@ export default function GuardThread() {
       const res: any = await messageService.thread(conversationId, { limit: 60 });
       setConversation(res?.conversation || null);
       setMessages((res?.rows || []).slice().reverse()); // API newest-first → show oldest-first
+      setLoadError(null);
       if (markRead) messageService.markRead(conversationId).catch(() => {});
       scrollDown();
-    } catch {
-      /* keep prior state */
+    } catch (e: any) {
+      setLoadError(e?.message || t("messages.loadFailed", "No se pudieron cargar los mensajes."));
     } finally { setLoading(false); }
   }, [conversationId, validId]);
 
@@ -97,8 +107,15 @@ export default function GuardThread() {
         {loading && messages.length === 0 ? (
           <div className="flex justify-center py-10"><Loader2 className="animate-spin text-muted" /></div>
         ) : messages.length === 0 ? (
-          <div className="flex h-full items-center justify-center">
-            <p className="text-sm text-muted">{t("messages.threadEmpty", "Aún no hay mensajes en esta conversación.")}</p>
+          <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
+            <p className="text-sm text-muted">
+              {loadError || t("messages.threadEmpty", "Aún no hay mensajes en esta conversación.")}
+            </p>
+            {loadError && (
+              <button onClick={() => load(true)} className="rounded-lg border border-line px-3 py-1.5 text-xs text-ink active:bg-white/10">
+                {t("common.retry", "Reintentar")}
+              </button>
+            )}
           </div>
         ) : (
           messages.map((m) => {
