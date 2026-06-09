@@ -15,4 +15,12 @@ export default defineConfig({
     port: 5174,
     host: true,
   },
+  build: {
+    rollupOptions: {
+      // @capacitor-firebase/messaging's WEB implementation imports the firebase
+      // JS SDK (optional peer dep). We only use the native (iOS/Android) path —
+      // the web chunk is never loaded — so keep firebase/* out of the bundle.
+      external: [/^firebase(\/.*)?$/],
+    },
+  },
 });

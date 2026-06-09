@@ -20,8 +20,8 @@ async function checkOne(kind: Kind): Promise<Status> {
       const p = await Cam.checkPermissions();
       return (p.camera as Status) || "unknown";
     }
-    const { PushNotifications } = await import("@capacitor/push-notifications");
-    const p = await PushNotifications.checkPermissions();
+    const { FirebaseMessaging } = await import("@capacitor-firebase/messaging");
+    const p = await FirebaseMessaging.checkPermissions();
     return (p.receive as Status) || "unknown";
   } catch {
     return "unsupported";
@@ -41,8 +41,8 @@ async function requestOne(kind: Kind): Promise<Status> {
       const r = await Cam.requestPermissions({ permissions: ["camera"] });
       return (r.camera as Status) || "unknown";
     }
-    const { PushNotifications } = await import("@capacitor/push-notifications");
-    const r = await PushNotifications.requestPermissions();
+    const { FirebaseMessaging } = await import("@capacitor-firebase/messaging");
+    const r = await FirebaseMessaging.requestPermissions();
     const s = (r.receive as Status) || "unknown";
     if (s === "granted") {
       // Register the device token so CRM → guard push is deliverable.
