@@ -73,11 +73,16 @@ export default function GuardPatrol() {
     const dash = await guardService.dashboard().catch(() => null);
     const station = dash?.stations?.[0] || null;
     const settings: RondaSettings = await rondasService.settings().catch(() => DEFAULT_SETTINGS);
-    const all = await rondasService.routes().catch(() => []);
-    const mine = all.filter(
-      (r: RondaRoute) => !station || r.postSiteId === station.postSiteId || (r as any).stationId === station.id
-    );
-    const routes: RondaRoute[] = mine.length ? mine : all;
+    // Rondas are isolated per STATION. Fetch only this station's tours (server-side
+    // filter by stationId) and keep strictly those whose stationId matches — never
+    // fall back to the whole tenant, and never match at the post-site level (a
+    // sibling/orphaned station at the same post-site must not leak in).
+    const fetched: RondaRoute[] = station
+      ? await rondasService.routes({ stationId: station.id }).catch(() => [])
+      : [];
+    const routes: RondaRoute[] = station
+      ? (fetched as RondaRoute[]).filter((r) => (r as any).stationId === station.id)
+      : [];
     for (const r of routes) {
       try { r.tags = await rondasService.tags(r.id); } catch { r.tags = []; }
     }
