@@ -4,6 +4,7 @@ import { Mic, Loader2, Users, Volume2 } from "lucide-react";
 import { apiOrigin, getToken, getTenantId } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { VoiceChannel, type VoiceMember, type VoiceSpeaker, type VoiceState } from "@/lib/voiceChannel";
+import { ensureMicPermission } from "@/lib/micPermission";
 
 /**
  * Open live channel (Canal abierto) — half-duplex PTT. Hold to talk; everyone on
@@ -47,6 +48,10 @@ export default function RadioLiveChannel() {
   const press = async () => {
     if (someoneElseTalking) { setHint(`${speaker?.name} ${t("radio.isTalking", "está hablando")}`); return; }
     setHint(null);
+    if (!(await ensureMicPermission())) {
+      setHint(t("radio.micPerm", "Activa el permiso de micrófono en Perfil → Permisos."));
+      return;
+    }
     const r = await vcRef.current?.startTalk();
     if (r?.ok) setTalking(true);
     else if (r?.busyWith) setHint(`${r.busyWith} ${t("radio.isTalking", "está hablando")}`);

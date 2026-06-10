@@ -7,6 +7,7 @@ import { Screen } from "@/components/Screen";
 import { guardService, radioCheckService } from "@/lib/services";
 import { onPush } from "@/lib/pushEvents";
 import { startRecording, stopRecording, cancelRecording, isRecordingSupported } from "@/lib/audioRecorder";
+import { ensureMicPermission } from "@/lib/micPermission";
 import RadioLiveChannel from "./RadioLiveChannel";
 
 const newId = () =>
@@ -81,6 +82,11 @@ export default function GuardRadio() {
     if (!entry || submitting) return;
     if (!isRecordingSupported()) {
       present({ message: t("radio.noMic", "Grabación no disponible. Usa \"Sin novedad\" o texto."), duration: 2400, position: "top" });
+      setShowText(true);
+      return;
+    }
+    if (!(await ensureMicPermission())) {
+      present({ message: t("radio.micPerm", "Activa el permiso de micrófono en Perfil → Permisos."), duration: 2600, position: "top" });
       setShowText(true);
       return;
     }
