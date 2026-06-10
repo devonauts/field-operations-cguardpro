@@ -7,6 +7,11 @@ const API_BASE_URL = (
   "https://api.cguardpro.com/api"
 ).replace(/\/+$/, "");
 
+/** Origin for socket.io (the REST base minus its trailing /api path). */
+export const apiOrigin = (() => {
+  try { return new URL(API_BASE_URL).origin; } catch { return API_BASE_URL.replace(/\/api$/, ""); }
+})();
+
 export const TOKEN_KEY = "authToken";
 export const TENANT_KEY = "tenantId";
 

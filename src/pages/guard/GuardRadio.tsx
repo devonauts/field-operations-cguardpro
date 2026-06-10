@@ -7,6 +7,7 @@ import { Screen } from "@/components/Screen";
 import { guardService, radioCheckService } from "@/lib/services";
 import { onPush } from "@/lib/pushEvents";
 import { startRecording, stopRecording, cancelRecording, isRecordingSupported } from "@/lib/audioRecorder";
+import RadioLiveChannel from "./RadioLiveChannel";
 
 const newId = () =>
   (globalThis.crypto && (globalThis.crypto as any).randomUUID
@@ -31,6 +32,7 @@ export default function GuardRadio() {
   const [text, setText] = useState("");
   const [showText, setShowText] = useState(false);
   const [channelName, setChannelName] = useState<string>(t("radio.generalChannel", "Canal general"));
+  const [mode, setMode] = useState<"reportes" | "canal">("reportes");
   const timerRef = useRef<any>(null);
 
   const load = useCallback(async () => {
@@ -128,6 +130,13 @@ export default function GuardRadio() {
   return (
     <Screen back title={t("nav.radio", "Radio")} subtitle={channelName}>
       <div className="space-y-5">
+        {/* Mode switch: Reportes (AI roll call) | Canal abierto (live PTT) */}
+        <div className="flex rounded-xl bg-surface-2 p-1">
+          <button onClick={() => setMode("reportes")} className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-colors ${mode === "reportes" ? "bg-gold text-navy" : "text-muted"}`}>{t("radio.reports", "Reportes")}</button>
+          <button onClick={() => setMode("canal")} className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-colors ${mode === "canal" ? "bg-gold text-navy" : "text-muted"}`}>{t("radio.liveChannel", "Canal abierto")}</button>
+        </div>
+
+        {mode === "canal" ? <RadioLiveChannel /> : (<>
         {/* Channel header */}
         <div className="card-elev flex items-center gap-3 p-4">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gold/10 text-gold">
@@ -229,6 +238,7 @@ export default function GuardRadio() {
             </div>
           </>
         )}
+        </>)}
       </div>
     </Screen>
   );
