@@ -80,7 +80,9 @@ export class VoiceChannel {
   private cb: VoiceCallbacks = {};
   private ctx: AudioContext | null = null;
 
-  // capture
+  // capture (its own AudioContext so the mic doesn't fight playback, and is fully
+  // released on stop — Android throws "Could not start audio source" otherwise)
+  private capCtx: AudioContext | null = null;
   private micStream: MediaStream | null = null;
   private capSource: MediaStreamAudioSourceNode | null = null;
   private capProc: ScriptProcessorNode | null = null;
@@ -159,13 +161,19 @@ export class VoiceChannel {
     });
     if (!granted?.ok) return { ok: false, busyWith: granted?.speaker?.name };
     try {
-      const ctx = this.ensureContext();
-      this.micStream = await navigator.mediaDevices.getUserMedia({
-        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      });
-      this.capSource = ctx.createMediaStreamSource(this.micStream);
-      this.capProc = ctx.createScriptProcessor(4096, 1, 1);
-      const inRate = ctx.sampleRate;
+      this.ensureContext(); // playback context (resumed again on stop)
+      // Free the audio device for capture — an active output context can block the
+      // mic on Android ("Could not start audio source"). Half-duplex: we don't need
+      // to play while we talk.
+      try { await this.ctx?.suspend(); } catch { /* ignore */ }
+      this.micStream = await this.acquireMic();
+      const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
+      const capCtx: AudioContext = new AC();
+      this.capCtx = capCtx;
+      if (capCtx.state === "suspended") await capCtx.resume().catch(() => {});
+      this.capSource = capCtx.createMediaStreamSource(this.micStream);
+      this.capProc = capCtx.createScriptProcessor(4096, 1, 1);
+      const inRate = capCtx.sampleRate;
       this.capProc.onaudioprocess = (e) => {
         if (!this._talking || !this.socket) return;
         const input = e.inputBuffer.getChannelData(0);
@@ -175,11 +183,11 @@ export class VoiceChannel {
       };
       // ScriptProcessor only fires when connected to the destination; route through
       // a zero-gain node so the talker never hears their own mic.
-      const silent = ctx.createGain();
+      const silent = capCtx.createGain();
       silent.gain.value = 0;
       this.capSource.connect(this.capProc);
       this.capProc.connect(silent);
-      silent.connect(ctx.destination);
+      silent.connect(capCtx.destination);
       this._talking = true;
       return { ok: true };
     } catch (err: any) {
@@ -189,6 +197,24 @@ export class VoiceChannel {
       this.teardownCapture();
       return { ok: false, error: msg };
     }
+  }
+
+  /** getUserMedia with graceful fallback: Android WebViews often reject processed
+   *  or over-specified audio constraints with NotReadableError ("Could not start
+   *  audio source") — fall back to the barest request. */
+  private async acquireMic(): Promise<MediaStream> {
+    const md = navigator.mediaDevices as any;
+    if (!md?.getUserMedia) throw new Error("getUserMedia no disponible");
+    const attempts: any[] = [
+      { audio: { echoCancellation: true, noiseSuppression: true } },
+      { audio: true },
+    ];
+    let lastErr: any;
+    for (const c of attempts) {
+      try { return await md.getUserMedia(c); }
+      catch (e) { lastErr = e; }
+    }
+    throw lastErr;
   }
 
   stopTalk(): void {
@@ -202,9 +228,13 @@ export class VoiceChannel {
     try { this.capProc?.disconnect(); } catch { /* ignore */ }
     try { this.capSource?.disconnect(); } catch { /* ignore */ }
     try { this.micStream?.getTracks().forEach((t) => t.stop()); } catch { /* ignore */ }
+    try { this.capCtx?.close(); } catch { /* ignore */ }
     this.capProc = null;
     this.capSource = null;
     this.micStream = null;
+    this.capCtx = null;
+    // Resume playback so we hear others again after talking.
+    try { this.ctx?.resume(); } catch { /* ignore */ }
   }
 
   private startPlayback(): void {
