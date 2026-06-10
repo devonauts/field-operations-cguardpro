@@ -152,7 +152,7 @@ export class VoiceChannel {
   }
 
   /** Request the floor and start streaming the mic. Returns false if busy. */
-  async startTalk(): Promise<{ ok: boolean; busyWith?: string }> {
+  async startTalk(): Promise<{ ok: boolean; busyWith?: string; error?: string }> {
     if (this._talking || !this.socket) return { ok: false };
     const granted = await new Promise<any>((resolve) => {
       this.socket!.emit("radio:voice:talk-request", {}, (res: any) => resolve(res));
@@ -184,9 +184,10 @@ export class VoiceChannel {
       return { ok: true };
     } catch (err: any) {
       this.socket?.emit("radio:voice:talk-end");
-      this.cb.onError?.(err?.message || "mic_error");
+      const msg = `${err?.name || "Error"}: ${err?.message || "mic"}`;
+      this.cb.onError?.(msg);
       this.teardownCapture();
-      return { ok: false };
+      return { ok: false, error: msg };
     }
   }
 

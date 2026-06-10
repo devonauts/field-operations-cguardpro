@@ -44,20 +44,40 @@ export default function RadioLiveChannel() {
   }, []);
 
   const someoneElseTalking = !!speaker && speaker.userId !== myId;
+  const pressedRef = useRef(false);
 
-  const press = async () => {
-    if (someoneElseTalking) { setHint(`${speaker?.name} ${t("radio.isTalking", "está hablando")}`); return; }
-    setHint(null);
+  // Acquiring the floor is async (mic permission + getUserMedia). pressedRef tracks
+  // whether the finger is still down so an early release can't leave the floor held.
+  const beginTalk = async () => {
     if (!(await ensureMicPermission())) {
+      pressedRef.current = false;
       setHint(t("radio.micPerm", "Activa el permiso de micrófono en Perfil → Permisos."));
       return;
     }
+    if (!pressedRef.current) return; // released during the permission prompt
     const r = await vcRef.current?.startTalk();
+    if (!pressedRef.current) { vcRef.current?.stopTalk(); return; } // released mid-acquire
     if (r?.ok) setTalking(true);
     else if (r?.busyWith) setHint(`${r.busyWith} ${t("radio.isTalking", "está hablando")}`);
-    else setHint(t("radio.micDenied", "No se pudo acceder al micrófono."));
+    else setHint(r?.error || t("radio.micDenied", "No se pudo acceder al micrófono."));
   };
-  const release = () => { vcRef.current?.stopTalk(); setTalking(false); };
+
+  const onPttDown = (e: React.PointerEvent) => {
+    if (state === "connecting" || someoneElseTalking) {
+      if (someoneElseTalking) setHint(`${speaker?.name} ${t("radio.isTalking", "está hablando")}`);
+      return;
+    }
+    try { (e.currentTarget as any).setPointerCapture?.(e.pointerId); } catch { /* ignore */ }
+    pressedRef.current = true;
+    setHint(null);
+    void beginTalk();
+  };
+  const onPttUp = (e: React.PointerEvent) => {
+    try { (e.currentTarget as any).releasePointerCapture?.(e.pointerId); } catch { /* ignore */ }
+    pressedRef.current = false;
+    vcRef.current?.stopTalk();
+    setTalking(false);
+  };
 
   const connecting = state === "connecting";
 
@@ -89,10 +109,12 @@ export default function RadioLiveChannel() {
       {/* PTT */}
       <div className="flex flex-col items-center py-3">
         <button
-          onPointerDown={press}
-          onPointerUp={release}
-          onPointerLeave={() => talking && release()}
+          onPointerDown={onPttDown}
+          onPointerUp={onPttUp}
+          onPointerCancel={onPttUp}
+          onContextMenu={(e) => e.preventDefault()}
           disabled={connecting || someoneElseTalking}
+          style={{ touchAction: "none", WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" } as any}
           className="relative grid h-40 w-40 place-items-center rounded-full disabled:opacity-50"
           aria-label={t("radio.holdToTalk", "Mantén para hablar")}
         >
