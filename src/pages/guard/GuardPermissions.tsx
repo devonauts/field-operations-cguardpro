@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { MapPin, Camera, Bell, Check, X, Loader2, RefreshCw } from "lucide-react";
+import { MapPin, Camera, Bell, Mic, Check, X, Loader2, RefreshCw } from "lucide-react";
 import { Screen } from "@/components/Screen";
 import { registerPush } from "@/lib/push";
 
 type Status = "granted" | "denied" | "prompt" | "unsupported" | "unknown";
-type Kind = "location" | "camera" | "notifications";
+type Kind = "location" | "camera" | "microphone" | "notifications";
 
 /** Check one permission via its Capacitor plugin; never throws. */
 async function checkOne(kind: Kind): Promise<Status> {
@@ -19,6 +19,26 @@ async function checkOne(kind: Kind): Promise<Status> {
       const { Camera: Cam } = await import("@capacitor/camera");
       const p = await Cam.checkPermissions();
       return (p.camera as Status) || "unknown";
+    }
+    if (kind === "microphone") {
+      // Native: capacitor-voice-recorder requests the real OS RECORD_AUDIO
+      // runtime permission (Capacitor's WebView won't do that for getUserMedia).
+      // Web/dev: fall back to the Permissions API.
+      try {
+        const { VoiceRecorder } = await import("capacitor-voice-recorder");
+        const r = await VoiceRecorder.hasAudioRecordingPermission();
+        return r.value ? "granted" : "prompt";
+      } catch {
+        const anyNav = navigator as any;
+        if (!anyNav.mediaDevices?.getUserMedia) return "unsupported";
+        try {
+          if (anyNav.permissions?.query) {
+            const st = await anyNav.permissions.query({ name: "microphone" });
+            return (st.state as Status) || "prompt";
+          }
+        } catch { /* not queryable on this platform */ }
+        return "prompt";
+      }
     }
     const { FirebaseMessaging } = await import("@capacitor-firebase/messaging");
     const p = await FirebaseMessaging.checkPermissions();
@@ -41,6 +61,25 @@ async function requestOne(kind: Kind): Promise<Status> {
       const r = await Cam.requestPermissions({ permissions: ["camera"] });
       return (r.camera as Status) || "unknown";
     }
+    if (kind === "microphone") {
+      // Native: ask the OS for RECORD_AUDIO via the plugin. Web/dev: getUserMedia.
+      try {
+        const { VoiceRecorder } = await import("capacitor-voice-recorder");
+        const r = await VoiceRecorder.requestAudioRecordingPermission();
+        return r.value ? "granted" : "denied";
+      } catch {
+        const anyNav = navigator as any;
+        if (!anyNav.mediaDevices?.getUserMedia) return "unsupported";
+        try {
+          const stream = await anyNav.mediaDevices.getUserMedia({ audio: true });
+          stream.getTracks().forEach((tr: MediaStreamTrack) => tr.stop());
+          return "granted";
+        } catch (e: any) {
+          if (e && (e.name === "NotAllowedError" || e.name === "SecurityError")) return "denied";
+          return "prompt";
+        }
+      }
+    }
     const { FirebaseMessaging } = await import("@capacitor-firebase/messaging");
     const r = await FirebaseMessaging.requestPermissions();
     const s = (r.receive as Status) || "unknown";
@@ -56,13 +95,13 @@ async function requestOne(kind: Kind): Promise<Status> {
 
 export default function GuardPermissions() {
   const { t } = useTranslation();
-  const [status, setStatus] = useState<Record<Kind, Status>>({ location: "unknown", camera: "unknown", notifications: "unknown" });
+  const [status, setStatus] = useState<Record<Kind, Status>>({ location: "unknown", camera: "unknown", microphone: "unknown", notifications: "unknown" });
   const [busy, setBusy] = useState<Kind | "all" | null>(null);
 
   const checkAll = useCallback(async () => {
     setBusy("all");
-    const [location, camera, notifications] = await Promise.all([checkOne("location"), checkOne("camera"), checkOne("notifications")]);
-    setStatus({ location, camera, notifications });
+    const [location, camera, microphone, notifications] = await Promise.all([checkOne("location"), checkOne("camera"), checkOne("microphone"), checkOne("notifications")]);
+    setStatus({ location, camera, microphone, notifications });
     setBusy(null);
   }, []);
 
@@ -78,6 +117,7 @@ export default function GuardPermissions() {
   const items: { kind: Kind; icon: any; title: string; why: string }[] = [
     { kind: "location", icon: <MapPin size={20} />, title: t("perm.location", "Ubicación (GPS)"), why: t("perm.locationWhy", "Necesaria para marcar entrada/salida en tu puesto.") },
     { kind: "camera", icon: <Camera size={20} />, title: t("perm.camera", "Cámara"), why: t("perm.cameraWhy", "Necesaria para la selfie de marcación y reportes.") },
+    { kind: "microphone", icon: <Mic size={20} />, title: t("perm.microphone", "Micrófono"), why: t("perm.microphoneWhy", "Necesario para los reportes de voz y el canal de radio en vivo.") },
     { kind: "notifications", icon: <Bell size={20} />, title: t("perm.notifications", "Notificaciones"), why: t("perm.notificationsWhy", "Necesaria para recibir mensajes y avisos de la empresa.") },
   ];
 

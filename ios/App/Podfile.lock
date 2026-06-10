@@ -25,6 +25,8 @@ PODS:
     - Capacitor
   - CapacitorStatusBar (6.0.3):
     - Capacitor
+  - CapacitorVoiceRecorder (6.0.3):
+    - Capacitor
   - FirebaseCore (11.15.0):
     - FirebaseCoreInternal (~> 11.15.0)
     - GoogleUtilities/Environment (~> 8.1)
@@ -93,6 +95,7 @@ DEPENDENCIES:
   - "CapacitorNetwork (from `../../node_modules/@capacitor/network`)"
   - "CapacitorSplashScreen (from `../../node_modules/@capacitor/splash-screen`)"
   - "CapacitorStatusBar (from `../../node_modules/@capacitor/status-bar`)"
+  - CapacitorVoiceRecorder (from `../../node_modules/capacitor-voice-recorder`)
 
 SPEC REPOS:
   trunk:
@@ -132,6 +135,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/splash-screen"
   CapacitorStatusBar:
     :path: "../../node_modules/@capacitor/status-bar"
+  CapacitorVoiceRecorder:
+    :path: "../../node_modules/capacitor-voice-recorder"
 
 SPEC CHECKSUMS:
   Capacitor: c95400d761e376be9da6be5a05f226c0e865cebf
@@ -147,6 +152,7 @@ SPEC CHECKSUMS:
   CapacitorNetwork: 093efa3664b692a971bdd01be70523291cd6a87f
   CapacitorSplashScreen: ef140a8b1ea7244e0c245ce2dd4ce5251e7ab86a
   CapacitorStatusBar: 149cde8f1328ec3aa6cbdd872a55137ae3f98b16
+  CapacitorVoiceRecorder: 27c4c998c2280571d853579f319f6f53f884bdee
   FirebaseCore: efb3893e5b94f32b86e331e3bd6dadf18b66568e
   FirebaseCoreInternal: 9afa45b1159304c963da48addb78275ef701c6b4
   FirebaseInstallations: 317270fec08a5d418fdbc8429282238cab3ac843
@@ -156,6 +162,6 @@ SPEC CHECKSUMS:
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
 
-PODFILE CHECKSUM: d9169338b1b9ec20a800f7eb556570b87fc79000
+PODFILE CHECKSUM: 9c07b7198784b30fb3da9bb0e88fa715d7b41c3b
 
 COCOAPODS: 1.16.2
