@@ -57,7 +57,7 @@ export default function RadioLiveChannel() {
   const connecting = state === "connecting";
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" onPointerDown={() => vcRef.current?.resume()}>
       {/* Status */}
       <div className="card-elev flex items-center gap-3 p-4">
         <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${state === "connected" ? "bg-online/15 text-online" : "bg-surface-2 text-muted"}`}>

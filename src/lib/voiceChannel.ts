@@ -98,6 +98,10 @@ export class VoiceChannel {
   get talking() { return this._talking; }
   get connected() { return !!this.socket?.connected; }
 
+  /** Resume the audio context from a user gesture (iOS needs this to play sound
+   *  even for listen-only users). Idempotent; safe to call on any tap. */
+  resume(): void { try { this.ensureContext(); } catch { /* ignore */ } }
+
   connect(opts: { url: string; path?: string; token: string; tenantId: string }, cb: VoiceCallbacks): void {
     this.cb = cb || {};
     this.cb.onState?.("connecting");
