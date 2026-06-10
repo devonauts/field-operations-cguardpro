@@ -95,6 +95,7 @@ export class VoiceChannel {
   private playing = false;
 
   private _talking = false;
+  private selfId = "";
   joined = false;
 
   get talking() { return this._talking; }
@@ -104,8 +105,52 @@ export class VoiceChannel {
    *  even for listen-only users). Idempotent; safe to call on any tap. */
   resume(): void { try { this.ensureContext(); } catch { /* ignore */ } }
 
-  connect(opts: { url: string; path?: string; token: string; tenantId: string }, cb: VoiceCallbacks): void {
+  /** Walkie-talkie chirp, synthesized (no asset). "open" = squelch-open static
+   *  burst when a transmission starts; "close" = roger/courtesy beep when it ends. */
+  private playChirp(kind: "open" | "close"): void {
+    const ctx = this.ctx;
+    if (!ctx || ctx.state !== "running") return;
+    try {
+      const now = ctx.currentTime;
+      const out = ctx.destination;
+      if (kind === "open") {
+        // Short band-passed noise burst → the classic "kssht" squelch.
+        const dur = 0.13;
+        const buf = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * dur)), ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+        const noise = ctx.createBufferSource(); noise.buffer = buf;
+        const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1700; bp.Q.value = 0.8;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.exponentialRampToValueAtTime(0.16, now + 0.012);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+        noise.connect(bp); bp.connect(g); g.connect(out);
+        noise.start(now); noise.stop(now + dur);
+        // A tiny high blip on top for the "chirp" character.
+        const osc = ctx.createOscillator(); osc.type = "square"; osc.frequency.value = 1500;
+        const og = ctx.createGain();
+        og.gain.setValueAtTime(0.0001, now);
+        og.gain.exponentialRampToValueAtTime(0.06, now + 0.01);
+        og.gain.exponentialRampToValueAtTime(0.0001, now + 0.06);
+        osc.connect(og); og.connect(out);
+        osc.start(now); osc.stop(now + 0.07);
+      } else {
+        // Roger beep — brief courtesy tone.
+        const osc = ctx.createOscillator(); osc.type = "sine"; osc.frequency.value = 1180;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.exponentialRampToValueAtTime(0.14, now + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + 0.13);
+        osc.connect(g); g.connect(out);
+        osc.start(now); osc.stop(now + 0.14);
+      }
+    } catch { /* ignore */ }
+  }
+
+  connect(opts: { url: string; path?: string; token: string; tenantId: string; selfId?: string }, cb: VoiceCallbacks): void {
     this.cb = cb || {};
+    this.selfId = opts.selfId || "";
     this.cb.onState?.("connecting");
     this.socket = io(opts.url, {
       path: opts.path || "/api/socket.io",
@@ -118,7 +163,11 @@ export class VoiceChannel {
     this.socket.on("connect_error", (e: any) => { this.cb.onState?.("error"); this.cb.onError?.(e?.message || "connect_error"); });
     this.socket.on("radio:voice:presence", (p: any) => this.cb.onPresence?.(p?.roster || []));
     this.socket.on("radio:voice:speaker", (s: any) => {
-      this.cb.onSpeaker?.(s?.speaking ? { userId: s.userId, name: s.name } : null);
+      const speaking = !!s?.speaking;
+      // Radio chirp for OTHER people's transmissions: squelch-open when they start,
+      // a "roger" courtesy beep when they finish. (Skip our own.)
+      if (s?.userId && s.userId !== this.selfId) this.playChirp(speaking ? "open" : "close");
+      this.cb.onSpeaker?.(speaking ? { userId: s.userId, name: s.name } : null);
     });
     this.socket.on("radio:voice:chunk", (data: ArrayBuffer | Uint8Array) => this.onRemoteChunk(data));
   }

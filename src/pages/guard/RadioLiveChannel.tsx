@@ -26,7 +26,7 @@ export default function RadioLiveChannel() {
     const vc = new VoiceChannel();
     vcRef.current = vc;
     vc.connect(
-      { url: apiOrigin, path: "/api/socket.io", token: getToken() || "", tenantId: getTenantId() },
+      { url: apiOrigin, path: "/api/socket.io", token: getToken() || "", tenantId: getTenantId(), selfId: myId },
       {
         onState: setState,
         onPresence: setRoster,
