@@ -4,11 +4,13 @@
  * Carries voice over the backend socket.io connection (free, passes through the
  * Cloudflare Tunnel as WebSocket — no UDP/TURN). Audio is captured as raw PCM via
  * Web Audio, downsampled to 16 kHz mono and µ-law (G.711) compressed (~128 kbps),
- * relayed by the server to the channel, and played back through Web Audio. No
- * MediaRecorder / MSE / codecs — the most reliable path across iOS + Android.
+ * relayed by the server to the channel, and played back through Web Audio.
  *
- * Floor control is enforced by the server (one talker at a time). This module is
- * framework-agnostic; the worker app and CRM share an identical copy.
+ * Playback schedules each incoming chunk as an AudioBufferSourceNode (the most
+ * reliable Web Audio output across iOS + Android — no ScriptProcessor/MSE/codecs).
+ * Capture uses a short-lived ScriptProcessor on its own AudioContext, fully
+ * released on stop. Floor control is enforced by the server (one talker at a time).
+ * This module is framework-agnostic; the worker app and CRM share an identical copy.
  */
 import { io, Socket } from "socket.io-client";
 
@@ -87,12 +89,8 @@ export class VoiceChannel {
   private capSource: MediaStreamAudioSourceNode | null = null;
   private capProc: ScriptProcessorNode | null = null;
 
-  // playback
-  private playProc: ScriptProcessorNode | null = null;
-  private queue: Float32Array[] = [];
-  private queueHeadOffset = 0;
-  private buffered = 0;
-  private playing = false;
+  // playback (scheduled AudioBufferSourceNodes)
+  private nextPlayTime = 0;
 
   private _talking = false;
   private selfId = "";
@@ -101,20 +99,18 @@ export class VoiceChannel {
   get talking() { return this._talking; }
   get connected() { return !!this.socket?.connected; }
 
-  /** Resume the audio context from a user gesture (iOS needs this to play sound
-   *  even for listen-only users). Idempotent; safe to call on any tap. */
+  /** Resume the audio context from a user gesture (browsers/iOS need this to play
+   *  sound even for listen-only users). Idempotent; safe to call on any tap. */
   resume(): void { try { this.ensureContext(); } catch { /* ignore */ } }
 
   /** Walkie-talkie chirp, synthesized (no asset). "open" = squelch-open static
    *  burst when a transmission starts; "close" = roger/courtesy beep when it ends. */
   private playChirp(kind: "open" | "close"): void {
-    const ctx = this.ctx;
-    if (!ctx || ctx.state !== "running") return;
+    const ctx = this.ensureContext();
     try {
       const now = ctx.currentTime;
       const out = ctx.destination;
       if (kind === "open") {
-        // Short band-passed noise burst → the classic "kssht" squelch.
         const dur = 0.13;
         const buf = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * dur)), ctx.sampleRate);
         const d = buf.getChannelData(0);
@@ -123,24 +119,22 @@ export class VoiceChannel {
         const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1700; bp.Q.value = 0.8;
         const g = ctx.createGain();
         g.gain.setValueAtTime(0.0001, now);
-        g.gain.exponentialRampToValueAtTime(0.16, now + 0.012);
+        g.gain.exponentialRampToValueAtTime(0.18, now + 0.012);
         g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
         noise.connect(bp); bp.connect(g); g.connect(out);
         noise.start(now); noise.stop(now + dur);
-        // A tiny high blip on top for the "chirp" character.
         const osc = ctx.createOscillator(); osc.type = "square"; osc.frequency.value = 1500;
         const og = ctx.createGain();
         og.gain.setValueAtTime(0.0001, now);
-        og.gain.exponentialRampToValueAtTime(0.06, now + 0.01);
+        og.gain.exponentialRampToValueAtTime(0.07, now + 0.01);
         og.gain.exponentialRampToValueAtTime(0.0001, now + 0.06);
         osc.connect(og); og.connect(out);
         osc.start(now); osc.stop(now + 0.07);
       } else {
-        // Roger beep — brief courtesy tone.
         const osc = ctx.createOscillator(); osc.type = "sine"; osc.frequency.value = 1180;
         const g = ctx.createGain();
         g.gain.setValueAtTime(0.0001, now);
-        g.gain.exponentialRampToValueAtTime(0.14, now + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.16, now + 0.01);
         g.gain.exponentialRampToValueAtTime(0.0001, now + 0.13);
         osc.connect(g); g.connect(out);
         osc.start(now); osc.stop(now + 0.14);
@@ -175,16 +169,13 @@ export class VoiceChannel {
   private ensureContext(): AudioContext {
     const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
     const ctx: AudioContext = (this.ctx || new AC()) as AudioContext;
-    if (!this.ctx) {
-      this.ctx = ctx;
-      this.startPlayback();
-    }
+    if (!this.ctx) this.ctx = ctx;
     if (ctx.state === "suspended") ctx.resume().catch(() => {});
     return ctx;
   }
 
   async join(): Promise<{ roster: VoiceMember[]; speaker: VoiceSpeaker }> {
-    this.ensureContext(); // must run from a user gesture (button tap) for iOS autoplay
+    this.ensureContext(); // call from a user gesture (button tap) for autoplay policy
     return new Promise((resolve, reject) => {
       if (!this.socket) return reject(new Error("no socket"));
       this.socket.emit("radio:voice:join", {}, (res: any) => {
@@ -210,11 +201,7 @@ export class VoiceChannel {
     });
     if (!granted?.ok) return { ok: false, busyWith: granted?.speaker?.name };
     try {
-      this.ensureContext(); // playback context (resumed again on stop)
-      // Free the audio device for capture — an active output context can block the
-      // mic on Android ("Could not start audio source"). Half-duplex: we don't need
-      // to play while we talk.
-      try { await this.ctx?.suspend(); } catch { /* ignore */ }
+      this.ensureContext(); // keep playback context alive
       this.micStream = await this.acquireMic();
       const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
       const capCtx: AudioContext = new AC();
@@ -282,49 +269,34 @@ export class VoiceChannel {
     this.capSource = null;
     this.micStream = null;
     this.capCtx = null;
-    // Resume playback so we hear others again after talking.
-    try { this.ctx?.resume(); } catch { /* ignore */ }
   }
 
-  private startPlayback(): void {
-    if (!this.ctx || this.playProc) return;
-    this.playProc = this.ctx.createScriptProcessor(4096, 1, 1);
-    this.playProc.onaudioprocess = (e) => {
-      const out = e.outputBuffer.getChannelData(0);
-      // ~150ms jitter buffer before starting; resume silence on underrun.
-      if (!this.playing && this.buffered < this.ctx!.sampleRate * 0.15) { out.fill(0); return; }
-      this.playing = true;
-      for (let i = 0; i < out.length; i++) {
-        const head = this.queue[0];
-        if (!head) { out[i] = 0; this.playing = false; continue; }
-        out[i] = head[this.queueHeadOffset++];
-        this.buffered--;
-        if (this.queueHeadOffset >= head.length) { this.queue.shift(); this.queueHeadOffset = 0; }
-      }
-    };
-    this.playProc.connect(this.ctx.destination);
-  }
-
+  /** Play an incoming µ-law frame: decode → resample → schedule sequentially. */
   private onRemoteChunk(data: ArrayBuffer | Uint8Array): void {
-    if (!this.ctx) return;
-    const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+    const ctx = this.ctx;
+    if (!ctx) return;
+    if (ctx.state !== "running") ctx.resume().catch(() => {});
+    const bytes = data instanceof Uint8Array ? data : new Uint8Array(data as ArrayBuffer);
+    if (!bytes.length) return;
     const pcm16k = decodeMuLaw(bytes);
-    const pcm = resample(pcm16k, TARGET_RATE, this.ctx.sampleRate);
-    // Cap the buffer so a slow listener can't accumulate unbounded latency (~2s).
-    if (this.buffered > this.ctx.sampleRate * 2) { this.queue.length = 0; this.queueHeadOffset = 0; this.buffered = 0; }
-    this.queue.push(pcm);
-    this.buffered += pcm.length;
+    const pcm = resample(pcm16k, TARGET_RATE, ctx.sampleRate);
+    const buf = ctx.createBuffer(1, pcm.length, ctx.sampleRate);
+    buf.getChannelData(0).set(pcm);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+    const now = ctx.currentTime;
+    // Prime a small jitter buffer on the first packet / after a gap, and bound
+    // latency if we ever fall too far behind.
+    if (this.nextPlayTime < now + 0.06 || this.nextPlayTime > now + 1.5) this.nextPlayTime = now + 0.12;
+    try { src.start(this.nextPlayTime); } catch { try { src.start(); } catch { /* ignore */ } }
+    this.nextPlayTime += buf.duration;
   }
 
   disconnect(): void {
     this.leave();
     this.teardownCapture();
-    try { this.playProc?.disconnect(); } catch { /* ignore */ }
-    this.playProc = null;
-    this.queue = [];
-    this.queueHeadOffset = 0;
-    this.buffered = 0;
-    this.playing = false;
+    this.nextPlayTime = 0;
     try { this.ctx?.close(); } catch { /* ignore */ }
     this.ctx = null;
     try { this.socket?.disconnect(); } catch { /* ignore */ }
