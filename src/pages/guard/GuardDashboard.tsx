@@ -21,7 +21,6 @@ import {
   Moon,
   Power,
   AlertTriangle,
-  Footprints,
 } from "lucide-react";
 import { Screen } from "@/components/Screen";
 import {
@@ -840,9 +839,9 @@ function PerformanceSection({ perf }: { perf: ReturnType<typeof useAsync<any>> }
     { key: "absences", value: s.absences },
   ];
 
+  // Ronda + Examen now live in the on-duty view (OnDutyView). Off duty keeps
+  // only backup/volunteer.
   const quickActions = [
-    { icon: <Footprints size={18} />, label: t("nav.patrol", "Ronda"), to: "/guard/patrol" },
-    { icon: <ClipboardCheck size={18} />, label: t("nav.quiz"), to: "/guard/quiz" },
     { icon: <LifeBuoy size={18} />, label: t("nav.backup"), to: "/guard/backup" },
   ];
 
