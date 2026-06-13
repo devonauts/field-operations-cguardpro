@@ -67,7 +67,7 @@ export default function Profile() {
 
   // Real profile + station data.
   const { data, reload } = useAsync(() => guardService.dashboard().catch(() => null));
-  const { data: perf } = useAsync<Performance | null>(() =>
+  const { data: perf, reload: reloadPerf } = useAsync<Performance | null>(() =>
     loadGuardPerformance(30).catch(() => null),
   );
 
@@ -155,6 +155,9 @@ export default function Profile() {
   return (
     <Screen
       title={t("nav.profile")}
+      onRefresh={async () => {
+        await Promise.all([reload(), reloadPerf()]);
+      }}
       right={
         <button
           onClick={() => setSheet("lang")}
@@ -349,11 +352,13 @@ function BottomSheet({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end" role="dialog">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <div className="sheet-backdrop absolute inset-0 bg-black/60" onClick={onClose} />
       <div
-        className="relative max-h-[80vh] overflow-y-auto rounded-t-2xl border-t border-line bg-surface p-4"
+        className="sheet-panel relative max-h-[80vh] overflow-y-auto rounded-t-2xl border-t border-line bg-surface p-4"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" }}
       >
+        {/* Grabber handle — native sheet affordance. */}
+        <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-line-2" />
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-base font-bold text-ink">{title}</h3>
           <button onClick={onClose} className="text-muted active:text-ink" aria-label="close">

@@ -213,6 +213,18 @@ ion-router-outlet {
   pointer-events: none;
 }
 
+/* Bottom-sheet enter animations — native slide-up panel + backdrop fade. */
+@keyframes sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes sheet-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.sheet-panel { animation: sheet-up 300ms cubic-bezier(0.22, 1, 0.36, 1); will-change: transform; }
+.sheet-backdrop { animation: sheet-fade 240ms ease-out; }
+
 /* Full-screen modals (forms) — prevents the footer/button being clipped by a
    content-sized sheet. Header uses safe-top, footers add safe-bottom padding. */
 ion-modal {
