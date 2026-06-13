@@ -23,6 +23,8 @@ import {
   X,
   LogOut,
   Loader2,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { Screen } from "@/components/Screen";
 import { Avatar } from "@/components/ui";
@@ -44,6 +46,7 @@ import { guardService } from "@/lib/services";
 import { loadGuardPerformance, Performance } from "@/lib/performance";
 import { SUPERVISOR_ROLE } from "@/lib/roles";
 import { getErrorLog, clearErrorLog, type LogEntry } from "@/lib/errorLog";
+import fb, { soundsEnabled, setSoundsEnabled, setHapticsEnabled } from "@/lib/feedback";
 
 const APP_VERSION = "2.0.0";
 
@@ -107,6 +110,8 @@ export default function Profile() {
 
   // Bottom-sheet router for the menu actions.
   const [sheet, setSheet] = useState<null | "phone" | "lang" | "logs">(null);
+  // Sound + haptic feedback toggle.
+  const [fbOn, setFbOn] = useState(soundsEnabled());
 
   const copyId = async () => {
     try {
@@ -300,6 +305,29 @@ export default function Profile() {
               title={t("profile.language", "Idioma")}
               subtitle={t("profile.languageSub", "Español / English")}
               onClick={() => setSheet("lang")}
+            />
+            <MenuRow
+              tone="purple"
+              icon={fbOn ? <Volume2 size={18} /> : <VolumeX size={18} />}
+              title={t("profile.sounds", "Sonidos y vibración")}
+              subtitle={t("profile.soundsSub", "Tonos y haptics de la app")}
+              showChevron={false}
+              trailing={
+                <span
+                  className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                    fbOn ? "bg-online/15 text-online" : "bg-white/8 text-muted"
+                  }`}
+                >
+                  {fbOn ? t("app.on", "Activado") : t("app.off", "Desactivado")}
+                </span>
+              }
+              onClick={() => {
+                const next = !fbOn;
+                setFbOn(next);
+                setSoundsEnabled(next);
+                setHapticsEnabled(next);
+                if (next) fb.success();
+              }}
             />
             <MenuRow
               tone="amber"

@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { ChevronRight, Check } from "lucide-react";
+import fb from "@/lib/feedback";
 
 /**
  * Enterprise UI kit — reusable, theme-driven primitives for the worker app.
@@ -111,7 +112,7 @@ export function MenuRow({
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={onClick ? () => { fb.select(); onClick(); } : undefined}
       className="pressable flex w-full items-center gap-3.5 px-4 py-3.5 text-left hover:bg-white/[0.03] active:bg-white/[0.05]"
     >
       <IconTile tone={tone}>{icon}</IconTile>
@@ -317,11 +318,16 @@ export function Button({
     ghost: "text-ink hover:bg-white/[0.04]",
     danger: "border border-critical/40 text-critical hover:bg-critical/10",
   };
+  const handleClick = () => {
+    if (variant === "primary" || variant === "danger") fb.press();
+    else fb.tap();
+    onClick?.();
+  };
   return (
     <button
       type={type}
       disabled={disabled}
-      onClick={onClick}
+      onClick={handleClick}
       className={`${base} ${variants[variant]} ${full ? "w-full" : ""} ${className}`}
     >
       {children}

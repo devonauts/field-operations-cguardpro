@@ -35,6 +35,7 @@ import {
 import { useAsync } from "@/lib/useAsync";
 import { guardService } from "@/lib/services";
 import { setDuty } from "@/lib/dutyState";
+import fb from "@/lib/feedback";
 import { onPush } from "@/lib/pushEvents";
 import { loadGuardPerformance, Tier, ComponentKey } from "@/lib/performance";
 import { pick, parseStationSchedule, formatDays } from "@/lib/normalize";
@@ -196,6 +197,7 @@ export default function GuardDashboard() {
       // Shift ended → the backend force-closed the shift. Reload (flips off-duty)
       // and let the guard know.
       if (type === "guard.forced_clockout") {
+        fb.warning();
         reload();
         presentToast({
           message: t("clock.forcedOut", "Tu turno terminó y se registró tu salida automáticamente."),

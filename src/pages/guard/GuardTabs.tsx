@@ -28,6 +28,7 @@ import Profile from "../shared/Profile";
 import { messageService } from "@/lib/services";
 import { onPush } from "@/lib/pushEvents";
 import { getDuty, subscribeDuty, setDuty } from "@/lib/dutyState";
+import fb from "@/lib/feedback";
 
 export default function GuardTabs() {
   const { t } = useTranslation();
@@ -95,7 +96,7 @@ export default function GuardTabs() {
 
   return (
     <>
-    <IonTabs>
+    <IonTabs onIonTabsDidChange={() => fb.select()}>
       <IonRouterOutlet>
         <Route exact path="/guard/dashboard" component={GuardDashboard} />
         <Route exact path="/guard/schedule" component={GuardSchedule} />

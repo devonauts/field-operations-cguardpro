@@ -76,3 +76,19 @@ export function playSuccess() {
   tone(ac, 880, t0, 0.18, 0.25); // A5
   tone(ac, 1318.5, t0 + 0.12, 0.3, 0.22); // E6
 }
+
+// A very short, soft UI click for taps/presses. Subtle by design.
+export function playTap() {
+  const ac = getCtx();
+  if (!ac) return;
+  click(ac, ac.currentTime, 0.16, 0.022);
+}
+
+// A descending two-note tone signalling an error/failure.
+export function playError() {
+  const ac = getCtx();
+  if (!ac) return;
+  const t0 = ac.currentTime;
+  tone(ac, 360, t0, 0.16, 0.22);
+  tone(ac, 240, t0 + 0.13, 0.26, 0.2);
+}
