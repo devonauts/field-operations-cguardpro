@@ -196,6 +196,9 @@ export class VoiceChannel {
   /** Request the floor and start streaming the mic. Returns false if busy. */
   async startTalk(): Promise<{ ok: boolean; busyWith?: string; error?: string }> {
     if (this._talking || !this.socket) return { ok: false };
+    // Release any stale capture from a prior aborted attempt — a leftover mic
+    // stream is the usual cause of Android's NotReadableError on the next press.
+    this.teardownCapture();
     const granted = await new Promise<any>((resolve) => {
       this.socket!.emit("radio:voice:talk-request", {}, (res: any) => resolve(res));
     });
@@ -242,13 +245,25 @@ export class VoiceChannel {
     const md = navigator.mediaDevices as any;
     if (!md?.getUserMedia) throw new Error("getUserMedia no disponible");
     const attempts: any[] = [
-      { audio: { echoCancellation: true, noiseSuppression: true } },
+      { audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 } },
+      { audio: { channelCount: 1 } },
       { audio: true },
     ];
     let lastErr: any;
-    for (const c of attempts) {
-      try { return await md.getUserMedia(c); }
-      catch (e) { lastErr = e; }
+    // Android frequently returns NotReadableError ("could not start audio
+    // source") transiently while the mic is still being released by a prior
+    // session. Retry a few rounds with a short backoff before giving up.
+    for (let round = 0; round < 3; round++) {
+      for (const c of attempts) {
+        try {
+          return await md.getUserMedia(c);
+        } catch (e: any) {
+          lastErr = e;
+          // A real permission denial won't recover by retrying — fail fast.
+          if (e?.name === "NotAllowedError" || e?.name === "SecurityError") throw e;
+        }
+      }
+      await new Promise((r) => setTimeout(r, 300));
     }
     throw lastErr;
   }
