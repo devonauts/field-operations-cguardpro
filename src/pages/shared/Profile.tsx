@@ -89,7 +89,19 @@ export default function Profile() {
     ? t("profile.roleSupervisor", "Supervisor de Seguridad")
     : t("profile.roleGuard", "Oficial de Seguridad");
   const employeeId = guard.employeeId || guard.guardId?.slice?.(0, 8)?.toUpperCase?.() || "—";
-  const stationLabel = station.stationName || station.name || t("profile.noStation", "Sin puesto asignado");
+  // Assigned post: prefer the station-junction assignment, then fall back to the
+  // guard's current/next scheduled shift station (guards are often assigned via
+  // shifts rather than the station junction).
+  const shiftStation =
+    (data as any)?.currentShift?.station ||
+    (data as any)?.nextShift?.station ||
+    null;
+  const stationLabel =
+    station.stationName ||
+    station.name ||
+    shiftStation?.stationName ||
+    shiftStation?.name ||
+    t("profile.noStation", "Sin puesto asignado");
 
   // Bottom-sheet router for the menu actions.
   const [sheet, setSheet] = useState<null | "phone" | "lang" | "logs">(null);
@@ -114,7 +126,14 @@ export default function Profile() {
     {
       tone: "blue",
       icon: <BadgeCheck size={20} />,
-      value: comp("consignas") != null ? `${Math.round(comp("consignas")!)}%` : "—",
+      // Consignas compliance when available; otherwise fall back to the overall
+      // compliance base so the tile isn't empty when a guard has no consignas.
+      value:
+        comp("consignas") != null
+          ? `${Math.round(comp("consignas")!)}%`
+          : perf?.base != null
+          ? `${Math.round(perf.base)}%`
+          : "—",
       label: t("profile.metricCompliance", "Cumplimiento"),
     },
     {
@@ -174,10 +193,16 @@ export default function Profile() {
 
           <div className="hairline my-3.5" />
 
-          <p className="flex items-center gap-1.5 text-sm text-ink">
-            <MapPin size={14} className="text-gold" />
-            {stationLabel}
-          </p>
+          <div className="space-y-2">
+            <p className="flex items-center gap-1.5 text-sm text-ink">
+              <MapPin size={14} className="shrink-0 text-gold" />
+              {stationLabel}
+            </p>
+            <p className="flex items-center gap-1.5 text-sm text-ink">
+              <Mail size={14} className="shrink-0 text-gold" />
+              <span className="break-all">{email}</span>
+            </p>
+          </div>
         </SectionCard>
 
         {/* ---------- Quick info strip ---------- */}
@@ -204,12 +229,6 @@ export default function Profile() {
             label={t("profile.phone", "Teléfono")}
             value={phone}
           />
-          <InfoCell
-            icon={<Mail size={18} />}
-            tone="amber"
-            label={t("profile.email", "Correo")}
-            value={<span className="block max-w-[70px] truncate">{email}</span>}
-          />
         </SectionCard>
 
         {/* ---------- Performance ---------- */}
@@ -224,58 +243,68 @@ export default function Profile() {
           </SectionCard>
         </div>
 
-        {/* ---------- Menu ---------- */}
-        <MenuList>
-          <MenuRow
-            tone="green"
-            icon={<User size={18} />}
-            title={t("profile.personalInfo", "Información personal")}
-            subtitle={t("profile.personalInfoSub", "Actualiza tus datos de contacto")}
-            onClick={() => setSheet("phone")}
-          />
-          <MenuRow
-            tone="blue"
-            icon={<CalendarDays size={18} />}
-            title={t("nav.schedule", "Horario")}
-            subtitle={t("profile.scheduleSub", "Tus próximos turnos")}
-            onClick={() => history.push("/guard/schedule")}
-          />
-          <MenuRow
-            tone="amber"
-            icon={<Bell size={18} />}
-            title={t("nav.notices", "Avisos")}
-            subtitle={t("profile.noticesSub", "Memos y comunicados")}
-            onClick={() => history.push("/guard/notices")}
-          />
-          <MenuRow
-            tone="purple"
-            icon={<CalendarOff size={18} />}
-            title={t("profile.timeOff", "Tiempo libre")}
-            subtitle={t("profile.timeOffSub", "Saldo y solicitudes")}
-            onClick={() => history.push("/guard/time-off")}
-          />
-          <MenuRow
-            tone="green"
-            icon={<ShieldCheck size={18} />}
-            title={t("profile.permissions", "Permisos del dispositivo")}
-            subtitle={t("profile.permissionsSub", "Ubicación, cámara y notificaciones")}
-            onClick={() => history.push("/guard/permissions")}
-          />
-          <MenuRow
-            tone="blue"
-            icon={<Globe size={18} />}
-            title={t("profile.language", "Idioma")}
-            subtitle={t("profile.languageSub", "Español / English")}
-            onClick={() => setSheet("lang")}
-          />
-          <MenuRow
-            tone="amber"
-            icon={<Bug size={18} />}
-            title={t("profile.diagnostics", "Diagnóstico")}
-            subtitle={t("profile.diagnosticsSub", "Registro de errores del dispositivo")}
-            onClick={() => setSheet("logs")}
-          />
-        </MenuList>
+        {/* ---------- Menu: account ---------- */}
+        <div>
+          <SectionHeader title={t("profile.groupAccount", "Mi cuenta")} />
+          <MenuList>
+            <MenuRow
+              tone="green"
+              icon={<User size={18} />}
+              title={t("profile.personalInfo", "Información personal")}
+              subtitle={t("profile.personalInfoSub", "Actualiza tus datos de contacto")}
+              onClick={() => setSheet("phone")}
+            />
+            <MenuRow
+              tone="blue"
+              icon={<CalendarDays size={18} />}
+              title={t("nav.schedule", "Horario")}
+              subtitle={t("profile.scheduleSub", "Tus próximos turnos")}
+              onClick={() => history.push("/guard/schedule")}
+            />
+            <MenuRow
+              tone="amber"
+              icon={<Bell size={18} />}
+              title={t("nav.notices", "Avisos")}
+              subtitle={t("profile.noticesSub", "Memos y comunicados")}
+              onClick={() => history.push("/guard/notices")}
+            />
+            <MenuRow
+              tone="purple"
+              icon={<CalendarOff size={18} />}
+              title={t("profile.timeOff", "Tiempo libre")}
+              subtitle={t("profile.timeOffSub", "Saldo y solicitudes")}
+              onClick={() => history.push("/guard/time-off")}
+            />
+          </MenuList>
+        </div>
+
+        {/* ---------- Menu: device & app ---------- */}
+        <div>
+          <SectionHeader title={t("profile.groupDevice", "Dispositivo y app")} />
+          <MenuList>
+            <MenuRow
+              tone="green"
+              icon={<ShieldCheck size={18} />}
+              title={t("profile.permissions", "Permisos del dispositivo")}
+              subtitle={t("profile.permissionsSub", "Ubicación, cámara y notificaciones")}
+              onClick={() => history.push("/guard/permissions")}
+            />
+            <MenuRow
+              tone="blue"
+              icon={<Globe size={18} />}
+              title={t("profile.language", "Idioma")}
+              subtitle={t("profile.languageSub", "Español / English")}
+              onClick={() => setSheet("lang")}
+            />
+            <MenuRow
+              tone="amber"
+              icon={<Bug size={18} />}
+              title={t("profile.diagnostics", "Diagnóstico")}
+              subtitle={t("profile.diagnosticsSub", "Registro de errores del dispositivo")}
+              onClick={() => setSheet("logs")}
+            />
+          </MenuList>
+        </div>
 
         {/* ---------- Log out ---------- */}
         <Button variant="danger" full onClick={signOut}>
