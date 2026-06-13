@@ -194,6 +194,18 @@ export default function GuardDashboard() {
   useEffect(() => {
     const off = onPush((d) => {
       const type = d?.type;
+      // Shift ended → the backend force-closed the shift. Reload (flips off-duty)
+      // and let the guard know.
+      if (type === "guard.forced_clockout") {
+        reload();
+        presentToast({
+          message: t("clock.forcedOut", "Tu turno terminó y se registró tu salida automáticamente."),
+          duration: 6000,
+          color: "warning",
+          position: "top",
+        });
+        return;
+      }
       if (type !== "attendance.clockout_approved" && type !== "attendance.clockout_rejected") {
         return;
       }

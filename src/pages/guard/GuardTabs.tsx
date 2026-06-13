@@ -27,7 +27,7 @@ import GuardPermissions from "./GuardPermissions";
 import Profile from "../shared/Profile";
 import { messageService } from "@/lib/services";
 import { onPush } from "@/lib/pushEvents";
-import { getDuty, subscribeDuty } from "@/lib/dutyState";
+import { getDuty, subscribeDuty, setDuty } from "@/lib/dutyState";
 
 export default function GuardTabs() {
   const { t } = useTranslation();
@@ -52,6 +52,11 @@ export default function GuardTabs() {
       if (d?.type === "message.new") setUnread((n) => n + 1);
       // A radio-check request: jump the guard straight to the Radio screen.
       if (d?.type === "radio.check_request") history.push("/guard/radio");
+      // Shift ended → forced clock-out: flip off-duty and return to dashboard.
+      if (d?.type === "guard.forced_clockout") {
+        setDuty(false);
+        history.push("/guard/dashboard");
+      }
     });
     return () => { active = false; off(); };
   }, []);
