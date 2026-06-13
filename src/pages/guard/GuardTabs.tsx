@@ -8,7 +8,7 @@ import {
   IonLabel,
 } from "@ionic/react";
 import { useTranslation } from "react-i18next";
-import { Home, Radio, MessageSquare, User, UserCheck } from "lucide-react";
+import { Home, Radio, MessageSquare, User, UserCheck, GraduationCap, Calendar } from "lucide-react";
 import GuardDashboard from "./GuardDashboard";
 import GuardSchedule from "./GuardSchedule";
 import GuardPatrol from "./GuardPatrol";
@@ -122,25 +122,42 @@ export default function GuardTabs() {
           <Home size={22} />
           <IonLabel>{t("nav.home", "Inicio")}</IonLabel>
         </IonTabButton>
-        {/* Visit control — ON DUTY only (off duty the app is informative). */}
+
+        {/* ON DUTY (clocked in): Visitantes + Mensajes. */}
         {onDuty && (
           <IonTabButton tab="visitors" href="/guard/visitors">
             <UserCheck size={22} />
             <IonLabel>{t("nav.visitors", "Visitantes")}</IonLabel>
           </IonTabButton>
         )}
+        {onDuty && (
+          <IonTabButton tab="messages" href="/guard/messages">
+            <span style={{ position: "relative", display: "inline-flex" }}>
+              <MessageSquare size={22} />
+              {unread > 0 && (
+                <span style={{ position: "absolute", top: -5, right: -8, minWidth: 16, height: 16, padding: "0 4px", borderRadius: 9999, background: "#ef4444", color: "#fff", fontSize: 9, fontWeight: 700, display: "grid", placeItems: "center" }}>
+                  {unread > 99 ? "99+" : unread}
+                </span>
+              )}
+            </span>
+            <IonLabel>{t("nav.messages", "Mensajes")}</IonLabel>
+          </IonTabButton>
+        )}
 
-        <IonTabButton tab="messages" href="/guard/messages">
-          <span style={{ position: "relative", display: "inline-flex" }}>
-            <MessageSquare size={22} />
-            {unread > 0 && (
-              <span style={{ position: "absolute", top: -5, right: -8, minWidth: 16, height: 16, padding: "0 4px", borderRadius: 9999, background: "#ef4444", color: "#fff", fontSize: 9, fontWeight: 700, display: "grid", placeItems: "center" }}>
-                {unread > 99 ? "99+" : unread}
-              </span>
-            )}
-          </span>
-          <IonLabel>{t("nav.messages", "Mensajes")}</IonLabel>
-        </IonTabButton>
+        {/* OFF DUTY (not clocked in): Entrenamiento + Horario. */}
+        {!onDuty && (
+          <IonTabButton tab="training" href="/guard/quiz">
+            <GraduationCap size={22} />
+            <IonLabel>{t("nav.training", "Entrenamiento")}</IonLabel>
+          </IonTabButton>
+        )}
+        {!onDuty && (
+          <IonTabButton tab="schedule" href="/guard/schedule">
+            <Calendar size={22} />
+            <IonLabel>{t("nav.schedule", "Horario")}</IonLabel>
+          </IonTabButton>
+        )}
+
         <IonTabButton tab="profile" href="/guard/profile">
           <User size={22} />
           <IonLabel>{t("nav.you", "Perfil")}</IonLabel>
