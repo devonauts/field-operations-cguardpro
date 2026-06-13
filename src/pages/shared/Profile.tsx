@@ -77,8 +77,10 @@ export default function Profile() {
   const station = stations[0] || {};
 
   const name = guard.fullName || user?.fullName || user?.name || user?.email || "—";
-  // Profile picture: the clock-in selfie is persisted as the user avatar.
+  // Profile picture: the guard's profileImage (CRM), then the clock-in selfie
+  // persisted as the user avatar.
   const avatarSrc =
+    (guard as any)?.photoUrl ||
     (user as any)?.avatars?.[0]?.downloadUrl ||
     (guard as any)?.avatars?.[0]?.downloadUrl ||
     null;
