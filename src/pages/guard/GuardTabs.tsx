@@ -103,7 +103,7 @@ export default function GuardTabs() {
   return (
     <>
     <IonTabs onIonTabsDidChange={() => fb.select()}>
-      <IonRouterOutlet>
+      <IonRouterOutlet animated>
         <Route exact path="/guard/dashboard" component={GuardDashboard} />
         <Route exact path="/guard/schedule" component={GuardSchedule} />
         <Route exact path="/guard/notices" component={GuardNotices} />

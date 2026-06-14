@@ -6,6 +6,7 @@ import { Screen } from "@/components/Screen";
 import { Card, Loader, EmptyState, Avatar } from "@/components/ui";
 import { useAsync } from "@/lib/useAsync";
 import { guardsService, performanceService } from "@/lib/services";
+import { fb } from "@/lib/feedback";
 
 export default function UniformInspection() {
   const { t } = useTranslation();
@@ -47,7 +48,10 @@ export default function UniformInspection() {
           {filtered.map((g) => (
             <button
               key={g.id}
-              onClick={() => setSelected(g)}
+              onClick={() => {
+                fb.tap();
+                setSelected(g);
+              }}
               className="flex w-full items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-left active:bg-surface-2"
             >
               <Avatar name={g.fullName} />
@@ -94,6 +98,7 @@ function RateModal({
     if (!guard || stars < 1 || busy) return;
     setBusy(true);
     setError(null);
+    fb.press();
     try {
       await performanceService.createInspection({
         securityGuardId: guard.id,
@@ -101,9 +106,11 @@ function RateModal({
         stars,
         notes: notes || undefined,
       });
+      fb.success();
       reset();
       onSaved();
     } catch (e: any) {
+      fb.error();
       setError(e?.message || "error");
     } finally {
       setBusy(false);
@@ -125,7 +132,13 @@ function RateModal({
           <h2 className="text-base font-semibold text-ink">
             {t("uniform.rate", { name: guard?.fullName || "" })}
           </h2>
-          <button onClick={onClose} className="text-muted">
+          <button
+            onClick={() => {
+              fb.tap();
+              onClose();
+            }}
+            className="text-muted"
+          >
             <X size={22} />
           </button>
         </div>
@@ -136,7 +149,13 @@ function RateModal({
             </label>
             <div className="flex justify-center gap-2">
               {[1, 2, 3, 4, 5].map((n) => (
-                <button key={n} onClick={() => setStars(n)}>
+                <button
+                  key={n}
+                  onClick={() => {
+                    fb.select();
+                    setStars(n);
+                  }}
+                >
                   <Star
                     size={36}
                     className={

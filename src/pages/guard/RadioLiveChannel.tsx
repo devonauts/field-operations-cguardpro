@@ -115,7 +115,7 @@ export default function RadioLiveChannel() {
           onContextMenu={(e) => e.preventDefault()}
           disabled={connecting || someoneElseTalking}
           style={{ touchAction: "none", WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" } as any}
-          className="relative grid h-40 w-40 place-items-center rounded-full disabled:opacity-50"
+          className="no-press relative grid h-40 w-40 place-items-center rounded-full disabled:opacity-50"
           aria-label={t("radio.holdToTalk", "Mantén para hablar")}
         >
           <span className={`absolute inset-0 rounded-full ${talking ? "bg-critical/20 animate-ping" : "bg-gold/15"}`} />

@@ -66,6 +66,7 @@ export default function GuardLesson() {
 
   const complete = async () => {
     if (!lesson || busy || alreadyComplete) return;
+    fb.press();
     setBusy(true);
     try {
       await trainingService.completeLesson(lesson.id, {

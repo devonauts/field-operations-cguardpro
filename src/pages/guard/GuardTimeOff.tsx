@@ -9,6 +9,7 @@ import { guardService } from "@/lib/services";
 import { asRows } from "@/lib/api";
 import { fmtDate } from "@/lib/format";
 import { normalizeStatus } from "@/lib/normalize";
+import { fb } from "@/lib/feedback";
 
 const TYPES = ["vacation", "medical", "personal", "family", "other"] as const;
 
@@ -40,7 +41,7 @@ export default function GuardTimeOff() {
       onRefresh={reload}
       right={
         <button
-          onClick={() => setOpen(true)}
+          onClick={() => { fb.tap(); setOpen(true); }}
           className="flex min-h-[40px] items-center gap-1.5 rounded-lg bg-gold-strong px-4 text-xs font-semibold text-navy active:bg-gold-hover"
         >
           <Plus size={16} />
@@ -111,6 +112,7 @@ function RequestModal({
 
   const submit = async () => {
     if (!startDate || !endDate || busy) return;
+    fb.press();
     setBusy(true);
     setError(null);
     try {
@@ -118,9 +120,11 @@ function RequestModal({
       setStartDate("");
       setEndDate("");
       setReason("");
+      fb.success();
       onCreated();
       onClose();
     } catch (e: any) {
+      fb.error();
       setError(e?.message || "error");
     } finally {
       setBusy(false);
@@ -135,7 +139,7 @@ function RequestModal({
       <div className="flex h-full flex-col bg-navy safe-bottom">
         <div className="safe-top flex items-center justify-between border-b border-line px-4 py-3">
           <h2 className="text-base font-semibold text-ink">{t("timeoff.newRequest")}</h2>
-          <button onClick={onClose} className="text-muted">
+          <button onClick={() => { fb.tap(); onClose(); }} className="text-muted">
             <X size={22} />
           </button>
         </div>
@@ -146,7 +150,7 @@ function RequestModal({
               {TYPES.map((ty) => (
                 <button
                   key={ty}
-                  onClick={() => setType(ty)}
+                  onClick={() => { fb.select(); setType(ty); }}
                   className={`rounded-lg border py-2.5 text-xs font-semibold ${
                     type === ty ? "border-gold bg-gold/10 text-gold" : "border-line text-muted"
                   }`}

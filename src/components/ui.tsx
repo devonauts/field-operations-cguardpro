@@ -9,7 +9,12 @@ import {
   initialsOf,
 } from "@/lib/normalize";
 
-/* Card surface */
+/* Card surface.
+   When given an `onClick`, the Card automatically becomes a native-feeling
+   press target: it gains the `.pressable` affordance (scale + fade on tap, no
+   gray tap-highlight), a pointer cursor, and button semantics (role/tabIndex +
+   Enter/Space activation) for accessibility. A Card without onClick is an inert
+   surface and is left completely unchanged. */
 export function Card({
   children,
   className = "",
@@ -19,10 +24,21 @@ export function Card({
   className?: string;
   onClick?: () => void;
 }) {
+  if (!onClick) {
+    return <div className={`card ${className}`}>{children}</div>;
+  }
   return (
     <div
       onClick={onClick}
-      className={`card ${onClick ? "active:opacity-80 cursor-pointer" : ""} ${className}`}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      className={`card pressable cursor-pointer ${className}`}
     >
       {children}
     </div>

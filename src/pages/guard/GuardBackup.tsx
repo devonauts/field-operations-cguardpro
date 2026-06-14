@@ -6,6 +6,7 @@ import { Card, Loader, EmptyState } from "@/components/ui";
 import { useAsync } from "@/lib/useAsync";
 import { guardService } from "@/lib/services";
 import { fmtDate, fmtTime } from "@/lib/format";
+import { fb } from "@/lib/feedback";
 
 interface OpenShift {
   shiftId: string;
@@ -27,11 +28,14 @@ export default function GuardBackup() {
 
   const volunteer = async (shiftId: string) => {
     if (busyId) return;
+    fb.press();
     setBusyId(shiftId);
     try {
       await guardService.volunteerBackup({ shiftId });
+      fb.success();
       await reload();
     } catch {
+      fb.error();
       /* surfaced by reload state */
     } finally {
       setBusyId(null);

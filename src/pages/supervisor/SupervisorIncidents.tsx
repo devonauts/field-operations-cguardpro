@@ -8,6 +8,7 @@ import { IncidentForm } from "@/components/IncidentForm";
 import { useAsync } from "@/lib/useAsync";
 import { incidentService } from "@/lib/services";
 import { normalizeSeverity, normalizeStatus, pick } from "@/lib/normalize";
+import { fb } from "@/lib/feedback";
 
 const SEVERITY_FILTERS = ["all", "critical", "high", "medium", "low"] as const;
 const STATUS_FILTERS = ["all", "open", "inProgress", "resolved", "closed"] as const;
@@ -48,7 +49,10 @@ export default function SupervisorIncidents() {
       onRefresh={reload}
       right={
         <button
-          onClick={() => setFormOpen(true)}
+          onClick={() => {
+            fb.press();
+            setFormOpen(true);
+          }}
           className="flex items-center gap-1.5 rounded-lg bg-gold-strong px-3 py-2 text-xs font-semibold text-navy active:bg-gold-hover"
         >
           <Plus size={15} />
@@ -121,7 +125,10 @@ function Chip({
 }) {
   return (
     <button
-      onClick={onClick}
+      onClick={() => {
+        fb.select();
+        onClick();
+      }}
       className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium ${
         active ? "border-gold bg-gold/10 text-gold" : "border-line text-muted"
       }`}

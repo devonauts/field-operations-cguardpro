@@ -113,7 +113,7 @@ export function MenuRow({
     <button
       type="button"
       onClick={onClick ? () => { fb.select(); onClick(); } : undefined}
-      className="pressable flex w-full items-center gap-4 rounded-2xl border border-line bg-surface px-5 py-[22px] text-left hover:bg-white/[0.03] active:bg-white/[0.05]"
+      className="pressable flex w-full items-center gap-4 rounded-2xl border border-line bg-surface px-5 py-5 text-left active:bg-white/[0.05] [@media(hover:hover)]:hover:bg-white/[0.03]"
     >
       <IconTile tone={tone}>{icon}</IconTile>
       <div className="min-w-0 flex-1">

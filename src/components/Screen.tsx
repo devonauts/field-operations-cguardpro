@@ -176,7 +176,7 @@ export function Screen({
                   <button
                     onClick={goBack}
                     aria-label="Atrás"
-                    className="-ml-1.5 mt-0.5 shrink-0 rounded-full p-1.5 text-ink active:bg-white/10"
+                    className="pressable -ml-1.5 mt-0.5 shrink-0 rounded-full p-1.5 text-ink active:bg-white/10"
                   >
                     <ChevronLeft size={22} />
                   </button>

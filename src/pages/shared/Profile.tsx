@@ -116,6 +116,7 @@ export default function Profile() {
   const copyId = async () => {
     try {
       await navigator.clipboard.writeText(employeeId);
+      fb.success();
     } catch {
       /* clipboard unavailable */
     }
@@ -165,7 +166,10 @@ export default function Profile() {
       }}
       right={
         <button
-          onClick={() => setSheet("lang")}
+          onClick={() => {
+            fb.tap();
+            setSheet("lang");
+          }}
           aria-label={t("profile.settings", "Ajustes")}
           className="grid h-9 w-9 place-items-center rounded-full border border-line text-muted active:bg-surface-2"
         >
@@ -389,7 +393,7 @@ function BottomSheet({
         <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-line-2" />
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-base font-bold text-ink">{title}</h3>
-          <button onClick={onClose} className="text-muted active:text-ink" aria-label="close">
+          <button onClick={() => { fb.tap(); onClose(); }} className="text-muted active:text-ink" aria-label="close">
             <X size={20} />
           </button>
         </div>
@@ -445,6 +449,7 @@ function LangSheet({ i18n, t, onClose }: { i18n: any; t: any; onClose: () => voi
     { id: "en", label: t("profile.english", "English") },
   ];
   const change = (id: string) => {
+    fb.select();
     if (id === "auto") {
       localStorage.removeItem("appLangChoice");
       const nav = (navigator.language || "es").slice(0, 2);
@@ -476,14 +481,16 @@ function LangSheet({ i18n, t, onClose }: { i18n: any; t: any; onClose: () => voi
 function LogsSheet({ t, onClose }: { t: any; onClose: () => void }) {
   const [logs, setLogs] = useState<LogEntry[]>(getErrorLog());
   const copy = async () => {
-    const text = logs.map((l) => `${l.t} [${l.ctx}] ${l.msg}`).join("\n");
     try {
+      const text = logs.map((l) => `${l.t} [${l.ctx}] ${l.msg}`).join("\n");
       await navigator.clipboard.writeText(text || "(empty)");
+      fb.success();
     } catch {
       /* ignore */
     }
   };
   const wipe = () => {
+    fb.tap();
     clearErrorLog();
     setLogs([]);
   };

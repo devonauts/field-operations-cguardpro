@@ -105,12 +105,75 @@ ion-router-outlet {
   height: 1px;
   background: #1f2630;
 }
-/* Pressable row/tile feedback */
+/* ------------------------------------------------------------------ */
+/* Press system — the canonical native tap affordance                  */
+/* (See: shared press contract. `.pressable` is the explicit class;    */
+/* native <button> and [role="button"] inherit the same feel globally) */
+/* ------------------------------------------------------------------ */
+
+/* Canonical press affordance. A crisp press-in scale + slight fade, with
+   the gray mobile tap-highlight removed and text un-selectable so a press
+   never starts a text selection. */
 .pressable {
-  transition: background-color 0.15s ease, transform 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 120ms cubic-bezier(0.2, 0, 0, 1),
+    opacity 120ms cubic-bezier(0.2, 0, 0, 1), background-color 150ms ease;
 }
 .pressable:active {
-  transform: scale(0.985);
+  transform: scale(0.96);
+  opacity: 0.92;
+}
+
+/* GLOBAL default press: any native button (not disabled) and any element with
+   role="button" gets the SAME native press feel automatically — no class
+   needed. Also removes the gray tap-highlight flash app-wide on interactive
+   elements. Ionic's own controls (ion-*) are excluded so we never fight their
+   built-in ripple/press behavior. */
+button,
+[role="button"],
+a,
+label[for],
+summary {
+  -webkit-tap-highlight-color: transparent;
+}
+button:not(:disabled):not(.no-press):not([class*="ion-"]),
+[role="button"]:not(.no-press) {
+  touch-action: manipulation;
+  transition: transform 120ms cubic-bezier(0.2, 0, 0, 1),
+    opacity 120ms cubic-bezier(0.2, 0, 0, 1), background-color 150ms ease;
+}
+button:not(:disabled):not(.no-press):not([class*="ion-"]):active,
+[role="button"]:not(.no-press):active {
+  transform: scale(0.96);
+  opacity: 0.92;
+}
+
+/* Opt-out: things that must not scale (full-width sticky bars, the radio FAB,
+   tab buttons, etc.). Still suppresses the tap-highlight flash. */
+.no-press {
+  -webkit-tap-highlight-color: transparent;
+}
+.no-press,
+.no-press:active {
+  transform: none !important;
+  opacity: inherit;
+}
+
+/* Sticky-hover fix: on touch devices a :hover background can "stick" after a
+   tap until the next interaction. Where a hover background is applied via the
+   Tailwind `hover:bg-*` utilities it is generated as `&:hover { ... }` — we
+   can't rewrite those here, but we ensure :active always wins by virtue of the
+   global :active rule above (it scales + fades regardless of a stuck hover bg),
+   and we neutralize lingering hover on real touch (no fine pointer). */
+@media (hover: none) {
+  button:hover,
+  [role="button"]:hover,
+  .pressable:hover {
+    background-color: revert-layer;
+  }
 }
 
 /* Hide scrollbars on horizontal scrollers but keep scrolling */
@@ -310,9 +373,15 @@ ion-tab-button {
     0 10px 30px -6px rgba(212, 160, 23, 0.85);
   transition: transform 0.12s ease;
 }
+/* !important so the global button :active scale (higher specificity) never
+   clobbers the FAB's translateX-aware press transform. */
 .radio-fab-float:active {
-  transform: translateX(-50%) scale(0.93);
+  transform: translateX(-50%) scale(0.93) !important;
+  opacity: 1 !important;
 }
+/* When the guard has dragged the FAB it carries an inline transform:none and
+   left/top, so the press scale would lose its centering offset — that's fine,
+   the inline style wins and there's no translateX to preserve. */
 .radio-fab-float.is-active {
   box-shadow:
     0 0 0 6px #0a0e16,

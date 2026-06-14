@@ -6,6 +6,7 @@ import { Send, Loader2, Paperclip, Play, X } from "lucide-react";
 import { Screen } from "@/components/Screen";
 import { messageService, type MessageAttachment } from "@/lib/services";
 import { onPush } from "@/lib/pushEvents";
+import { fb } from "@/lib/feedback";
 
 const API_BASE = ((import.meta.env.VITE_API_URL as string | undefined) ?? "https://api.cguardpro.com/api").replace(/\/+$/, "");
 /** Displayable URL for a stored private attachment (works in <img>/<video>). */
@@ -87,6 +88,7 @@ export default function GuardThread() {
   const send = async () => {
     const body = draft.trim();
     if ((!body && pending.length === 0) || sending || uploading || conversation?.isOneWay || !validId) return;
+    fb.press();
     const atts = pending;
     setSending(true);
     setSendError(null);
@@ -104,6 +106,7 @@ export default function GuardThread() {
       setMessages((m) => m.filter((x) => x.id !== temp.id));
       setDraft(body);
       setPending(atts);
+      fb.error();
       setSendError(e?.message || t("messages.sendFailed", "No se pudo enviar. Reintenta."));
     } finally { setSending(false); }
   };
@@ -142,7 +145,7 @@ export default function GuardThread() {
               {loadError || t("messages.threadEmpty", "Aún no hay mensajes en esta conversación.")}
             </p>
             {loadError && (
-              <button onClick={() => load(true)} className="rounded-lg border border-line px-3 py-1.5 text-xs text-ink active:bg-white/10">
+              <button onClick={() => { fb.tap(); load(true); }} className="rounded-lg border border-line px-3 py-1.5 text-xs text-ink active:bg-white/10">
                 {t("common.retry", "Reintentar")}
               </button>
             )}
@@ -199,7 +202,7 @@ export default function GuardThread() {
                   ) : (
                     <img src={fileUrl(a.url)} alt="" className="h-full w-full object-cover" />
                   )}
-                  <button onClick={() => setPending((p) => p.filter((_, j) => j !== i))} className="absolute right-0 top-0 grid h-5 w-5 place-items-center rounded-bl bg-black/70 text-white"><X size={12} /></button>
+                  <button onClick={() => { fb.tap(); setPending((p) => p.filter((_, j) => j !== i)); }} className="absolute right-0 top-0 grid h-5 w-5 place-items-center rounded-bl bg-black/70 text-white"><X size={12} /></button>
                 </div>
               ))}
             </div>
@@ -207,7 +210,7 @@ export default function GuardThread() {
           <div className="flex items-end gap-2">
             <input ref={fileRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={(e) => onPickFiles(e.target.files)} />
             <button
-              onClick={() => fileRef.current?.click()}
+              onClick={() => { fb.tap(); fileRef.current?.click(); }}
               disabled={uploading}
               aria-label={t("messages.attach", "Adjuntar")}
               className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-line-2 text-muted active:bg-white/5 disabled:opacity-50"

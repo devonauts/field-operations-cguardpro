@@ -85,7 +85,10 @@ export default function GuardRadio() {
             </p>
             <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={() => reply({ cannedText: t("radio.allClear", "Sin novedad") }, t("radio.sent", "Reporte enviado"))}
+                onClick={() => {
+                  fb.press();
+                  reply({ cannedText: t("radio.allClear", "Sin novedad") }, t("radio.sent", "Reporte enviado"));
+                }}
                 disabled={submitting}
                 className="btn-xl flex items-center justify-center gap-2 bg-online/15 text-online active:bg-online/25 disabled:opacity-50"
               >
@@ -93,7 +96,10 @@ export default function GuardRadio() {
                 {t("radio.allClear", "Sin novedad")}
               </button>
               <button
-                onClick={() => reply({ text: t("radio.reportedByVoice", "Novedad reportada por voz en el canal.") }, t("radio.sent", "Reporte enviado"))}
+                onClick={() => {
+                  fb.press();
+                  reply({ text: t("radio.reportedByVoice", "Novedad reportada por voz en el canal.") }, t("radio.sent", "Reporte enviado"));
+                }}
                 disabled={submitting}
                 className="btn-xl flex items-center justify-center gap-2 bg-gold/15 text-gold active:bg-gold/25 disabled:opacity-50"
               >

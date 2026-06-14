@@ -7,6 +7,7 @@ import { useAsync } from "@/lib/useAsync";
 import { rondasService } from "@/lib/rondas";
 import { RondaRoute, RondaCheckpoint, TagScan } from "@/types/rondas";
 import { fmtTime, relativeTime } from "@/lib/format";
+import { fb } from "@/lib/feedback";
 
 /**
  * Supervisor live patrol tracking — consolidated on the siteTour system
@@ -66,7 +67,10 @@ export default function PatrolTracking() {
               return (
                 <button
                   key={r.id}
-                  onClick={() => setActiveRoute(r.id)}
+                  onClick={() => {
+                    fb.select();
+                    setActiveRoute(r.id);
+                  }}
                   className={`flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium ${
                     isActive ? "border-gold bg-gold/10 text-gold" : "border-line text-muted"
                   }`}

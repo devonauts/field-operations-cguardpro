@@ -45,6 +45,7 @@ export default function GuardCourseQuiz() {
 
   const submit = async () => {
     if (!bankId || !allAnswered || busy) return;
+    fb.press();
     setBusy(true);
     setError(null);
     try {
@@ -65,6 +66,7 @@ export default function GuardCourseQuiz() {
   };
 
   const retake = () => {
+    fb.tap();
     setResult(null);
     setAnswers({});
     reload();

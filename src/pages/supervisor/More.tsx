@@ -4,6 +4,7 @@ import { CalendarDays, FileBarChart, User, ChevronRight, LogOut, Shirt, LifeBuoy
 import { Screen } from "@/components/Screen";
 import { Card } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
+import { fb } from "@/lib/feedback";
 
 export default function More() {
   const { t } = useTranslation();
@@ -24,7 +25,10 @@ export default function More() {
         {items.map((it) => (
           <button
             key={it.to}
-            onClick={() => history.push(it.to)}
+            onClick={() => {
+              fb.tap();
+              history.push(it.to);
+            }}
             className="flex w-full items-center gap-3 px-4 py-4 text-sm font-medium text-ink active:bg-surface-2"
           >
             <span className="text-gold">{it.icon}</span>
@@ -36,7 +40,10 @@ export default function More() {
 
       <Card className="mt-4 p-2">
         <button
-          onClick={signOut}
+          onClick={() => {
+            fb.press();
+            signOut();
+          }}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-critical active:bg-surface-2"
         >
           <LogOut size={18} />

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { AuthService } from "@/lib/auth";
+import { fb } from "@/lib/feedback";
 import brandLogo from "../assets/brand-logo.png";
 
 export default function Login() {
@@ -16,6 +17,7 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
 
   const onForgot = async () => {
+    fb.tap();
     if (!email.trim()) {
       setError(t("auth.forgot.needEmail", "Escribe tu correo arriba y vuelve a tocar aquí."));
       return;
@@ -33,10 +35,16 @@ export default function Login() {
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (submitting) return;
+    fb.press();
     setError(null);
     setSubmitting(true);
     const res = await signIn({ email: email.trim(), password });
-    if (!res.success) setError(res.error || t("auth.errorGeneric"));
+    if (!res.success) {
+      fb.error();
+      setError(res.error || t("auth.errorGeneric"));
+    } else {
+      fb.success();
+    }
     setSubmitting(false);
   };
 
@@ -89,7 +97,7 @@ export default function Login() {
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPw((s) => !s)}
+                    onClick={() => { fb.tap(); setShowPw((s) => !s); }}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted"
                     tabIndex={-1}
                   >

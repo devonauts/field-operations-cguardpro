@@ -13,6 +13,7 @@ import { useAsync } from "@/lib/useAsync";
 import { shiftService } from "@/lib/services";
 import { fmtTime } from "@/lib/format";
 import { pick } from "@/lib/normalize";
+import { fb } from "@/lib/feedback";
 
 export default function ShiftSchedule() {
   const { t, i18n } = useTranslation();
@@ -50,7 +51,10 @@ export default function ShiftSchedule() {
           return (
             <button
               key={d.toISOString()}
-              onClick={() => setSelected(d)}
+              onClick={() => {
+                fb.select();
+                setSelected(d);
+              }}
               className={`flex flex-col items-center rounded-lg border py-2 ${
                 active
                   ? "border-gold bg-gold/10 text-gold"

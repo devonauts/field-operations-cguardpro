@@ -24,6 +24,7 @@ import {
   guardsService,
 } from "@/lib/services";
 import { normalizeStatus, pick } from "@/lib/normalize";
+import { fb } from "@/lib/feedback";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -164,7 +165,11 @@ export default function SupervisorDashboard() {
           <div>
             <SectionTitle
               right={
-                <Link to="/supervisor/incidents" className="text-xs font-medium text-gold">
+                <Link
+                  to="/supervisor/incidents"
+                  onClick={() => fb.tap()}
+                  className="pressable text-xs font-medium text-gold"
+                >
                   {t("app.viewAll")}
                 </Link>
               }

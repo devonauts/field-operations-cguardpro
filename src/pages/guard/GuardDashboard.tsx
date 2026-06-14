@@ -476,7 +476,11 @@ export default function GuardDashboard() {
                   </div>
                 )}
                 <button
-                  onClick={() => primaryTarget && beginClockIn(primaryTarget)}
+                  onClick={() => {
+                    if (!primaryTarget) return;
+                    fb.press();
+                    beginClockIn(primaryTarget);
+                  }}
                   disabled={busy || !primaryTarget}
                   className="btn-xl glow-gold w-full bg-gradient-to-b from-gold to-gold-strong text-navy active:from-gold-hover active:to-gold-hover disabled:opacity-50"
                 >
@@ -494,7 +498,10 @@ export default function GuardDashboard() {
                 {extraTargets.map((st) => (
                   <button
                     key={st.id}
-                    onClick={() => beginClockIn(st)}
+                    onClick={() => {
+                      fb.press();
+                      beginClockIn(st);
+                    }}
                     disabled={busy}
                     className="btn-xl w-full border border-gold/40 bg-gold/5 text-gold active:bg-gold/10 disabled:opacity-50"
                   >

@@ -7,6 +7,7 @@ import { Loader, EmptyState } from "@/components/ui";
 import { useAsync } from "@/lib/useAsync";
 import { messageService } from "@/lib/services";
 import { onPush } from "@/lib/pushEvents";
+import { fb } from "@/lib/feedback";
 
 const fmt = (d?: string | null) => {
   if (!d) return "";
@@ -37,8 +38,8 @@ export default function GuardMessages() {
           {rows.map((c) => (
             <button
               key={c.id}
-              onClick={() => history.push(`/guard/messages/${c.id}`)}
-              className="pressable flex w-full items-center gap-3 px-4 py-3 text-left active:bg-white/[0.04]"
+              onClick={() => { fb.tap(); history.push(`/guard/messages/${c.id}`); }}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left active:bg-white/[0.04]"
             >
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gold/15 text-gold">
                 <MessageSquare size={18} />

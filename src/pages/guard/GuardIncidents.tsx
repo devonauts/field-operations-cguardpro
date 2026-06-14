@@ -7,6 +7,7 @@ import { IncidentRow } from "@/components/IncidentRow";
 import { IncidentForm } from "@/components/IncidentForm";
 import { useAsync } from "@/lib/useAsync";
 import { incidentService } from "@/lib/services";
+import fb from "@/lib/feedback";
 
 export default function GuardIncidents() {
   const { t } = useTranslation();
@@ -24,7 +25,10 @@ export default function GuardIncidents() {
       onRefresh={reload}
       right={
         <button
-          onClick={() => setFormOpen(true)}
+          onClick={() => {
+            fb.tap();
+            setFormOpen(true);
+          }}
           className="flex min-h-[40px] items-center gap-1.5 rounded-lg bg-gold-strong px-4 text-xs font-semibold text-navy active:bg-gold-hover"
         >
           <Plus size={16} />

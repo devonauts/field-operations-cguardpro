@@ -6,6 +6,7 @@ import { Card, Loader, EmptyState, Avatar } from "@/components/ui";
 import { useAsync } from "@/lib/useAsync";
 import { performanceService } from "@/lib/services";
 import { fmtDate } from "@/lib/format";
+import { fb } from "@/lib/feedback";
 
 const subjectName = (ev: any) =>
   ev.subject?.fullName ||
@@ -24,11 +25,15 @@ export default function BackupConfirm() {
   const act = async (id: string, confirm: boolean) => {
     if (busyId) return;
     setBusyId(id);
+    fb.press();
     try {
       if (confirm) await performanceService.confirmBackup(id);
       else await performanceService.rejectBackup(id);
+      if (confirm) fb.success();
+      else fb.warning();
       await reload();
     } catch {
+      fb.error();
       /* surfaced by reload */
     } finally {
       setBusyId(null);

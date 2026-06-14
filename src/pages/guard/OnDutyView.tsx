@@ -5,6 +5,7 @@ import { ChevronRight, Footprints, ClipboardCheck } from "lucide-react";
 import { useAsync } from "@/lib/useAsync";
 import { incidentService, guardService } from "@/lib/services";
 import { rondasService } from "@/lib/rondas";
+import fb from "@/lib/feedback";
 
 /* ----------------------------------------------------------------- helpers */
 
@@ -64,12 +65,16 @@ function NavCard({
   className?: string;
   children: React.ReactNode;
 }) {
+  const handle = () => {
+    fb.tap();
+    onClick();
+  };
   return (
     <div
       role="button"
       tabIndex={0}
-      onClick={onClick}
-      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
+      onClick={handle}
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && handle()}
       className={`pressable cursor-pointer ${className}`}
     >
       {children}
@@ -348,7 +353,10 @@ export default function OnDutyView({ data }: { data: any }) {
         ].map((a) => (
           <button
             key={a.to}
-            onClick={() => history.push(a.to)}
+            onClick={() => {
+              fb.tap();
+              history.push(a.to);
+            }}
             className="flex min-h-[54px] items-center gap-2.5 rounded-xl border border-line bg-surface px-4 text-sm font-semibold text-ink active:bg-surface-2"
           >
             <span className="shrink-0 text-gold">{a.icon}</span>

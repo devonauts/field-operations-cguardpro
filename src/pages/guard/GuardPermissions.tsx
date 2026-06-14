@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { MapPin, Camera, Bell, Mic, Check, X, Loader2, RefreshCw } from "lucide-react";
 import { Screen } from "@/components/Screen";
 import { registerPush } from "@/lib/push";
+import { fb } from "@/lib/feedback";
 
 type Status = "granted" | "denied" | "prompt" | "unsupported" | "unknown";
 type Kind = "location" | "camera" | "microphone" | "notifications";
@@ -108,9 +109,12 @@ export default function GuardPermissions() {
   useEffect(() => { checkAll(); }, [checkAll]);
 
   const request = async (kind: Kind) => {
+    fb.press();
     setBusy(kind);
     const s = await requestOne(kind);
     setStatus((prev) => ({ ...prev, [kind]: s }));
+    if (s === "granted") fb.success();
+    else if (s === "denied") fb.warning();
     setBusy(null);
   };
 
@@ -139,7 +143,7 @@ export default function GuardPermissions() {
       title={t("perm.title", "Permisos")}
       subtitle={t("perm.subtitle", "Activa los permisos del dispositivo")}
       right={
-        <button onClick={checkAll} disabled={busy === "all"} aria-label="Actualizar" className="rounded-full p-2 text-muted active:bg-white/10">
+        <button onClick={() => { fb.tap(); checkAll(); }} disabled={busy === "all"} aria-label="Actualizar" className="rounded-full p-2 text-muted active:bg-white/10">
           {busy === "all" ? <Loader2 size={18} className="animate-spin" /> : <RefreshCw size={18} />}
         </button>
       }

@@ -3,6 +3,7 @@ import { IonPage, IonContent } from "@ionic/react";
 import { useTranslation } from "react-i18next";
 import { Loader2, Eye, EyeOff, CheckCircle2, ShieldCheck } from "lucide-react";
 import { AuthService } from "@/lib/auth";
+import { fb } from "@/lib/feedback";
 import brandLogo from "../assets/brand-logo.png";
 
 /**
@@ -31,11 +32,14 @@ export default function ResetPassword({ token, onDone }: { token: string; onDone
       setError(t("auth.reset.mismatch", "Las contraseñas no coinciden."));
       return;
     }
+    fb.press();
     setSubmitting(true);
     try {
       await AuthService.resetPassword(token, password);
+      fb.success();
       setDone(true);
     } catch (err: any) {
+      fb.error();
       setError(err?.message || t("auth.reset.error", "El enlace es inválido o expiró. Pide uno nuevo."));
     } finally {
       setSubmitting(false);
@@ -68,7 +72,7 @@ export default function ResetPassword({ token, onDone }: { token: string; onDone
                   {t("auth.reset.success", "Tu contraseña se actualizó. Ya puedes iniciar sesión.")}
                 </p>
                 <button
-                  onClick={onDone}
+                  onClick={() => { fb.tap(); onDone(); }}
                   className="flex min-h-[54px] w-full items-center justify-center rounded-xl bg-gold-strong px-4 py-4 text-base font-semibold text-navy active:bg-gold-hover"
                 >
                   {t("auth.reset.goLogin", "Ir a iniciar sesión")}
@@ -87,7 +91,7 @@ export default function ResetPassword({ token, onDone }: { token: string; onDone
                       placeholder="••••••••"
                       className="w-full rounded-xl border border-line bg-surface px-4 py-3 pr-11 text-base text-ink placeholder:text-faint outline-none focus:border-gold/60"
                     />
-                    <button type="button" onClick={() => setShowPw((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted" tabIndex={-1}>
+                    <button type="button" onClick={() => { fb.tap(); setShowPw((s) => !s); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted" tabIndex={-1}>
                       {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
@@ -119,7 +123,7 @@ export default function ResetPassword({ token, onDone }: { token: string; onDone
                   )}
                 </button>
 
-                <button type="button" onClick={onDone} className="w-full pt-1 text-center text-sm text-muted">
+                <button type="button" onClick={() => { fb.tap(); onDone(); }} className="w-full pt-1 text-center text-sm text-muted">
                   {t("auth.reset.cancel", "Cancelar")}
                 </button>
               </form>

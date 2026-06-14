@@ -119,7 +119,10 @@ function CoursesTab() {
         />
       ))}
       <button
-        onClick={() => reload()}
+        onClick={() => {
+          fb.tap();
+          reload();
+        }}
         className="mx-auto block pt-1 text-xs text-muted"
       >
         {t("common.refresh")}

@@ -5,6 +5,7 @@ import { Screen } from "@/components/Screen";
 import { Card, Loader, EmptyState, ScoreRing } from "@/components/ui";
 import { useAsync } from "@/lib/useAsync";
 import { guardService } from "@/lib/services";
+import fb from "@/lib/feedback";
 
 interface QuizQuestion {
   id: string;
@@ -39,6 +40,7 @@ export default function GuardQuiz() {
 
   const submit = async () => {
     if (!quiz || !allAnswered || busy) return;
+    fb.press();
     setBusy(true);
     setError(null);
     try {
@@ -52,14 +54,18 @@ export default function GuardQuiz() {
         })),
       });
       setResult(res as QuizResult);
+      if ((res as QuizResult).passed) fb.success();
+      else fb.error();
     } catch (e: any) {
       setError(e?.message || "error");
+      fb.error();
     } finally {
       setBusy(false);
     }
   };
 
   const retake = () => {
+    fb.tap();
     setResult(null);
     setAnswers({});
     reload();
@@ -94,9 +100,10 @@ export default function GuardQuiz() {
                   return (
                     <button
                       key={oi}
-                      onClick={() =>
-                        setAnswers((a) => ({ ...a, [q.id]: oi }))
-                      }
+                      onClick={() => {
+                        fb.tap();
+                        setAnswers((a) => ({ ...a, [q.id]: oi }));
+                      }}
                       className={`flex min-h-[48px] w-full items-center gap-2.5 rounded-xl border px-3.5 text-left text-sm ${
                         selected
                           ? "border-gold bg-gold/10 text-gold"

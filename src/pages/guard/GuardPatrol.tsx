@@ -16,6 +16,7 @@ import { guardService } from "@/lib/services";
 import { rondasService } from "@/lib/rondas";
 import { getCurrentPosition, Coords, distanceMeters } from "@/lib/geo";
 import { dataUrlToFile } from "@/lib/capture";
+import fb from "@/lib/feedback";
 import {
   RondaCheckpoint, RondaRoute, CheckpointScanStatus, RondaSettings, DEFAULT_SETTINGS, TagScan,
 } from "@/types/rondas";
@@ -136,6 +137,7 @@ export default function GuardPatrol() {
   const persistScanned = (next: Set<string>) => ls.set(scKey(routeId), Array.from(next));
 
   const startPatrol = () => {
+    fb.press();
     const ts = Date.now();
     setStartedAt(ts);
     ls.set(sKey(routeId), { startedAt: ts });
@@ -143,6 +145,7 @@ export default function GuardPatrol() {
     if (routeId) rondasService.startPatrol(routeId).catch(() => {});
   };
   const finishPatrol = () => {
+    fb.success();
     setStartedAt(null);
     ls.del(sKey(routeId));
     ls.del(scKey(routeId));
@@ -260,7 +263,7 @@ export default function GuardPatrol() {
             <div className="flex items-center gap-2 rounded-xl border border-high/40 bg-high/10 px-3 py-2.5 text-xs text-high">
               <CloudOff size={15} className="shrink-0" />
               <span className="flex-1">{t("rondas.pendingSync", { count: pending.length })}</span>
-              <button onClick={flushPending} className="font-semibold underline">{t("rondas.syncNow")}</button>
+              <button onClick={() => { fb.tap(); flushPending(); }} className="font-semibold underline">{t("rondas.syncNow")}</button>
             </div>
           )}
 
@@ -337,7 +340,7 @@ export default function GuardPatrol() {
       {checkpoints.length > 0 && startedAt && (
         <div className="sticky bottom-0 -mx-4 mt-4 space-y-2 border-t border-line bg-navy px-4 pt-3" style={footerStyle}>
           {!allDone ? (
-            <button onClick={() => setScannerOpen(true)} className="btn-xl w-full bg-gold-strong text-navy active:bg-gold-hover">
+            <button onClick={() => { fb.tap(); setScannerOpen(true); }} className="btn-xl w-full bg-gold-strong text-navy active:bg-gold-hover">
               <ScanLine size={18} />{t("rondas.scanQR")}
             </button>
           ) : (
@@ -345,7 +348,7 @@ export default function GuardPatrol() {
               <Flag size={18} />{t("rondas.finish")}
             </button>
           )}
-          <button onClick={() => setIssueOpen(true)} className="btn-xl w-full border border-critical/40 text-critical">
+          <button onClick={() => { fb.tap(); setIssueOpen(true); }} className="btn-xl w-full border border-critical/40 text-critical">
             <AlertTriangle size={18} />{t("rondas.reportIssue")}
           </button>
         </div>
@@ -416,6 +419,7 @@ function ScanConfirm({ checkpoint, settings, onClose, onSubmit }: {
 
   const submit = async () => {
     if (busy) return;
+    fb.press();
     setError(null);
     // enforce settings.
     // TESTING ESCAPE HATCH: VITE_GEOFENCE_BYPASS=true lets you scan checkpoints
@@ -478,7 +482,7 @@ function ScanConfirm({ checkpoint, settings, onClose, onSubmit }: {
             <label className="label-eyebrow mb-1.5 block">{t("rondas.statusLabel")}</label>
             <div className="grid grid-cols-4 gap-2">
               {SCAN_STATUSES.map((s) => (
-                <button key={s} onClick={() => setStatus(s)} className={`flex min-h-[44px] items-center justify-center rounded-lg border px-1 text-[11px] font-semibold ${status === s ? "border-gold bg-gold/10 text-gold" : "border-line text-muted"}`}>
+                <button key={s} onClick={() => { fb.select(); setStatus(s); }} className={`flex min-h-[44px] items-center justify-center rounded-lg border px-1 text-[11px] font-semibold ${status === s ? "border-gold bg-gold/10 text-gold" : "border-line text-muted"}`}>
                   {t(`rondas.scanStatus.${s}`)}
                 </button>
               ))}
@@ -517,7 +521,7 @@ function HistorySection({ patrols, open, setOpen }: { patrols: any[]; open: bool
   const { t } = useTranslation();
   return (
     <Card className="p-0">
-      <button onClick={() => setOpen(!open)} className="flex w-full items-center gap-2 px-4 py-3.5 text-sm font-semibold text-ink">
+      <button onClick={() => { fb.tap(); setOpen(!open); }} className="flex w-full items-center gap-2 px-4 py-3.5 text-sm font-semibold text-ink">
         <History size={16} className="text-gold" />
         <span className="flex-1 text-left">{t("rondas.history")}</span>
         <ChevronRight size={18} className={`text-muted transition-transform ${open ? "rotate-90" : ""}`} />

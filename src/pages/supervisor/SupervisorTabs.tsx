@@ -24,12 +24,13 @@ import More from "./More";
 import UniformInspection from "./UniformInspection";
 import BackupConfirm from "./BackupConfirm";
 import Profile from "../shared/Profile";
+import fb from "@/lib/feedback";
 
 export default function SupervisorTabs() {
   const { t } = useTranslation();
   return (
-    <IonTabs>
-      <IonRouterOutlet>
+    <IonTabs onIonTabsDidChange={() => fb.select()}>
+      <IonRouterOutlet animated>
         <Route exact path="/supervisor/dashboard" component={SupervisorDashboard} />
         <Route exact path="/supervisor/checkin" component={CheckInOut} />
         <Route exact path="/supervisor/incidents" component={SupervisorIncidents} />
