@@ -121,12 +121,18 @@ export default function GuardSchedule() {
         <>
           {view === "month" && <MonthGrid anchor={anchor} today={today} weekdayLabels={weekdayLabels} byDay={byDay} freeDays={freeDays} onPick={(d: Date) => { fb.tap(); setAnchor(d); }} />}
           {view === "week" && <WeekStrip anchor={anchor} today={today} weekdayLabels={weekdayLabels} byDay={byDay} freeDays={freeDays} onPick={(d: Date) => { fb.tap(); setAnchor(d); }} />}
+          {view !== "day" && <Legend t={t} />}
 
-          {/* Selected-day events (shown under month/week, and as the body of day view) */}
-          <div className="mt-4">
-            <DayHeader anchor={anchor} locale={locale} view={view} />
-            <DayShifts shifts={shiftsOn(anchor)} freeDay={freeDays.has(ymd(anchor))} t={t} />
-          </div>
+          {view === "day" ? (
+            /* iOS-style time-of-day timeline */
+            <DayTimeline shifts={shiftsOn(anchor)} freeDay={freeDays.has(ymd(anchor))} anchor={anchor} today={today} t={t} />
+          ) : (
+            /* Selected-day events list under the month/week grid */
+            <div className="mt-4">
+              <DayHeader anchor={anchor} locale={locale} view={view} />
+              <DayShifts shifts={shiftsOn(anchor)} freeDay={freeDays.has(ymd(anchor))} t={t} />
+            </div>
+          )}
         </>
       )}
     </Screen>
@@ -158,8 +164,12 @@ function MonthGrid({ anchor, today, weekdayLabels, byDay, freeDays, onPick }: an
                 isSel ? "bg-gold font-bold text-navy" : isToday ? "font-bold text-gold" : inMonth ? "text-ink" : "text-faint",
                 !isSel && free ? "bg-online/10" : "",
               ].join(" ")}>{d.getDate()}</span>
-              {count > 0 && !isSel && <span className="absolute bottom-1 h-1.5 w-1.5 rounded-full bg-gold" />}
-              {count > 0 && isSel && <span className="absolute bottom-1 h-1.5 w-1.5 rounded-full bg-navy/70" />}
+              {/* bottom marker: shift dot, else "L" for a free/resting day */}
+              {count > 0 ? (
+                <span className={`absolute bottom-1 h-1.5 w-1.5 rounded-full ${isSel ? "bg-navy/70" : "bg-gold"}`} />
+              ) : free ? (
+                <span className={`absolute bottom-0.5 text-[9px] font-bold leading-none ${isSel ? "text-navy" : "text-online"}`}>L</span>
+              ) : null}
             </button>
           );
         })}
@@ -182,7 +192,13 @@ function WeekStrip({ anchor, today, weekdayLabels, byDay, freeDays, onPick }: an
           <button key={i} onClick={() => onPick(d)} className={`flex flex-col items-center gap-1 rounded-xl py-2 ${isSel ? "bg-gold text-navy" : "active:bg-surface-2"}`}>
             <span className={`text-[10px] font-semibold uppercase ${isSel ? "text-navy/70" : "text-muted"}`}>{weekdayLabels[i]}</span>
             <span className={`text-[15px] font-bold ${isSel ? "text-navy" : isToday ? "text-gold" : "text-ink"}`}>{d.getDate()}</span>
-            <span className={`h-1.5 w-1.5 rounded-full ${count > 0 ? (isSel ? "bg-navy/70" : "bg-gold") : free ? "bg-online/60" : "bg-transparent"}`} />
+            {count > 0 ? (
+              <span className={`h-1.5 w-1.5 rounded-full ${isSel ? "bg-navy/70" : "bg-gold"}`} />
+            ) : free ? (
+              <span className={`text-[10px] font-bold leading-none ${isSel ? "text-navy" : "text-online"}`}>L</span>
+            ) : (
+              <span className="h-1.5 w-1.5 rounded-full bg-transparent" />
+            )}
           </button>
         );
       })}
@@ -196,6 +212,105 @@ function DayHeader({ anchor, locale, view }: any) {
     <p className="mb-2 text-[13px] font-bold capitalize text-ink">
       {new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long" }).format(anchor)}
     </p>
+  );
+}
+
+/** A compact legend explaining the grid markers. */
+function Legend({ t }: any) {
+  return (
+    <div className="mt-2 flex items-center justify-center gap-4 text-[11px] text-muted">
+      <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-gold" />{t("schedule.legendShift", "Turno")}</span>
+      <span className="flex items-center gap-1.5"><span className="font-bold text-online">L</span>{t("schedule.legendFree", "Día libre")}</span>
+    </div>
+  );
+}
+
+/** iOS-Calendar-style day view: a scrollable 24h timeline with shift blocks
+ *  positioned at their real times, hour gridlines, and a "now" indicator. */
+function DayTimeline({ shifts, freeDay, anchor, today, t }: any) {
+  const HOUR_H = 52;          // px per hour
+  const GUTTER = 52;          // px width of the hour-label gutter
+  const dayStart = startOfDay(anchor);
+  const isToday = sameDay(anchor, today);
+  const now = new Date();
+  const nowMin = isToday ? (now.getTime() - dayStart.getTime()) / 60000 : -1;
+
+  const fmt = (s: any, k: "start" | "end") => s[k === "start" ? "startTimeLabel" : "endTimeLabel"] ||
+    new Date(s[k === "start" ? "startTime" : "endTime"]).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+
+  // Position each shift within the day (clamped, so night shifts crossing
+  // midnight still render sensibly).
+  const blocks = shifts
+    .map((s: any) => {
+      const start = new Date(s.startTime);
+      const end = new Date(s.endTime);
+      if (Number.isNaN(start.getTime())) return null;
+      let sMin = (start.getTime() - dayStart.getTime()) / 60000;
+      let eMin = (end.getTime() - dayStart.getTime()) / 60000;
+      sMin = Math.max(0, Math.min(1440, sMin));
+      eMin = Math.max(sMin + 30, Math.min(1440, Number.isNaN(eMin) ? sMin + 30 : eMin));
+      return { s, sMin, eMin };
+    })
+    .filter(Boolean);
+
+  return (
+    <div className="mt-3">
+      {freeDay && (
+        <Card className="mb-3 flex items-center gap-3 p-3.5">
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-online/15 text-lg font-bold text-online">L</span>
+          <div>
+            <p className="text-[15px] font-semibold text-ink">{t("schedule.freeDay", "Día libre")}</p>
+            <p className="text-xs text-muted">{t("schedule.timeOffApproved", "Tiempo libre aprobado")}</p>
+          </div>
+        </Card>
+      )}
+      <Card className="overflow-hidden p-0">
+        <div className="relative" style={{ height: 24 * HOUR_H }}>
+          {/* Hour gridlines + labels */}
+          {Array.from({ length: 24 }, (_, h) => (
+            <div key={h} className="absolute inset-x-0 flex items-start" style={{ top: h * HOUR_H }}>
+              <span className="-translate-y-1.5 pr-2 text-right text-[10px] tabular-nums text-faint" style={{ width: GUTTER }}>
+                {String(h).padStart(2, "0")}:00
+              </span>
+              <span className="h-px flex-1 bg-line/50" />
+            </div>
+          ))}
+
+          {/* Now indicator */}
+          {nowMin >= 0 && nowMin <= 1440 && (
+            <div className="absolute right-0 z-10 flex items-center" style={{ left: GUTTER, top: (nowMin / 60) * HOUR_H }}>
+              <span className="-ml-1 h-2 w-2 rounded-full bg-critical" />
+              <span className="h-px flex-1 bg-critical" />
+            </div>
+          )}
+
+          {/* Shift blocks */}
+          {blocks.map((b: any, i: number) => (
+            <div
+              key={b.s.id || i}
+              className="absolute z-20 overflow-hidden rounded-lg border border-gold/40 bg-gold/15 px-2 py-1"
+              style={{ top: (b.sMin / 60) * HOUR_H + 1, height: ((b.eMin - b.sMin) / 60) * HOUR_H - 2, left: GUTTER + 4, right: 6 }}
+            >
+              <p className="flex items-center gap-1 text-[12px] font-bold text-ink">
+                <Clock size={12} className="shrink-0 text-gold" /> {fmt(b.s, "start")} – {fmt(b.s, "end")}
+              </p>
+              {(b.s.station?.stationName || b.s.stationName) && (
+                <p className="mt-0.5 flex items-center gap-1 truncate text-[11px] text-muted">
+                  <MapPin size={11} className="shrink-0 text-gold" /> {b.s.station?.stationName || b.s.stationName}
+                </p>
+              )}
+            </div>
+          ))}
+
+          {/* Empty state (no shifts and not a free day) */}
+          {blocks.length === 0 && !freeDay && (
+            <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-sm text-muted">
+              {t("schedule.noShiftsDay", "Sin turnos este día")}
+            </div>
+          )}
+        </div>
+      </Card>
+    </div>
   );
 }
 
