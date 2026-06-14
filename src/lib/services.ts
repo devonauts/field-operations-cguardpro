@@ -13,7 +13,12 @@ const adoptTz = (d: any) => {
 /* ------------------------------------------------------------------ */
 export const guardService = {
   dashboard: () => api.get(tenantPath("/guard/me")).then(unwrap).then(adoptTz),
-  schedule: () => api.get(tenantPath("/guard/me/schedule")).then(unwrap).then(adoptTz),
+  schedule: (params?: { from?: string; to?: string }) => {
+    const qs = params && (params.from || params.to)
+      ? "?" + new URLSearchParams(Object.entries(params).filter(([, v]) => Boolean(v)) as [string, string][]).toString()
+      : "";
+    return api.get(tenantPath("/guard/me/schedule") + qs).then(unwrap).then(adoptTz);
+  },
   /** Summary of my most recent completed shift (off-duty "last shift" card). */
   lastShift: () => api.get(tenantPath("/guard/me/last-shift")).then(unwrap),
   /** Guards on duty at my current sitio de servicio (team roster). */
