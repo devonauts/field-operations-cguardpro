@@ -22,6 +22,7 @@ import GuardLesson from "./GuardLesson";
 import GuardCourseQuiz from "./GuardCourseQuiz";
 import GuardCertificate from "./GuardCertificate";
 import GuardBackup from "./GuardBackup";
+import GuardPerformance from "./GuardPerformance";
 import GuardShiftDetail from "./GuardShiftDetail";
 import GuardMap from "./GuardMap";
 import GuardRadio from "./GuardRadio";
@@ -116,6 +117,7 @@ export default function GuardTabs() {
         <Route exact path="/guard/training/:enrollmentId/quiz" component={GuardCourseQuiz} />
         <Route exact path="/guard/training/:enrollmentId" component={GuardCourseDetail} />
         <Route exact path="/guard/backup" component={GuardBackup} />
+        <Route exact path="/guard/performance" component={GuardPerformance} />
         <Route exact path="/guard/profile" component={Profile} />
         {/* Tab destinations + the detail screens reached from dashboard cards */}
         <Route exact path="/guard/patrol" component={GuardPatrol} />

@@ -60,6 +60,22 @@ export interface Performance {
   source: "backend" | "client";
 }
 
+export interface PerfTrendPoint {
+  label: string;
+  score: number;
+}
+
+export interface PerfEvents {
+  absences: { date: string; shiftLabel?: string }[];
+  tardies: { date: string; minutesLate: number; shiftLabel?: string }[];
+  backups: { date: string; stationName?: string; kind: "volunteer" | "cover" }[];
+}
+
+export interface PerformanceDetail extends Performance {
+  trend: PerfTrendPoint[];
+  events: PerfEvents;
+}
+
 // Keep in sync with backend DEFAULT_WEIGHTS.
 export const WEIGHTS: Record<ComponentKey, number> = {
   punctuality: 0.18,
@@ -148,6 +164,55 @@ export async function loadGuardPerformance(
     /* endpoint unreachable → degrade gracefully */
   }
   return emptyPerformance("client");
+}
+
+const EMPTY_EVENTS: PerfEvents = { absences: [], tardies: [], backups: [] };
+
+/** Normalize a raw backend payload into a fully-shaped PerformanceDetail. */
+function normalizeDetail(
+  r: any,
+  source: "backend" | "client",
+): PerformanceDetail {
+  const perf = normalize(r, source);
+  const ev = r && r.events ? r.events : {};
+  return {
+    ...perf,
+    trend: Array.isArray(r && r.trend) ? r.trend : [],
+    events: {
+      absences: Array.isArray(ev.absences) ? ev.absences : [],
+      tardies: Array.isArray(ev.tardies) ? ev.tardies : [],
+      backups: Array.isArray(ev.backups) ? ev.backups : [],
+    },
+  };
+}
+
+function emptyPerformanceDetail(
+  source: "backend" | "client",
+): PerformanceDetail {
+  return {
+    ...emptyPerformance(source),
+    trend: [],
+    events: { ...EMPTY_EVENTS, absences: [], tardies: [], backups: [] },
+  };
+}
+
+/**
+ * Load the detailed performance payload (?detail=1) for the authenticated
+ * guard: base Performance plus chronological trend buckets and real event
+ * records. Degrades gracefully to an empty PerformanceDetail on failure.
+ */
+export async function loadGuardPerformanceDetail(
+  periodDays = 30,
+): Promise<PerformanceDetail> {
+  try {
+    const r = await api.get(
+      tenantPath(`/guard/me/performance?period=${periodDays}&detail=1`),
+    );
+    if (r && typeof r.score === "number") return normalizeDetail(r, "backend");
+  } catch {
+    /* endpoint unreachable → degrade gracefully */
+  }
+  return emptyPerformanceDetail("client");
 }
 
 /** Supervisor performance (admin/supervisor view of a staff user id). */

@@ -844,13 +844,24 @@ function PerformanceSection({ perf }: { perf: ReturnType<typeof useAsync<any>> }
   // Ronda + Examen now live in the on-duty view (OnDutyView). Off duty keeps
   // only backup/volunteer.
   const quickActions = [
-    { icon: <LifeBuoy size={18} />, label: t("nav.backup"), to: "/guard/backup" },
+    {
+      icon: <LifeBuoy size={18} />,
+      label: t("nav.backup"),
+      sub: t("backup.cardSub", "Cubre turnos sin asignar y gana puntos extra"),
+      to: "/guard/backup",
+    },
   ];
 
   return (
     <div className="space-y-4">
-      {/* Score + tier */}
-      <Card className="p-5">
+      {/* Score + tier — tappable: opens the full "Mi Desempeño" detail screen. */}
+      <Card
+        className="cursor-pointer p-5 active:bg-surface-2"
+        onClick={() => {
+          fb.tap();
+          history.push("/guard/performance");
+        }}
+      >
         <SectionTitle icon={<TrendingUp size={16} />} right={<span className="text-[11px] text-muted">{t("perf.period30")}</span>}>
           {t("perf.title")}
         </SectionTitle>
@@ -907,20 +918,34 @@ function PerformanceSection({ perf }: { perf: ReturnType<typeof useAsync<any>> }
                 ))}
               </div>
             )}
+
+            {/* Affordance: this card opens the full performance detail screen. */}
+            <div className="mt-4 flex items-center justify-end gap-1 border-t border-line pt-3 text-xs font-semibold text-gold">
+              <span>{t("perfDetail.seeDetail", "Ver detalle")}</span>
+              <ChevronRight size={15} className="shrink-0" />
+            </div>
           </>
         )}
       </Card>
 
       {/* Quick actions: take the station test / volunteer as backup */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3">
         {quickActions.map((a) => (
           <button
             key={a.to}
-            onClick={() => history.push(a.to)}
-            className="flex min-h-[54px] items-center gap-2.5 rounded-xl border border-line bg-surface px-4 text-sm font-semibold text-ink active:bg-surface-2"
+            onClick={() => {
+              fb.tap();
+              history.push(a.to);
+            }}
+            className="flex min-h-[54px] items-center gap-3 rounded-xl border border-line bg-surface px-4 py-2.5 text-left active:bg-surface-2"
           >
             <span className="shrink-0 text-gold">{a.icon}</span>
-            <span className="flex-1 text-left">{a.label}</span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-ink">{a.label}</span>
+              {a.sub && (
+                <span className="mt-0.5 block text-xs leading-snug text-muted">{a.sub}</span>
+              )}
+            </span>
             <ChevronRight size={16} className="shrink-0 text-muted" />
           </button>
         ))}

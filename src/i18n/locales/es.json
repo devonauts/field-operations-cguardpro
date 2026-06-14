@@ -439,7 +439,11 @@
       "hours": "Horas trabajadas",
       "shifts": "Turnos cubiertos",
       "onTime": "Turnos puntuales",
-      "absences": "Faltas"
+      "absences": "Faltas",
+      "shiftsScheduled": "Turnos asignados",
+      "attendanceRate": "Asistencia",
+      "avgLatenessMin": "Atraso promedio",
+      "tardies": "Atrasos"
     },
     "tip": {
       "punctuality": "Llega al menos 10 minutos antes de tu turno.",
@@ -449,6 +453,55 @@
       "rondas": "Completa todas las rondas a tiempo.",
       "quiz": "Repasa y aprueba el examen de seguridad del puesto.",
       "training": "Completa las capacitaciones asignadas."
+    }
+  },
+  "perfDetail": {
+    "title": "Mi desempeño",
+    "subtitle": "Tu puntaje en detalle",
+    "seeDetail": "Ver detalle",
+    "overall": "Puntaje general",
+    "period7": "7 días",
+    "period30": "30 días",
+    "period90": "90 días",
+    "trendTitle": "Evolución",
+    "trendEmpty": "Aún no hay suficiente historial para mostrar tu evolución.",
+    "breakdownTitle": "Desglose por factor",
+    "weight": "Peso {{pct}}%",
+    "statsTitle": "Tus números",
+    "penaltyTitle": "Faltas y atrasos",
+    "penaltyNone": "Sin faltas ni atrasos en este período. ¡Excelente!",
+    "penaltyDetail": "{{absences}} faltas · {{tardies}} atrasos · −{{points}} pts",
+    "bonusTitle": "Bono de respaldo",
+    "bonusNone": "Aún no sumas puntos de respaldo en este período.",
+    "bonusDetail": "{{volunteer}} ofrecimientos · {{cover}} coberturas · +{{points}} pts",
+    "bonusNote": "Bono por cubrir turnos de respaldo (respaldo).",
+    "eventsTitle": "Actividad reciente",
+    "noEvents": "No hay actividad registrada en este período.",
+    "eventAbsence": "Falta",
+    "eventTardy": "{{min}} min tarde",
+    "eventBackup": "Respaldo",
+    "tipsTitle": "Cómo mejorar",
+    "glossaryTitle": "Cómo se calcula tu puntaje",
+    "glossaryIntro": "Tu puntaje combina siete factores de calidad ponderados, menos una penalización por faltas y atrasos, más un bono por respaldos. Así influye cada uno:",
+    "componentHint": {
+      "punctuality": "Mide cuántos turnos iniciaste a tiempo y tu atraso promedio.",
+      "uniform": "Promedio de las revisiones de uniforme en tus turnos.",
+      "inventory": "Porcentaje de turnos con el inventario completo y verificado.",
+      "consignas": "Consignas del puesto completadas sobre las asignadas.",
+      "rondas": "Rondas completadas a tiempo sobre las programadas.",
+      "quiz": "Promedio de tus exámenes de seguridad del puesto.",
+      "training": "Capacitaciones asignadas que completaste."
+    },
+    "glossary": {
+      "punctuality": "La puntualidad sube cuando inicias tus turnos a tiempo; los atrasos la reducen y pesan un 18% del puntaje base.",
+      "uniform": "El uniforme refleja tus revisiones de presentación en cada turno y pesa un 14% del puntaje base.",
+      "inventory": "El inventario mide los turnos en que verificaste todo el equipo asignado y pesa un 14% del puntaje base.",
+      "consignas": "Las consignas miden las tareas del puesto que completaste sobre las asignadas y pesan un 16% del puntaje base.",
+      "rondas": "Las rondas miden los recorridos completados a tiempo y pesan un 16% del puntaje base.",
+      "quiz": "El examen toma el promedio de tus pruebas de seguridad del puesto y pesa un 12% del puntaje base.",
+      "training": "La capacitación mide las formaciones asignadas que completaste y pesa un 10% del puntaje base.",
+      "penalty": "Las faltas y atrasos aplican una penalización sobre tu puntaje base: mientras más faltas y atrasos, mayor el descuento.",
+      "bonus": "El respaldo suma un bono cuando te ofreces o cubres turnos de otros guardias, hasta un límite máximo."
     }
   },
   "profile": {
@@ -603,6 +656,7 @@
   },
   "backup": {
     "title": "Respaldo de turnos",
+    "cardSub": "Cubre turnos sin asignar y gana puntos extra",
     "subtitle": "Ofrécete a cubrir turnos en riesgo",
     "empty": "No hay turnos abiertos para cubrir ahora mismo.",
     "explain": "Estos turnos podrían quedar sin cubrir. Ofrécete y gana puntos de respaldo.",

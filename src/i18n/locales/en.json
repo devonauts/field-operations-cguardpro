@@ -439,7 +439,11 @@
       "hours": "Hours worked",
       "shifts": "Shifts covered",
       "onTime": "On-time shifts",
-      "absences": "Absences"
+      "absences": "Absences",
+      "shiftsScheduled": "Shifts scheduled",
+      "attendanceRate": "Attendance",
+      "avgLatenessMin": "Avg. lateness",
+      "tardies": "Late arrivals"
     },
     "tip": {
       "punctuality": "Arrive at least 10 minutes before your shift.",
@@ -449,6 +453,55 @@
       "rondas": "Complete every patrol on time.",
       "quiz": "Review and pass the station security test.",
       "training": "Complete your assigned training."
+    }
+  },
+  "perfDetail": {
+    "title": "My performance",
+    "subtitle": "Your score in detail",
+    "seeDetail": "View details",
+    "overall": "Overall score",
+    "period7": "7 days",
+    "period30": "30 days",
+    "period90": "90 days",
+    "trendTitle": "Trend",
+    "trendEmpty": "Not enough history yet to show your trend.",
+    "breakdownTitle": "Factor breakdown",
+    "weight": "Weight {{pct}}%",
+    "statsTitle": "Your numbers",
+    "penaltyTitle": "Absences & late arrivals",
+    "penaltyNone": "No absences or late arrivals this period. Great job!",
+    "penaltyDetail": "{{absences}} absences · {{tardies}} late · −{{points}} pts",
+    "bonusTitle": "Backup bonus",
+    "bonusNone": "You haven't earned backup points this period yet.",
+    "bonusDetail": "{{volunteer}} volunteered · {{cover}} covered · +{{points}} pts",
+    "bonusNote": "Bonus for covering backup shifts (respaldo).",
+    "eventsTitle": "Recent activity",
+    "noEvents": "No activity recorded this period.",
+    "eventAbsence": "Absence",
+    "eventTardy": "{{min}} min late",
+    "eventBackup": "Backup",
+    "tipsTitle": "How to improve",
+    "glossaryTitle": "How your score is calculated",
+    "glossaryIntro": "Your score combines seven weighted quality factors, minus a penalty for absences and late arrivals, plus a bonus for backups. Here's how each one matters:",
+    "componentHint": {
+      "punctuality": "Measures how many shifts you started on time and your average lateness.",
+      "uniform": "Average of the uniform checks across your shifts.",
+      "inventory": "Share of shifts with complete, verified inventory.",
+      "consignas": "Station standing orders completed out of those assigned.",
+      "rondas": "Patrols completed on time out of those scheduled.",
+      "quiz": "Average of your station security tests.",
+      "training": "Assigned training courses you completed."
+    },
+    "glossary": {
+      "punctuality": "Punctuality rises when you start your shifts on time; late arrivals lower it and it weighs 18% of the base score.",
+      "uniform": "Uniform reflects your presentation checks each shift and weighs 14% of the base score.",
+      "inventory": "Inventory measures the shifts where you verified all assigned equipment and weighs 14% of the base score.",
+      "consignas": "Standing orders measure the station tasks you completed out of those assigned and weigh 16% of the base score.",
+      "rondas": "Patrols measure the rounds completed on time and weigh 16% of the base score.",
+      "quiz": "The test takes the average of your station security tests and weighs 12% of the base score.",
+      "training": "Training measures the assigned courses you completed and weighs 10% of the base score.",
+      "penalty": "Absences and late arrivals apply a penalty to your base score: the more absences and late arrivals, the larger the deduction.",
+      "bonus": "Backup adds a bonus when you volunteer for or cover other guards' shifts, up to a maximum cap."
     }
   },
   "profile": {
@@ -603,6 +656,7 @@
   },
   "backup": {
     "title": "Shift backup",
+    "cardSub": "Cover unassigned shifts and earn bonus points",
     "subtitle": "Volunteer to cover at-risk shifts",
     "empty": "No open shifts to cover right now.",
     "explain": "These shifts may go uncovered. Volunteer and earn backup points.",
