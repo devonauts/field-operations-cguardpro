@@ -113,7 +113,7 @@ export function MenuRow({
     <button
       type="button"
       onClick={onClick ? () => { fb.select(); onClick(); } : undefined}
-      className="pressable flex w-full items-center gap-3.5 px-4 py-3.5 text-left hover:bg-white/[0.03] active:bg-white/[0.05]"
+      className="pressable flex w-full items-center gap-3.5 rounded-2xl border border-line bg-surface px-4 py-4 text-left hover:bg-white/[0.03] active:bg-white/[0.05]"
     >
       <IconTile tone={tone}>{icon}</IconTile>
       <div className="min-w-0 flex-1">
@@ -128,9 +128,7 @@ export function MenuRow({
 
 /** A list of MenuRows inside one elevated card with hairline separators. */
 export function MenuList({ children }: { children: ReactNode }) {
-  return (
-    <div className="card-elev divide-y divide-line overflow-hidden">{children}</div>
-  );
+  return <div className="flex flex-col gap-2.5">{children}</div>;
 }
 
 /** A KPI tile: circular tinted icon, big value, caption. */
