@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { setupIonicReact } from "@ionic/react";
+import { iosTransitionAnimation } from "@ionic/core";
 
 /* Core Ionic CSS (required) */
 import "@ionic/react/css/core.css";
@@ -42,7 +43,13 @@ logInfo("env", "startup", {
   origin: location.origin,
 });
 
-setupIonicReact({ mode: "md" });
+// Keep Material component styling, but use the native iOS slide for PAGE
+// transitions. The md transition fades the entering page in while the leaving
+// page stays fully visible underneath — so pushing a sub-page (e.g. Perfil →
+// Avisos) shows the old page bleeding through. The iOS transition slides the
+// entering page in opaque from the right with a parallax exit, so there's no
+// double-exposure.
+setupIonicReact({ mode: "md", navAnimation: iosTransitionAnimation });
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
