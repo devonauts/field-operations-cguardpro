@@ -18,10 +18,16 @@ import "./i18n";
 import App from "./App";
 import { Capacitor } from "@capacitor/core";
 import { installGlobalErrorLogging, logInfo } from "./lib/errorLog";
+import { initTapFeedback } from "./lib/feedback";
 
 // Capture uncaught errors + unhandled rejections app-wide (viewable in
 // Profile → Diagnostics). Install before anything else can throw.
 installGlobalErrorLogging();
+
+// Global tap feedback: every button gets a light haptic + click sound
+// (respecting the Profile "Sonidos y vibración" toggle), de-duped against
+// components that already emit their own richer feedback.
+initTapFeedback();
 
 // One-time environment snapshot — camera (getUserMedia) and geolocation BOTH
 // require a secure context (HTTPS or localhost). If `secureContext` is false
