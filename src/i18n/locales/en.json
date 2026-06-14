@@ -114,6 +114,14 @@
     "requestTimeOff": "Request time off",
     "clockInForShift": "For your {{time}} shift"
   },
+  "late": {
+    "title": "You're late for your shift",
+    "minutes": "{{min}} min late",
+    "body": "You haven't clocked in yet. Please clock in as soon as possible.",
+    "atStation": "at {{station}}",
+    "since": "Your shift started at {{time}}",
+    "clockInNow": "Clock in now"
+  },
   "dashboard": {
     "operationsOverview": "Operations Overview",
     "live": "Live",

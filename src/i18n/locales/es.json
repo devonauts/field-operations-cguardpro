@@ -114,6 +114,14 @@
     "requestTimeOff": "Solicitar permiso",
     "clockInForShift": "Para tu turno de las {{time}}"
   },
+  "late": {
+    "title": "Vas tarde a tu turno",
+    "minutes": "{{min}} min tarde",
+    "body": "Aún no has marcado tu entrada. Marca tu entrada lo antes posible.",
+    "atStation": "en {{station}}",
+    "since": "Tu turno empezó a las {{time}}",
+    "clockInNow": "Marcar entrada"
+  },
   "dashboard": {
     "operationsOverview": "Resumen de Operaciones",
     "live": "En vivo",

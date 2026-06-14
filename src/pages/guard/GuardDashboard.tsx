@@ -267,6 +267,35 @@ export default function GuardDashboard() {
     null;
   const extraTargets: any[] = clockInTargets.filter((s) => s !== primaryTarget);
   const upcomingShift = currentShift || nextShift;
+
+  // Late-arrival detection. Prefer the backend-computed `lateArrival` (it knows
+  // the grace window and authoritative shift times); otherwise derive it
+  // client-side: a started shift the guard hasn't clocked into yet, past a small
+  // grace, is "late". Recomputed each minute via the now-tick so it stays live.
+  const nowTick = useNowTick(30000);
+  const FALLBACK_GRACE_MIN = 5;
+  const lateInfo = (() => {
+    const backend = data?.lateArrival;
+    if (backend) return backend.isLate ? backend : null;
+    // Fallback: never show when already clocked in.
+    if (isClockedIn) return null;
+    const start = currentShift?.startTime ? new Date(currentShift.startTime) : null;
+    if (!start || Number.isNaN(start.getTime())) return null;
+    const lateMinutes = Math.floor((nowTick - start.getTime()) / 60000);
+    if (lateMinutes < FALLBACK_GRACE_MIN) return null;
+    return {
+      isLate: true,
+      lateMinutes,
+      graceMin: FALLBACK_GRACE_MIN,
+      shiftId: currentShift?.id ?? null,
+      startTimeLabel:
+        currentShift?.startTimeLabel || fmtTime(currentShift?.startTime) || null,
+      stationName:
+        currentShift?.station?.stationName || currentShift?.stationName || null,
+    };
+  })();
+  // Belt-and-suspenders: clocked-in guards are never late.
+  const showLate = !!lateInfo && !isClockedIn;
   const guardName = guard?.fullName || guard?.name || "";
   const firstName = guardName.trim().split(/\s+/)[0] || "";
   const hour = new Date().getHours();
@@ -404,6 +433,18 @@ export default function GuardDashboard() {
       ) : (
         /* ====================== OFF-DUTY VIEW ===================== */
         <div className="space-y-4">
+          {/* Late-arrival warning — prominent, above everything else */}
+          {showLate && lateInfo && (
+            <LateWarning
+              info={lateInfo}
+              onClockIn={
+                primaryTarget && !busy
+                  ? () => beginClockIn(primaryTarget)
+                  : undefined
+              }
+            />
+          )}
+
           {/* Current status */}
           <CurrentStatusCard
             postsCount={stations.length}
@@ -809,6 +850,80 @@ function NextShiftCard({ shift, isCurrent }: { shift: any; isCurrent: boolean })
             <span className="text-faint">·</span>
             <span className="truncate">{station}</span>
           </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type LateArrival = {
+  isLate: boolean;
+  lateMinutes: number;
+  graceMin: number;
+  shiftId: string | null;
+  startTimeLabel: string | null;
+  stationName: string | null;
+};
+
+/* High-visibility late-arrival banner. Shown at the top of the off-duty
+   dashboard when the guard's shift has started and they still haven't clocked
+   in. If a clock-in target is available, the button kicks off the same
+   checklist→selfie flow as the hero CTA; otherwise it's informational. */
+function LateWarning({
+  info,
+  onClockIn,
+}: {
+  info: LateArrival;
+  onClockIn?: () => void;
+}) {
+  const { t } = useTranslation();
+  const min = Math.max(0, Math.round(info.lateMinutes || 0));
+  // Warn once when the banner first appears.
+  useEffect(() => {
+    fb.warning();
+  }, []);
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-critical/40 bg-critical/10 p-4">
+      <div className="flex items-start gap-3">
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-critical/40 bg-critical/15 text-critical">
+          <AlertTriangle size={22} strokeWidth={2.5} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-base font-extrabold tracking-tight text-critical">
+            {t("late.title", "Vas tarde a tu turno")}
+          </p>
+          <p className="mt-0.5 text-sm font-bold tabular-nums text-ink">
+            {t("late.minutes", { min })}
+            {info.stationName && (
+              <span className="font-medium text-muted">
+                {" "}
+                {t("late.atStation", { station: info.stationName })}
+              </span>
+            )}
+          </p>
+          {info.startTimeLabel && (
+            <p className="mt-0.5 text-xs text-muted">
+              {t("late.since", { time: info.startTimeLabel })}
+            </p>
+          )}
+          <p className="mt-1.5 text-xs leading-snug text-muted">
+            {t(
+              "late.body",
+              "Aún no has marcado tu entrada. Marca tu entrada lo antes posible.",
+            )}
+          </p>
+          {onClockIn && (
+            <button
+              onClick={() => {
+                fb.press();
+                onClockIn();
+              }}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-gold to-gold-strong px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-navy active:from-gold-hover active:to-gold-hover"
+            >
+              <Power size={18} className="shrink-0" strokeWidth={2.5} />
+              {t("late.clockInNow", "Marcar entrada")}
+            </button>
+          )}
         </div>
       </div>
     </div>
