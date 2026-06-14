@@ -453,7 +453,7 @@ function ScanConfirm({ checkpoint, settings, onClose, onSubmit }: {
           <h2 className="flex items-center gap-2 text-base font-semibold text-ink">
             <ScanLine size={18} className="text-gold" />{t("rondas.confirmCheckpoint")}
           </h2>
-          <button onClick={onClose} className="text-muted"><X size={22} /></button>
+          <button onClick={onClose} className="rounded-full p-1.5 text-muted"><X size={22} /></button>
         </div>
 
         <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4 pb-6">
@@ -521,7 +521,7 @@ function HistorySection({ patrols, open, setOpen }: { patrols: any[]; open: bool
   const { t } = useTranslation();
   return (
     <Card className="p-0">
-      <button onClick={() => { fb.tap(); setOpen(!open); }} className="flex w-full items-center gap-2 px-4 py-3.5 text-sm font-semibold text-ink">
+      <button onClick={() => { fb.tap(); setOpen(!open); }} className="flex w-full items-center gap-2 rounded-xl px-4 py-3.5 text-sm font-semibold text-ink">
         <History size={16} className="text-gold" />
         <span className="flex-1 text-left">{t("rondas.history")}</span>
         <ChevronRight size={18} className={`text-muted transition-transform ${open ? "rotate-90" : ""}`} />

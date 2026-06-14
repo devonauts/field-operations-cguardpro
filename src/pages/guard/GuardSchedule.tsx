@@ -186,7 +186,7 @@ function MonthGrid({ anchor, today, weekdayLabels, byDay, freeDays, onPick }: an
           const count = (byDay.get(ymd(d)) || []).length;
           const free = freeDays.has(ymd(d));
           return (
-            <button key={i} onClick={() => onPick(d)} className="relative flex aspect-square flex-col items-center justify-center">
+            <button key={i} onClick={() => onPick(d)} className="relative flex aspect-square flex-col items-center justify-center rounded-xl">
               <span className={[
                 "grid h-8 w-8 place-items-center rounded-full text-[13px]",
                 isSel ? "bg-gold font-bold text-navy" : isToday ? "font-bold text-gold" : inMonth ? "text-ink" : "text-faint",
@@ -287,7 +287,7 @@ function WeekTimeline({ anchor, today, weekdayLabels, byDay, freeDays, onPick }:
                     <button
                       key={b.s.id || j}
                       onClick={() => onPick(d)}
-                      className="absolute inset-x-0.5 z-20 overflow-hidden rounded-md border border-gold/40 bg-gold/20 px-1 py-0.5 text-left"
+                      className="absolute inset-x-0.5 z-20 overflow-hidden rounded-lg border border-gold/40 bg-gold/20 px-1 py-0.5 text-left"
                       style={{ top: (b.sMin / 60) * HOUR_H + 1, height: ((b.eMin - b.sMin) / 60) * HOUR_H - 2 }}
                     >
                       <span className="block truncate text-[9px] font-bold leading-tight text-ink">{fmtStart(b.s)}</span>

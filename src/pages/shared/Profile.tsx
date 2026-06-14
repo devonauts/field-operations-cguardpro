@@ -198,7 +198,7 @@ export default function Profile() {
               </p>
               <button
                 onClick={copyId}
-                className="mt-1 flex items-center gap-1.5 text-xs text-muted active:text-ink"
+                className="mt-1 flex items-center gap-1.5 rounded-xl text-xs text-muted active:text-ink"
               >
                 {t("profile.employeeId", "ID de empleado")}: {employeeId}
                 <Copy size={12} />
@@ -394,7 +394,7 @@ function BottomSheet({
         <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-line-2" />
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-base font-bold text-ink">{title}</h3>
-          <button onClick={() => { fb.tap(); onClose(); }} className="text-muted active:text-ink" aria-label="close">
+          <button onClick={() => { fb.tap(); onClose(); }} className="rounded-full text-muted active:text-ink" aria-label="close">
             <X size={20} />
           </button>
         </div>

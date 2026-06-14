@@ -91,7 +91,7 @@ export default function ResetPassword({ token, onDone }: { token: string; onDone
                       placeholder="••••••••"
                       className="w-full rounded-xl border border-line bg-surface px-4 py-3 pr-11 text-base text-ink placeholder:text-faint outline-none focus:border-gold/60"
                     />
-                    <button type="button" onClick={() => { fb.tap(); setShowPw((s) => !s); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted" tabIndex={-1}>
+                    <button type="button" onClick={() => { fb.tap(); setShowPw((s) => !s); }} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted" tabIndex={-1}>
                       {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
@@ -123,7 +123,7 @@ export default function ResetPassword({ token, onDone }: { token: string; onDone
                   )}
                 </button>
 
-                <button type="button" onClick={() => { fb.tap(); onDone(); }} className="w-full pt-1 text-center text-sm text-muted">
+                <button type="button" onClick={() => { fb.tap(); onDone(); }} className="w-full rounded-xl pt-1 text-center text-sm text-muted">
                   {t("auth.reset.cancel", "Cancelar")}
                 </button>
               </form>

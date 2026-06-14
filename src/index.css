@@ -151,6 +151,17 @@ button:not(:disabled):not(.no-press):not([class*="ion-"]):active,
   opacity: 0.92;
 }
 
+/* GLOBAL default radius — safety net so NO button ever renders square. Uses the
+   zero-specificity :where() selector, so ANY explicit Tailwind rounded-* utility
+   (rounded-full, rounded-2xl, rounded-lg, rounded-md, …) always wins over it.
+   Ionic custom elements are excluded (their internal parts own their geometry),
+   and `.no-round` is an explicit opt-out. Class-based rules like .radio-fab-float
+   (border-radius:9999px) also win, since a class has higher specificity than
+   :where(). Token --radius-tile = 0.75rem, the most common existing radius. */
+:where(button, [role="button"]):not(.no-round):not([class*="ion-"]) {
+  border-radius: var(--radius-tile);
+}
+
 /* Opt-out: things that must not scale (full-width sticky bars, the radio FAB,
    tab buttons, etc.). Still suppresses the tap-highlight flash. */
 .no-press {

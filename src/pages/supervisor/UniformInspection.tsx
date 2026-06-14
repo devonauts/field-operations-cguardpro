@@ -137,7 +137,7 @@ function RateModal({
               fb.tap();
               onClose();
             }}
-            className="text-muted"
+            className="rounded-full p-1.5 text-muted"
           >
             <X size={22} />
           </button>
@@ -155,6 +155,7 @@ function RateModal({
                     fb.select();
                     setStars(n);
                   }}
+                  className="rounded-full"
                 >
                   <Star
                     size={36}

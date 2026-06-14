@@ -98,7 +98,7 @@ export default function Login() {
                   <button
                     type="button"
                     onClick={() => { fb.tap(); setShowPw((s) => !s); }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted"
                     tabIndex={-1}
                   >
                     {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -130,7 +130,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={onForgot}
-                className="w-full pt-1 text-center text-sm font-medium text-gold-strong"
+                className="w-full rounded-xl pt-1 text-center text-sm font-medium text-gold-strong"
               >
                 {forgotSent
                   ? t("auth.forgot.sent", "Si el correo existe, te enviamos un enlace.")

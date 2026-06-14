@@ -123,7 +123,7 @@ function CoursesTab() {
           fb.tap();
           reload();
         }}
-        className="mx-auto block pt-1 text-xs text-muted"
+        className="mx-auto block rounded-xl pt-1 text-xs text-muted"
       >
         {t("common.refresh")}
       </button>

@@ -139,7 +139,7 @@ function RequestModal({
       <div className="flex h-full flex-col bg-navy safe-bottom">
         <div className="safe-top flex items-center justify-between border-b border-line px-4 py-3">
           <h2 className="text-base font-semibold text-ink">{t("timeoff.newRequest")}</h2>
-          <button onClick={() => { fb.tap(); onClose(); }} className="text-muted">
+          <button onClick={() => { fb.tap(); onClose(); }} className="rounded-full p-1 text-muted">
             <X size={22} />
           </button>
         </div>
