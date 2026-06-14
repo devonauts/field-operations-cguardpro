@@ -16,6 +16,11 @@ import GuardIncidents from "./GuardIncidents";
 import GuardNotices from "./GuardNotices";
 import GuardTimeOff from "./GuardTimeOff";
 import GuardQuiz from "./GuardQuiz";
+import GuardTraining from "./GuardTraining";
+import GuardCourseDetail from "./GuardCourseDetail";
+import GuardLesson from "./GuardLesson";
+import GuardCourseQuiz from "./GuardCourseQuiz";
+import GuardCertificate from "./GuardCertificate";
 import GuardBackup from "./GuardBackup";
 import GuardShiftDetail from "./GuardShiftDetail";
 import GuardMap from "./GuardMap";
@@ -103,6 +108,13 @@ export default function GuardTabs() {
         <Route exact path="/guard/notices" component={GuardNotices} />
         <Route exact path="/guard/time-off" component={GuardTimeOff} />
         <Route exact path="/guard/quiz" component={GuardQuiz} />
+        {/* Entrenamiento (professional training). Specific routes before the
+            :enrollmentId param route so /certificate isn't captured as an id. */}
+        <Route exact path="/guard/training" component={GuardTraining} />
+        <Route exact path="/guard/training/certificate/:certificateId" component={GuardCertificate} />
+        <Route exact path="/guard/training/:enrollmentId/lesson/:lessonId" component={GuardLesson} />
+        <Route exact path="/guard/training/:enrollmentId/quiz" component={GuardCourseQuiz} />
+        <Route exact path="/guard/training/:enrollmentId" component={GuardCourseDetail} />
         <Route exact path="/guard/backup" component={GuardBackup} />
         <Route exact path="/guard/profile" component={Profile} />
         {/* Tab destinations + the detail screens reached from dashboard cards */}
@@ -152,7 +164,7 @@ export default function GuardTabs() {
 
         {/* OFF DUTY (not clocked in): Entrenamiento + Horario. */}
         {!onDuty && (
-          <IonTabButton tab="training" href="/guard/quiz">
+          <IonTabButton tab="training" href="/guard/training">
             <GraduationCap size={22} />
             <IonLabel>{t("nav.training", "Entrenamiento")}</IonLabel>
           </IonTabButton>

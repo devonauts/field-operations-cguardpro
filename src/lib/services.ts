@@ -88,6 +88,136 @@ export const guardService = {
 };
 
 /* ------------------------------------------------------------------ */
+/* Training (Entrenamiento) — /tenant/:id/guard/me/training/*          */
+/* Professional courses assigned to the guard: lessons (video/text/    */
+/* pdf), an optional quiz, points + a branded achievement certificate. */
+/* ------------------------------------------------------------------ */
+export interface TrainingCourseRow {
+  id: string;
+  courseId: string;
+  courseTitle: string;
+  status: "assigned" | "in_progress" | "completed" | "expired";
+  progressPercentage: number;
+  dueDate?: string | null;
+  completedAt?: string | null;
+}
+
+export interface TrainingLessonView {
+  id: string;
+  order: number;
+  title: string;
+  description?: string | null;
+  videoUrl?: string | null;
+  richContent?: string | null;
+  resources?: Array<{ name: string; url: string; type?: string }> | null;
+  durationMinutes?: number | null;
+  completed: boolean;
+}
+
+export interface TrainingEnrollmentDetail {
+  id: string;
+  courseId: string;
+  courseTitle: string;
+  status: "assigned" | "in_progress" | "completed" | "expired";
+  progressPercentage: number;
+  quizPassed: boolean;
+  hasQuiz: boolean;
+  quizBankId?: string | null;
+  passPct?: number | null;
+  lessons: TrainingLessonView[];
+  /** Sanitized quiz questions to present (no correct answers); may be absent. */
+  questions?: Array<{ id: string; prompt: string; options: string[] }> | null;
+}
+
+export interface TrainingCertificateRow {
+  id: string;
+  courseTitle: string;
+  serialNumber: string;
+  score?: number | null;
+  issuedAt: string;
+  publicUrl?: string | null;
+  pointsValue?: number | null;
+}
+
+export interface TrainingCertificateDetail extends TrainingCertificateRow {
+  guardName: string;
+  htmlContent: string;
+  downloadToken: string;
+}
+
+export const trainingService = {
+  /** Courses assigned to me (all_guards templates are materialized per-guard). */
+  myCourses: (params?: { status?: string; limit?: number; offset?: number }) => {
+    const qs = params
+      ? "?" + new URLSearchParams(params as Record<string, string>).toString()
+      : "";
+    return api
+      .get(tenantPath(`/guard/me/training/my-courses${qs}`))
+      .then((r) => ({
+        rows: asRows<TrainingCourseRow>(r),
+        count: (r && (r.count ?? r.total)) ?? asRows(r).length,
+      }));
+  },
+  /** Enrollment detail with ordered lessons + per-lesson completion + quiz info. */
+  enrollmentDetail: (enrollmentId: string) =>
+    api
+      .get(tenantPath(`/guard/me/training/enrollments/${enrollmentId}/detail`))
+      .then(unwrap) as Promise<TrainingEnrollmentDetail>,
+  /** Mark a lesson complete; returns recomputed progress (auto-completes if no quiz). */
+  completeLesson: (
+    lessonId: string,
+    data: { enrollmentId: string; timeSpentSeconds?: number },
+  ) =>
+    api
+      .post(tenantPath(`/guard/me/training/lessons/${lessonId}/complete`), { data })
+      .then(unwrap) as Promise<{
+      id: string;
+      completedAt: string;
+      progressPercentage: number;
+    }>,
+  /** Submit the course quiz; graded server-side, issues a certificate on pass. */
+  submitQuiz: (
+    enrollmentId: string,
+    data: {
+      bankId: string;
+      answers: Array<{ questionId: string; chosenIndex: number }>;
+      startedAt?: string | null;
+    },
+  ) =>
+    api
+      .post(
+        tenantPath(`/guard/me/training/enrollments/${enrollmentId}/submit-quiz`),
+        { data },
+      )
+      .then(unwrap) as Promise<{
+      id: string;
+      total: number;
+      correctCount: number;
+      scorePct: number;
+      passed: boolean;
+      passPct: number;
+      certificateId?: string | null;
+    }>,
+  /** My earned certificates (Mis logros). */
+  certificates: (params?: { limit?: number; offset?: number }) => {
+    const qs = params
+      ? "?" + new URLSearchParams(params as Record<string, string>).toString()
+      : "";
+    return api
+      .get(tenantPath(`/guard/me/training/certificates${qs}`))
+      .then((r) => ({
+        rows: asRows<TrainingCertificateRow>(r),
+        count: (r && (r.count ?? r.total)) ?? asRows(r).length,
+      }));
+  },
+  /** A single certificate including its print-ready htmlContent + share token. */
+  certificate: (certificateId: string) =>
+    api
+      .get(tenantPath(`/guard/me/training/certificates/${certificateId}`))
+      .then(unwrap) as Promise<TrainingCertificateDetail>,
+};
+
+/* ------------------------------------------------------------------ */
 /* Performance capture (supervisor) — uniform, backup confirmation     */
 /* ------------------------------------------------------------------ */
 export const performanceService = {

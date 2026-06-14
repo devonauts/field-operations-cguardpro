@@ -517,6 +517,90 @@
     "resultDetail": "{{correct}} of {{total}} correct",
     "retake": "Take another test"
   },
+  "training": {
+    "title": "Training",
+    "subtitle": "Your professional courses",
+    "tabs": {
+      "courses": "Courses",
+      "achievements": "My achievements"
+    },
+    "empty": "You have no assigned training right now.",
+    "emptyHint": "When your company assigns a course, it will show up here.",
+    "status": {
+      "assigned": "Assigned",
+      "in_progress": "In progress",
+      "completed": "Completed",
+      "expired": "Expired"
+    },
+    "due": "Due {{date}}",
+    "completedOn": "Completed {{date}}",
+    "progress": "{{pct}}% complete",
+    "continue": "Continue",
+    "start": "Start",
+    "review": "Review",
+    "points": "{{points}} pts",
+    "course": {
+      "lessons": "Lessons",
+      "lessonsCount": "{{count}} lessons",
+      "lessonOf": "Lesson {{current}} of {{total}}",
+      "noLessons": "This course has no lessons yet.",
+      "minutes": "{{min}} min",
+      "completedBadge": "Completed",
+      "openLesson": "Open lesson",
+      "quizLocked": "Complete all lessons to take the quiz.",
+      "takeQuiz": "Take the quiz",
+      "quizPassed": "Quiz passed",
+      "finishCourse": "Finish course",
+      "courseDone": "Course completed!"
+    },
+    "lesson": {
+      "resources": "Resources",
+      "openResource": "Open",
+      "watchVideo": "Watch video",
+      "markComplete": "Mark as complete",
+      "completed": "Lesson completed",
+      "next": "Next lesson"
+    },
+    "quiz": {
+      "title": "Course quiz",
+      "subtitle": "Pass to earn your certificate",
+      "none": "This course has no quiz.",
+      "submit": "Submit answers",
+      "score": "Score",
+      "passed": "Passed!",
+      "failed": "Not passed",
+      "passNeeded": "You need {{pct}}% to pass",
+      "resultDetail": "{{correct}} of {{total}} correct",
+      "retake": "Try again",
+      "viewCertificate": "View my certificate"
+    },
+    "achievements": {
+      "title": "My achievements",
+      "subtitle": "Points and certificates earned",
+      "totalPoints": "Total points",
+      "certificatesEarned": "Certificates",
+      "coursesDone": "Courses completed",
+      "empty": "You have not earned any certificates yet.",
+      "emptyHint": "Complete a course to earn your first certificate.",
+      "issuedOn": "Issued {{date}}",
+      "serial": "Serial {{serial}}"
+    },
+    "certificate": {
+      "title": "Certificate",
+      "subtitle": "C-Guard Pro achievement",
+      "view": "View certificate",
+      "share": "Share",
+      "download": "Download",
+      "shared": "Share link ready",
+      "shareText": "I earned my certificate in {{course}} — C-Guard Pro",
+      "loadError": "Could not load the certificate."
+    },
+    "completed": {
+      "title": "Congratulations!",
+      "body": "You completed {{course}} and earned {{points}} points.",
+      "viewCertificate": "View certificate"
+    }
+  },
   "backup": {
     "title": "Shift backup",
     "subtitle": "Volunteer to cover at-risk shifts",

@@ -517,6 +517,90 @@
     "resultDetail": "{{correct}} de {{total}} correctas",
     "retake": "Tomar otro examen"
   },
+  "training": {
+    "title": "Entrenamiento",
+    "subtitle": "Tus capacitaciones profesionales",
+    "tabs": {
+      "courses": "Cursos",
+      "achievements": "Mis logros"
+    },
+    "empty": "No tienes capacitaciones asignadas por ahora.",
+    "emptyHint": "Cuando tu empresa te asigne un curso, aparecerá aquí.",
+    "status": {
+      "assigned": "Asignado",
+      "in_progress": "En progreso",
+      "completed": "Completado",
+      "expired": "Vencido"
+    },
+    "due": "Vence {{date}}",
+    "completedOn": "Completado {{date}}",
+    "progress": "{{pct}}% completado",
+    "continue": "Continuar",
+    "start": "Comenzar",
+    "review": "Repasar",
+    "points": "{{points}} pts",
+    "course": {
+      "lessons": "Lecciones",
+      "lessonsCount": "{{count}} lecciones",
+      "lessonOf": "Lección {{current}} de {{total}}",
+      "noLessons": "Este curso aún no tiene lecciones.",
+      "minutes": "{{min}} min",
+      "completedBadge": "Completada",
+      "openLesson": "Abrir lección",
+      "quizLocked": "Completa todas las lecciones para tomar el examen.",
+      "takeQuiz": "Tomar el examen",
+      "quizPassed": "Examen aprobado",
+      "finishCourse": "Finalizar curso",
+      "courseDone": "¡Curso completado!"
+    },
+    "lesson": {
+      "resources": "Material de apoyo",
+      "openResource": "Abrir",
+      "watchVideo": "Ver video",
+      "markComplete": "Marcar como completada",
+      "completed": "Lección completada",
+      "next": "Siguiente lección"
+    },
+    "quiz": {
+      "title": "Examen del curso",
+      "subtitle": "Aprueba para obtener tu certificado",
+      "none": "Este curso no tiene examen.",
+      "submit": "Enviar respuestas",
+      "score": "Puntaje",
+      "passed": "¡Aprobado!",
+      "failed": "No aprobado",
+      "passNeeded": "Necesitas {{pct}}% para aprobar",
+      "resultDetail": "{{correct}} de {{total}} correctas",
+      "retake": "Intentar de nuevo",
+      "viewCertificate": "Ver mi certificado"
+    },
+    "achievements": {
+      "title": "Mis logros",
+      "subtitle": "Puntos y certificados ganados",
+      "totalPoints": "Puntos totales",
+      "certificatesEarned": "Certificados",
+      "coursesDone": "Cursos completados",
+      "empty": "Aún no has ganado certificados.",
+      "emptyHint": "Completa un curso para obtener tu primer certificado.",
+      "issuedOn": "Emitido {{date}}",
+      "serial": "Serie {{serial}}"
+    },
+    "certificate": {
+      "title": "Certificado",
+      "subtitle": "Logro de C-Guard Pro",
+      "view": "Ver certificado",
+      "share": "Compartir",
+      "download": "Descargar",
+      "shared": "Enlace listo para compartir",
+      "shareText": "Obtuve mi certificado en {{course}} — C-Guard Pro",
+      "loadError": "No se pudo cargar el certificado."
+    },
+    "completed": {
+      "title": "¡Felicidades!",
+      "body": "Completaste {{course}} y ganaste {{points}} puntos.",
+      "viewCertificate": "Ver certificado"
+    }
+  },
   "backup": {
     "title": "Respaldo de turnos",
     "subtitle": "Ofrécete a cubrir turnos en riesgo",
