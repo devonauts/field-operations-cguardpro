@@ -65,6 +65,27 @@ export default function GuardSchedule() {
     (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
   );
 
+  // Free/rest days ("L"): approved time-off PLUS any non-working day that falls
+  // within the guard's scheduled rotation span (between the first and last
+  // shift we fetched). This reveals the rotation pattern — worked days carry a
+  // dot, rest days carry an "L" — without spamming unscheduled future months.
+  const freeSet = useMemo(() => {
+    const set = new Set<string>(freeDays);
+    const times = shifts
+      .map((s) => new Date(pick(s, "startTime", "date", "shiftDate") as any).getTime())
+      .filter((n) => !Number.isNaN(n));
+    if (times.length) {
+      let cur = startOfDay(new Date(Math.min(...times)));
+      const last = startOfDay(new Date(Math.max(...times)));
+      while (cur <= last) {
+        const k = ymd(cur);
+        if (!byDay.has(k)) set.add(k);
+        cur = addDays(cur, 1);
+      }
+    }
+    return set;
+  }, [shifts, freeDays, byDay]);
+
   /* ---------------- navigation ---------------- */
   const step = (dir: 1 | -1) => {
     fb.select();
@@ -119,19 +140,26 @@ export default function GuardSchedule() {
         <Loader />
       ) : (
         <>
-          {view === "month" && <MonthGrid anchor={anchor} today={today} weekdayLabels={weekdayLabels} byDay={byDay} freeDays={freeDays} onPick={(d: Date) => { fb.tap(); setAnchor(d); }} />}
-          {view === "week" && <WeekStrip anchor={anchor} today={today} weekdayLabels={weekdayLabels} byDay={byDay} freeDays={freeDays} onPick={(d: Date) => { fb.tap(); setAnchor(d); }} />}
-          {view !== "day" && <Legend t={t} />}
+          {view === "month" && (
+            <>
+              <MonthGrid anchor={anchor} today={today} weekdayLabels={weekdayLabels} byDay={byDay} freeDays={freeSet} onPick={(d: Date) => { fb.tap(); setAnchor(d); }} />
+              <Legend t={t} />
+              <div className="mt-4">
+                <DayHeader anchor={anchor} locale={locale} view={view} />
+                <DayShifts shifts={shiftsOn(anchor)} freeDay={freeSet.has(ymd(anchor))} t={t} />
+              </div>
+            </>
+          )}
 
-          {view === "day" ? (
-            /* iOS-style time-of-day timeline */
-            <DayTimeline shifts={shiftsOn(anchor)} freeDay={freeDays.has(ymd(anchor))} anchor={anchor} today={today} t={t} />
-          ) : (
-            /* Selected-day events list under the month/week grid */
-            <div className="mt-4">
-              <DayHeader anchor={anchor} locale={locale} view={view} />
-              <DayShifts shifts={shiftsOn(anchor)} freeDay={freeDays.has(ymd(anchor))} t={t} />
-            </div>
+          {view === "week" && (
+            <>
+              <WeekTimeline anchor={anchor} today={today} weekdayLabels={weekdayLabels} byDay={byDay} freeDays={freeSet} onPick={(d: Date) => { fb.tap(); setAnchor(d); }} t={t} />
+              <Legend t={t} />
+            </>
+          )}
+
+          {view === "day" && (
+            <DayTimeline shifts={shiftsOn(anchor)} freeDay={freeSet.has(ymd(anchor))} anchor={anchor} today={today} t={t} />
           )}
         </>
       )}
@@ -178,30 +206,107 @@ function MonthGrid({ anchor, today, weekdayLabels, byDay, freeDays, onPick }: an
   );
 }
 
-function WeekStrip({ anchor, today, weekdayLabels, byDay, freeDays, onPick }: any) {
+/** iOS-Calendar-style week view: a day-header row (with "L" rest-day markers)
+ *  over a scrollable 24h grid of 7 day-columns, with shift blocks positioned by
+ *  their real times and a "now" indicator on today's column. */
+function WeekTimeline({ anchor, today, weekdayLabels, byDay, freeDays, onPick }: any) {
+  const HOUR_H = 44;          // px per hour
+  const GUTTER = 40;          // px width of the hour-label gutter
   const ws = startOfWeekMon(anchor);
   const days = Array.from({ length: 7 }, (_, i) => addDays(ws, i));
+  const now = new Date();
+  const showsToday = days.some((d) => sameDay(d, today));
+  const nowMin = showsToday ? (now.getTime() - startOfDay(today).getTime()) / 60000 : -1;
+
+  const fmtStart = (s: any) =>
+    s.startTimeLabel || new Date(s.startTime).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+
+  const blocksFor = (d: Date) =>
+    (byDay.get(ymd(d)) || [])
+      .map((s: any) => {
+        const start = new Date(s.startTime);
+        const end = new Date(s.endTime);
+        if (Number.isNaN(start.getTime())) return null;
+        const dayStart = startOfDay(d).getTime();
+        let sMin = (start.getTime() - dayStart) / 60000;
+        let eMin = (end.getTime() - dayStart) / 60000;
+        sMin = Math.max(0, Math.min(1440, sMin));
+        eMin = Math.max(sMin + 30, Math.min(1440, Number.isNaN(eMin) ? sMin + 30 : eMin));
+        return { s, sMin, eMin };
+      })
+      .filter(Boolean);
+
   return (
-    <div className="grid grid-cols-7 gap-1">
-      {days.map((d, i) => {
-        const isToday = sameDay(d, today);
-        const isSel = sameDay(d, anchor);
-        const count = (byDay.get(ymd(d)) || []).length;
-        const free = freeDays.has(ymd(d));
-        return (
-          <button key={i} onClick={() => onPick(d)} className={`flex flex-col items-center gap-1 rounded-xl py-2 ${isSel ? "bg-gold text-navy" : "active:bg-surface-2"}`}>
-            <span className={`text-[10px] font-semibold uppercase ${isSel ? "text-navy/70" : "text-muted"}`}>{weekdayLabels[i]}</span>
-            <span className={`text-[15px] font-bold ${isSel ? "text-navy" : isToday ? "text-gold" : "text-ink"}`}>{d.getDate()}</span>
-            {count > 0 ? (
-              <span className={`h-1.5 w-1.5 rounded-full ${isSel ? "bg-navy/70" : "bg-gold"}`} />
-            ) : free ? (
-              <span className={`text-[10px] font-bold leading-none ${isSel ? "text-navy" : "text-online"}`}>L</span>
-            ) : (
-              <span className="h-1.5 w-1.5 rounded-full bg-transparent" />
-            )}
-          </button>
-        );
-      })}
+    <div>
+      {/* Day-header row (doubles as the day selector) */}
+      <div className="mb-1 flex">
+        <span className="shrink-0" style={{ width: GUTTER }} />
+        <div className="grid flex-1 grid-cols-7 gap-px">
+          {days.map((d, i) => {
+            const isToday = sameDay(d, today);
+            const isSel = sameDay(d, anchor);
+            const count = (byDay.get(ymd(d)) || []).length;
+            const free = freeDays.has(ymd(d));
+            return (
+              <button key={i} onClick={() => onPick(d)} className={`flex flex-col items-center rounded-lg py-1 ${isSel ? "bg-gold text-navy" : "active:bg-surface-2"}`}>
+                <span className={`text-[9px] font-semibold uppercase ${isSel ? "text-navy/70" : "text-muted"}`}>{weekdayLabels[i]}</span>
+                <span className={`text-[14px] font-bold leading-tight ${isSel ? "text-navy" : isToday ? "text-gold" : "text-ink"}`}>{d.getDate()}</span>
+                {count > 0 ? (
+                  <span className={`mt-0.5 h-1 w-1 rounded-full ${isSel ? "bg-navy/70" : "bg-gold"}`} />
+                ) : free ? (
+                  <span className={`mt-0.5 text-[9px] font-bold leading-none ${isSel ? "text-navy" : "text-online"}`}>L</span>
+                ) : (
+                  <span className="mt-0.5 h-1 w-1" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 24h grid with 7 day-columns */}
+      <Card className="overflow-hidden p-0">
+        <div className="relative" style={{ height: 24 * HOUR_H }}>
+          {/* Hour gridlines + labels */}
+          {Array.from({ length: 24 }, (_, h) => (
+            <div key={h} className="absolute inset-x-0 flex items-start" style={{ top: h * HOUR_H }}>
+              <span className="-translate-y-1.5 pr-1 text-right text-[9px] tabular-nums text-faint" style={{ width: GUTTER }}>
+                {String(h).padStart(2, "0")}
+              </span>
+              <span className="h-px flex-1 bg-line/40" />
+            </div>
+          ))}
+
+          {/* Day columns */}
+          <div className="absolute bottom-0 right-0 top-0 grid grid-cols-7" style={{ left: GUTTER }}>
+            {days.map((d, i) => {
+              const isSel = sameDay(d, anchor);
+              return (
+                <div key={i} className={`relative border-l border-line/40 ${isSel ? "bg-gold/[0.06]" : ""}`}>
+                  {blocksFor(d).map((b: any, j: number) => (
+                    <button
+                      key={b.s.id || j}
+                      onClick={() => onPick(d)}
+                      className="absolute inset-x-0.5 z-20 overflow-hidden rounded-md border border-gold/40 bg-gold/20 px-1 py-0.5 text-left"
+                      style={{ top: (b.sMin / 60) * HOUR_H + 1, height: ((b.eMin - b.sMin) / 60) * HOUR_H - 2 }}
+                    >
+                      <span className="block truncate text-[9px] font-bold leading-tight text-ink">{fmtStart(b.s)}</span>
+                    </button>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Now indicator */}
+          {nowMin >= 0 && nowMin <= 1440 && (
+            <div className="absolute right-0 z-30 flex items-center" style={{ left: GUTTER, top: (nowMin / 60) * HOUR_H }}>
+              <span className="-ml-1 h-1.5 w-1.5 rounded-full bg-critical" />
+              <span className="h-px flex-1 bg-critical/70" />
+            </div>
+          )}
+        </div>
+      </Card>
     </div>
   );
 }
