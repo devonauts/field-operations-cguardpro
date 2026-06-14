@@ -52,7 +52,7 @@ export default function PatrolTracking() {
   const cleared = checkpoints.filter((c) => scannedTagIds.has(c.id)).length;
 
   return (
-    <Screen title={t("patrol.title")} subtitle={t("patrol.subtitle")} onRefresh={reload}>
+    <Screen root title={t("patrol.title")} subtitle={t("patrol.subtitle")} onRefresh={reload}>
       {loading ? (
         <Loader />
       ) : routes.length === 0 ? (

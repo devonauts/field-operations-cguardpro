@@ -160,6 +160,7 @@ export default function Profile() {
 
   return (
     <Screen
+      root
       title={t("nav.profile")}
       onRefresh={async () => {
         await Promise.all([reload(), reloadPerf()]);

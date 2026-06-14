@@ -35,7 +35,7 @@ export default function GuardTraining() {
   const [tab, setTab] = useState<Tab>("courses");
 
   return (
-    <Screen title={t("training.title")} subtitle={t("training.subtitle")}>
+    <Screen root title={t("training.title")} subtitle={t("training.subtitle")}>
       <div className="mb-4 flex rounded-2xl bg-surface-2 p-1">
         <SegBtn
           active={tab === "courses"}

@@ -44,6 +44,7 @@ export default function SupervisorIncidents() {
 
   return (
     <Screen
+      root
       title={t("incidents.title")}
       subtitle={t("incidents.active", { count: activeCount })}
       onRefresh={reload}

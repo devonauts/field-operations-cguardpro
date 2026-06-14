@@ -110,7 +110,7 @@ export default function GuardSchedule() {
   }, [locale]);
 
   return (
-    <Screen title={t("nav.schedule", "Horario")}>
+    <Screen root title={t("nav.schedule", "Horario")}>
       {/* Segmented control */}
       <div className="mb-3 flex rounded-xl bg-surface-2 p-1">
         {(["day", "week", "month"] as View[]).map((v) => (

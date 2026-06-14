@@ -20,7 +20,7 @@ export default function More() {
   ];
 
   return (
-    <Screen title={t("nav.more")} onRefresh={refreshUser}>
+    <Screen root title={t("nav.more")} onRefresh={refreshUser}>
       <Card className="divide-y divide-line p-0">
         {items.map((it) => (
           <button

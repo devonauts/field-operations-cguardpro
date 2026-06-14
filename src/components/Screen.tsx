@@ -36,6 +36,7 @@ export function Screen({
   onRefresh,
   back,
   backHref,
+  root,
   largeTitle,
   largeSubtitle,
   compactTitle,
@@ -51,6 +52,12 @@ export function Screen({
   onRefresh?: () => Promise<void> | void;
   back?: boolean;
   backHref?: string;
+  /**
+   * Tab-root screens (the bottom-tab destinations) pass `root` to HIDE the back
+   * button. Every other screen is a pushed sub-page and shows a back button by
+   * default — so navigation always has a way back.
+   */
+  root?: boolean;
   /** Full-height, non-scrolling page (the child owns its own scroll/layout — e.g. chat). */
   fill?: boolean;
   /** When set, renders the collapsing iOS-style large title instead of `title`. */
@@ -64,6 +71,8 @@ export function Screen({
   header?: ReactNode;
 }) {
   const history = useHistory();
+  // Sub-pages show a back button by default; only tab roots opt out via `root`.
+  const showBack = back === true || !root;
   const goBack = () => {
     if (backHref) history.push(backHref);
     else if (history.length > 1) history.goBack();
@@ -172,7 +181,7 @@ export function Screen({
           <div className="safe-top bg-navy-50 border-b border-line shrink-0">
             <div className="flex items-start justify-between gap-3 px-4 pb-3 pt-3">
               <div className="flex min-w-0 items-start gap-1.5">
-                {back && (
+                {showBack && (
                   <button
                     onClick={goBack}
                     aria-label="Atrás"
@@ -202,7 +211,7 @@ export function Screen({
         <div className="safe-top bg-navy-50 border-b border-line">
           <div className="flex items-start justify-between gap-3 px-4 pb-3 pt-3">
             <div className="flex min-w-0 items-start gap-1.5">
-              {back && (
+              {showBack && (
                 <button
                   onClick={goBack}
                   aria-label="Atrás"

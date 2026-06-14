@@ -402,6 +402,7 @@ export default function GuardDashboard() {
 
   return (
     <Screen
+      root
       // On duty: the design's branded operations header. Off duty: the usual
       // collapsing large title.
       header={

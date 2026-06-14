@@ -63,6 +63,7 @@ export default function SupervisorDashboard() {
 
   return (
     <Screen
+      root
       title={t("dashboard.operationsOverview")}
       subtitle={t("dashboard.openIncidents", { count: openIncidents })}
       onRefresh={reload}

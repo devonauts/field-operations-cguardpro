@@ -52,6 +52,7 @@ export default function CheckInOut() {
 
   return (
     <Screen
+      root
       title={t("checkin.title")}
       subtitle={t("checkin.subtitle")}
       onRefresh={reload}
