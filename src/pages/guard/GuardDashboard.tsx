@@ -918,7 +918,7 @@ function LateWarning({
                 fb.press();
                 onClockIn();
               }}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-gold to-gold-strong px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-navy active:from-gold-hover active:to-gold-hover"
+              className="mt-3.5 flex min-h-[52px] w-full items-center justify-center gap-2.5 rounded-xl bg-gradient-to-b from-gold to-gold-strong px-5 py-3.5 text-sm font-bold uppercase tracking-wide text-navy active:from-gold-hover active:to-gold-hover"
             >
               <Power size={18} className="shrink-0" strokeWidth={2.5} />
               {t("late.clockInNow", "Marcar entrada")}
