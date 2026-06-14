@@ -113,12 +113,12 @@ export function MenuRow({
     <button
       type="button"
       onClick={onClick ? () => { fb.select(); onClick(); } : undefined}
-      className="pressable flex w-full items-center gap-3.5 rounded-2xl border border-line bg-surface px-5 py-[18px] text-left hover:bg-white/[0.03] active:bg-white/[0.05]"
+      className="pressable flex w-full items-center gap-4 rounded-2xl border border-line bg-surface px-5 py-[22px] text-left hover:bg-white/[0.03] active:bg-white/[0.05]"
     >
       <IconTile tone={tone}>{icon}</IconTile>
       <div className="min-w-0 flex-1">
         <p className="truncate text-[15px] font-semibold text-ink">{title}</p>
-        {subtitle && <p className="truncate text-xs text-muted">{subtitle}</p>}
+        {subtitle && <p className="mt-0.5 truncate text-xs text-muted">{subtitle}</p>}
       </div>
       {trailing}
       {showChevron && <ChevronRight size={18} className="shrink-0 text-faint" />}
