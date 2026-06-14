@@ -52,12 +52,16 @@ export default function GuardShiftDetail() {
   const [gpsOk, setGpsOk] = useState<boolean | null>(null);
   const [online, setOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
   useEffect(() => {
-    getCurrentPosition().then(() => setGpsOk(true)).catch(() => setGpsOk(false));
+    let alive = true;
+    getCurrentPosition()
+      .then(() => { if (alive) setGpsOk(true); })
+      .catch(() => { if (alive) setGpsOk(false); });
     const on = () => setOnline(true);
     const off = () => setOnline(false);
     window.addEventListener("online", on);
     window.addEventListener("offline", off);
     return () => {
+      alive = false;
       window.removeEventListener("online", on);
       window.removeEventListener("offline", off);
     };

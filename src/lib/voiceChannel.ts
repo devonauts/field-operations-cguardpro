@@ -143,6 +143,15 @@ export class VoiceChannel {
   }
 
   connect(opts: { url: string; path?: string; token: string; tenantId: string; selfId?: string }, cb: VoiceCallbacks): void {
+    // Guard against a re-entrant connect() (reconnect / token refresh / re-run
+    // effect): without this the old socket stays connected with its listeners
+    // still bound to this.cb, double-binding presence/speaker/chunk handling and
+    // leaking the orphaned WebSocket.
+    if (this.socket) {
+      try { this.socket.removeAllListeners(); } catch { /* ignore */ }
+      try { this.socket.disconnect(); } catch { /* ignore */ }
+      this.socket = null;
+    }
     this.cb = cb || {};
     this.selfId = opts.selfId || "";
     this.cb.onState?.("connecting");
@@ -214,7 +223,9 @@ export class VoiceChannel {
       this.capProc = capCtx.createScriptProcessor(4096, 1, 1);
       const inRate = capCtx.sampleRate;
       this.capProc.onaudioprocess = (e) => {
-        if (!this._talking || !this.socket) return;
+        // Drop frames while disconnected rather than letting socket.io queue a
+        // burst of stale audio that floods the channel on reconnect.
+        if (!this._talking || !this.socket?.connected) return;
         const input = e.inputBuffer.getChannelData(0);
         const ds = resample(input, inRate, TARGET_RATE);
         const ulaw = encodeMuLaw(ds);
@@ -290,6 +301,8 @@ export class VoiceChannel {
   private onRemoteChunk(data: ArrayBuffer | Uint8Array): void {
     const ctx = this.ctx;
     if (!ctx) return;
+    // Drop late/replayed frames if we're no longer connected or in the channel.
+    if (!this.socket?.connected || !this.joined) return;
     if (ctx.state !== "running") ctx.resume().catch(() => {});
     const bytes = data instanceof Uint8Array ? data : new Uint8Array(data as ArrayBuffer);
     if (!bytes.length) return;
@@ -300,6 +313,9 @@ export class VoiceChannel {
     const src = ctx.createBufferSource();
     src.buffer = buf;
     src.connect(ctx.destination);
+    // Release the node from the audio graph promptly once it finishes, so a long
+    // continuous transmission doesn't pile up short-lived nodes before GC.
+    src.onended = () => { try { src.disconnect(); } catch { /* ignore */ } };
     const now = ctx.currentTime;
     // Prime a small jitter buffer on the first packet / after a gap, and bound
     // latency if we ever fall too far behind.
@@ -314,6 +330,7 @@ export class VoiceChannel {
     this.nextPlayTime = 0;
     try { this.ctx?.close(); } catch { /* ignore */ }
     this.ctx = null;
+    try { this.socket?.removeAllListeners(); } catch { /* ignore */ }
     try { this.socket?.disconnect(); } catch { /* ignore */ }
     this.socket = null;
   }

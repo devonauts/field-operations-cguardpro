@@ -48,22 +48,35 @@ export default function GuardThread() {
   const [uploading, setUploading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const scrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Monotonic request id: load() fires from many sources (poll, push, resume,
+  // post-send). A slower earlier response must not overwrite a newer snapshot.
+  const loadSeq = useRef(0);
 
-  const scrollDown = () => setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }), 50);
+  const scrollDown = useCallback(() => {
+    if (scrollTimer.current) clearTimeout(scrollTimer.current);
+    scrollTimer.current = setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }), 50);
+  }, []);
+
+  // Clear any pending scroll timer on unmount.
+  useEffect(() => () => { if (scrollTimer.current) clearTimeout(scrollTimer.current); }, []);
 
   const load = useCallback(async (markRead = false) => {
     if (!validId) { setLoading(false); return; }
+    const seq = ++loadSeq.current;
     try {
       const res: any = await messageService.thread(conversationId, { limit: 60 });
+      if (seq !== loadSeq.current) return; // a newer load() superseded this one
       setConversation(res?.conversation || null);
       setMessages((res?.rows || []).slice().reverse()); // API newest-first → show oldest-first
       setLoadError(null);
       if (markRead) messageService.markRead(conversationId).catch(() => {});
       scrollDown();
     } catch (e: any) {
+      if (seq !== loadSeq.current) return;
       setLoadError(e?.message || t("messages.loadFailed", "No se pudieron cargar los mensajes."));
-    } finally { setLoading(false); }
-  }, [conversationId, validId]);
+    } finally { if (seq === loadSeq.current) setLoading(false); }
+  }, [conversationId, validId, scrollDown, t]);
 
   useEffect(() => { load(true); }, [load]);
 
@@ -161,9 +174,9 @@ export default function GuardThread() {
                     <div className="mb-1 grid gap-1.5">
                       {m.attachments.map((a: any, i: number) => (
                         a.type === "video" ? (
-                          <video key={i} src={fileUrl(a.url)} controls preload="metadata" className="max-h-64 w-full rounded-lg bg-black/30" />
+                          <video key={a.id || a.url || i} src={fileUrl(a.url)} controls preload="metadata" className="max-h-64 w-full rounded-lg bg-black/30" />
                         ) : (
-                          <a key={i} href={fileUrl(a.url)} target="_blank" rel="noreferrer">
+                          <a key={a.id || a.url || i} href={fileUrl(a.url)} target="_blank" rel="noreferrer">
                             <img src={fileUrl(a.url)} alt={a.name || "imagen"} loading="lazy" className="max-h-64 w-full rounded-lg object-cover" />
                           </a>
                         )
@@ -196,7 +209,7 @@ export default function GuardThread() {
           {pending.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-2">
               {pending.map((a, i) => (
-                <div key={i} className="relative h-16 w-16 overflow-hidden rounded-lg border border-line-2">
+                <div key={(a as any).id || a.url || i} className="relative h-16 w-16 overflow-hidden rounded-lg border border-line-2">
                   {a.type === "video" ? (
                     <div className="flex h-full w-full items-center justify-center bg-black/60 text-white"><Play size={18} /></div>
                   ) : (

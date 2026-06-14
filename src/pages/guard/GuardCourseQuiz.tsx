@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHistory, useParams } from "react-router-dom";
 import {
@@ -31,11 +31,29 @@ export default function GuardCourseQuiz() {
     () => trainingService.enrollmentDetail(enrollmentId),
     [enrollmentId],
   );
-  const startedAt = useMemo(() => new Date().toISOString(), [data]);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<QuizResult | null>(null);
+
+  // Quiz start time: stamped when the question set first arrives and re-stamped
+  // on each reload() (retake). Explicit ref decouples it from render memoization.
+  const startedAt = useRef(new Date().toISOString());
+  const stamped = useRef(false);
+  useEffect(() => {
+    if (data && !stamped.current) {
+      startedAt.current = new Date().toISOString();
+      stamped.current = true;
+    }
+  }, [data]);
+
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const questions = data?.questions || [];
   const bankId = data?.quizBankId || null;
@@ -51,17 +69,19 @@ export default function GuardCourseQuiz() {
     try {
       const res = await trainingService.submitQuiz(enrollmentId, {
         bankId,
-        startedAt,
+        startedAt: startedAt.current,
         answers: questions.map((q) => ({ questionId: q.id, chosenIndex: answers[q.id] })),
       });
+      if (!mounted.current) return;
       setResult(res as QuizResult);
       if (res.passed) fb.success();
       else fb.error();
     } catch (e: any) {
+      if (!mounted.current) return;
       setError(e?.message || "error");
       fb.error();
     } finally {
-      setBusy(false);
+      if (mounted.current) setBusy(false);
     }
   };
 
@@ -69,6 +89,7 @@ export default function GuardCourseQuiz() {
     fb.tap();
     setResult(null);
     setAnswers({});
+    stamped.current = false; // re-stamp start time when the new question set loads
     reload();
   };
 

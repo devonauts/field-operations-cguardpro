@@ -105,6 +105,9 @@ export function VisitorFlow({ station, onClose, embedded }: { station: any; onCl
   const cameraInput = useRef<HTMLInputElement>(null);
   const galleryInput = useRef<HTMLInputElement>(null);
   const webResolver = useRef<((img: CapturedImage | null) => void) | null>(null);
+  // Bumped on every new scan / reset so a slow OCR result can be discarded if the
+  // flow has moved on (e.g. modal closed → flow unmounted) before it resolves.
+  const scanGen = useRef(0);
 
   const { data, loading, reload } = useAsync(() =>
     visitorService.list({ limit: 50 }).catch(() => [])
@@ -132,10 +135,15 @@ export function VisitorFlow({ station, onClose, embedded }: { station: any; onCl
   };
 
   const runScan = async (img: CapturedImage) => {
+    const gen = ++scanGen.current;
+    const stale = () => gen !== scanGen.current;
     setScanProgress(0);
     setScanFailed(false);
     try {
-      const res = await scanId(img.dataUrl, (p) => setScanProgress(Math.round(p * 100)));
+      const res = await scanId(img.dataUrl, (p) => {
+        if (!stale()) setScanProgress(Math.round(p * 100));
+      });
+      if (stale()) return;
       setFields((f) => ({
         ...f,
         idNumber: f.idNumber || res.idNumber || "",
@@ -146,9 +154,9 @@ export function VisitorFlow({ station, onClose, embedded }: { station: any; onCl
       }));
       if (!res.idNumber && !res.firstName && !res.lastName) setScanFailed(true);
     } catch {
-      setScanFailed(true);
+      if (!stale()) setScanFailed(true);
     } finally {
-      setScanProgress(null);
+      if (!stale()) setScanProgress(null);
     }
   };
 
@@ -167,6 +175,7 @@ export function VisitorFlow({ station, onClose, embedded }: { station: any; onCl
   const removePhoto = (i: number) => setPhotos((p) => p.filter((_, idx) => idx !== i));
 
   const reset = () => {
+    scanGen.current++; // invalidate any in-flight OCR scan
     setPhotos([]);
     setFields(EMPTY);
     setScanFailed(false);

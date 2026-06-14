@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   BarChart,
@@ -24,39 +25,49 @@ export default function Reports() {
   );
 
   const rows = data?.rows || [];
-  const total = data?.count || rows.length;
-  const resolved = rows.filter((i: any) =>
-    ["resolved", "closed"].includes(normalizeStatus(i.status))
-  ).length;
-  const resolutionRate = total ? Math.round((resolved / total) * 1000) / 10 : 0;
 
-  // Monthly trend (current year)
-  const year = new Date().getFullYear();
-  const monthly = MONTHS.map((m, idx) => {
-    const inMonth = rows.filter((i: any) => {
-      const d = new Date(pick(i, "incidentAt", "dateTime", "createdAt") as any);
-      return d.getFullYear() === year && d.getMonth() === idx;
+  // Heavy aggregation over up to 500 rows — memoize so unrelated re-renders
+  // (recharts measure/resize, i18n language change) don't rescan and reparse
+  // dates every time.
+  const { total, resolutionRate, monthly, byType } = useMemo(() => {
+    const total = data?.count || rows.length;
+    const resolved = rows.filter((i: any) =>
+      ["resolved", "closed"].includes(normalizeStatus(i.status))
+    ).length;
+    const resolutionRate = total ? Math.round((resolved / total) * 1000) / 10 : 0;
+
+    // Monthly trend (current year)
+    const now = new Date();
+    const year = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const monthly = MONTHS.map((m, idx) => {
+      const inMonth = rows.filter((i: any) => {
+        const d = new Date(pick(i, "incidentAt", "dateTime", "createdAt") as any);
+        return d.getFullYear() === year && d.getMonth() === idx;
+      });
+      return {
+        month: m,
+        reported: inMonth.length,
+        resolved: inMonth.filter((i: any) =>
+          ["resolved", "closed"].includes(normalizeStatus(i.status))
+        ).length,
+      };
+    }).slice(0, currentMonth + 1);
+
+    // By type
+    const typeMap = new Map<string, number>();
+    rows.forEach((i: any) => {
+      const k =
+        i.incidentType?.name || i.typeName || pick(i, "subject", "title") || "Other";
+      typeMap.set(k, (typeMap.get(k) || 0) + 1);
     });
-    return {
-      month: m,
-      reported: inMonth.length,
-      resolved: inMonth.filter((i: any) =>
-        ["resolved", "closed"].includes(normalizeStatus(i.status))
-      ).length,
-    };
-  }).slice(0, new Date().getMonth() + 1);
+    const byType = Array.from(typeMap.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 6);
 
-  // By type
-  const typeMap = new Map<string, number>();
-  rows.forEach((i: any) => {
-    const k =
-      i.incidentType?.name || i.typeName || pick(i, "subject", "title") || "Other";
-    typeMap.set(k, (typeMap.get(k) || 0) + 1);
-  });
-  const byType = Array.from(typeMap.entries())
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 6);
+    return { total, resolutionRate, monthly, byType };
+  }, [rows]);
 
   return (
     <Screen title={t("reports.title")} subtitle={t("reports.subtitle")} onRefresh={reload}>

@@ -84,6 +84,13 @@ export function SelfieClockIn({
   const [starting, setStarting] = useState(true);
   const [stamped, setStamped] = useState<{ file: File; dataUrl: string } | null>(null);
   const [flash, setFlash] = useState(false);
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clear the shutter-flash timer on unmount so it can't setState after the
+  // screen closes (confirm/cancel can unmount within the 320ms window).
+  useEffect(() => () => {
+    if (flashTimer.current) clearTimeout(flashTimer.current);
+  }, []);
 
   // breadcrumb: when the selfie screen opens (so the flow is visible in logs)
   useEffect(() => {
@@ -91,16 +98,21 @@ export function SelfieClockIn({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  // live clock
+  // live clock — only ticks while the live viewfinder is shown (the preview
+  // phase displays a frozen stamped image and doesn't read `now`).
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || phase !== "camera") return;
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
-  }, [isOpen]);
+  }, [isOpen, phase]);
 
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach((tr) => tr.stop());
     streamRef.current = null;
+    // Release the dead stream from the <video> element immediately so the
+    // reused element doesn't retain it (and doesn't show a black frame on
+    // re-entry in some WebViews).
+    if (videoRef.current) videoRef.current.srcObject = null;
   }, []);
 
   // Open the FRONT camera INSIDE the WebView (true selfie, no external activity
@@ -247,7 +259,8 @@ export function SelfieClockIn({
     playShutter();
     Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
     setFlash(true);
-    setTimeout(() => setFlash(false), 320);
+    if (flashTimer.current) clearTimeout(flashTimer.current);
+    flashTimer.current = setTimeout(() => setFlash(false), 320);
     try {
       logInfo("selfie.cap", "start", { w: video.videoWidth, h: video.videoHeight });
       const r = await captureFrame(video);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { IonModal } from "@ionic/react";
 import { X, FileText, Send, Loader2, Mic, Square } from "lucide-react";
@@ -23,6 +23,25 @@ export function ClockOutReportModal({
   onCancel: () => void;
   onSubmit: (summary: string) => void;
 }) {
+  // Mount the body (and the speech-to-text hook + its native listeners) only
+  // while the modal is on screen — matching IncidentForm/VisitorModal.
+  const close = () => onCancel();
+  return (
+    <IonModal isOpen={isOpen} onDidDismiss={close}>
+      {isOpen && <ReportBody busy={busy} onCancel={onCancel} onSubmit={onSubmit} />}
+    </IonModal>
+  );
+}
+
+function ReportBody({
+  busy,
+  onCancel,
+  onSubmit,
+}: {
+  busy: boolean;
+  onCancel: () => void;
+  onSubmit: (summary: string) => void;
+}) {
   const { t, i18n } = useTranslation();
   const [summary, setSummary] = useState("");
   const [touched, setTouched] = useState(false);
@@ -33,14 +52,6 @@ export function ClockOutReportModal({
     onResult: (txt) =>
       setSummary((s) => (s.trim() ? `${s.trim()} ${txt}` : txt)),
   });
-
-  // Reset whenever the modal (re)opens.
-  useEffect(() => {
-    if (isOpen) {
-      setSummary("");
-      setTouched(false);
-    }
-  }, [isOpen]);
 
   const close = () => {
     if (listening) stop();
@@ -58,8 +69,7 @@ export function ClockOutReportModal({
   };
 
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={close}>
-      <div className="flex h-full flex-col bg-navy">
+    <div className="flex h-full flex-col bg-navy">
         <div className="safe-top flex items-center gap-2 border-b border-line px-4 py-3">
           <FileText size={18} className="text-gold" />
           <h2 className="flex-1 text-base font-semibold text-ink">
@@ -154,6 +164,5 @@ export function ClockOutReportModal({
           </button>
         </div>
       </div>
-    </IonModal>
   );
 }

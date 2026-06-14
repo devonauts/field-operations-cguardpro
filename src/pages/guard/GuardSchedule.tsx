@@ -58,12 +58,15 @@ export default function GuardSchedule() {
       const k = ymd(ts);
       (m.get(k) || m.set(k, []).get(k)!).push(s);
     }
+    // Pre-sort each day's shifts once so consumers can read them directly.
+    for (const arr of m.values()) {
+      arr.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+    }
     return m;
   }, [shifts]);
 
-  const shiftsOn = (d: Date) => (byDay.get(ymd(d)) || []).slice().sort(
-    (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
-  );
+  // The selected/anchor day's shifts, recomputed only when the data or anchor change.
+  const anchorShifts = useMemo(() => byDay.get(ymd(anchor)) || [], [byDay, anchor]);
 
   // Free/rest days ("L"): approved time-off PLUS any non-working day that falls
   // within the guard's scheduled rotation span (between the first and last
@@ -146,7 +149,7 @@ export default function GuardSchedule() {
               <Legend t={t} />
               <div className="mt-4">
                 <DayHeader anchor={anchor} locale={locale} view={view} />
-                <DayShifts shifts={shiftsOn(anchor)} freeDay={freeSet.has(ymd(anchor))} t={t} />
+                <DayShifts shifts={anchorShifts} freeDay={freeSet.has(ymd(anchor))} t={t} />
               </div>
             </>
           )}
@@ -159,7 +162,7 @@ export default function GuardSchedule() {
           )}
 
           {view === "day" && (
-            <DayTimeline shifts={shiftsOn(anchor)} freeDay={freeSet.has(ymd(anchor))} anchor={anchor} today={today} t={t} />
+            <DayTimeline shifts={anchorShifts} freeDay={freeSet.has(ymd(anchor))} anchor={anchor} today={today} t={t} />
           )}
         </>
       )}

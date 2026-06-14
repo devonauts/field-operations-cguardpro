@@ -17,16 +17,22 @@ export function useAsync<T>(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
+  // Monotonic id so only the LATEST request can write state — a slow earlier
+  // request that resolves after a newer one (deps changed / reload() called
+  // mid-flight) is ignored, preventing stale data from overwriting fresh data.
+  const runId = useRef(0);
 
   const run = useCallback(async () => {
+    const id = ++runId.current;
+    const isCurrent = () => mounted.current && runId.current === id;
     setError(null);
     try {
       const res = await loader();
-      if (mounted.current) setData(res);
+      if (isCurrent()) setData(res);
     } catch (e: any) {
-      if (mounted.current) setError(e?.message || "error");
+      if (isCurrent()) setError(e?.message || "error");
     } finally {
-      if (mounted.current) setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);

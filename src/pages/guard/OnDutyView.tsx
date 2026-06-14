@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHistory } from "react-router-dom";
 import { ChevronRight, Footprints, ClipboardCheck } from "lucide-react";
@@ -22,6 +22,23 @@ function useElapsed(since: any): { clock: string; hours: number; mins: number } 
   const m = Math.floor((s % 3600) / 60);
   const pad = (n: number) => String(n).padStart(2, "0");
   return { clock: `${pad(h)}:${pad(m)}:${pad(s % 60)}`, hours: h, mins: m };
+}
+
+/** Live HH:MM:SS clock. Owns the 1s tick so only this node re-renders each
+ *  second — the rest of the on-duty tree re-renders only on data changes. */
+function ShiftClock({ since }: { since: any }) {
+  const { clock } = useElapsed(since);
+  return (
+    <p className="mt-2 font-mono text-[44px] font-bold leading-none tracking-tight text-gold tabular-nums">
+      {clock}
+    </p>
+  );
+}
+
+/** Live "elapsed" stat. Owns its own 1s tick (isolated leaf). */
+function ElapsedStat({ since, label }: { since: any; label: string }) {
+  const { hours, mins } = useElapsed(since);
+  return <ShiftStat value={`${hours}h ${String(mins).padStart(2, "0")}m`} label={label} />;
 }
 
 function fmtClock(d: any): string {
@@ -91,7 +108,6 @@ export default function OnDutyView({ data }: { data: any }) {
   const stations: any[] = data?.stations || [];
   const station = stations[0] || {};
   const punchInTime = data?.activeClockIn?.punchInTime || data?.activeClockIn?.createdAt;
-  const elapsed = useElapsed(punchInTime);
   const shiftStart = punchInTime ? new Date(punchInTime).getTime() : 0;
 
   const schedStart = data?.activeClockIn?.scheduledStart || data?.currentShift?.startTime;
@@ -103,31 +119,48 @@ export default function OnDutyView({ data }: { data: any }) {
     minsToEnd != null ? `${Math.floor(minsToEnd / 60)}h ${minsToEnd % 60}m` : null;
 
   // Incidents (tenant feed) — scoped to this shift for the counters/alerts.
-  const { data: incRes } = useAsync<{ rows: any[]; count: number }>(
+  const { data: incRes, loading: incLoading } = useAsync<{ rows: any[]; count: number }>(
     () => incidentService.list({ limit: 25 }).catch(() => ({ rows: [], count: 0 })),
     [],
   );
-  const incidents = incRes?.rows || [];
-  const shiftIncidents = incidents.filter(
-    (i) => new Date(i.incidentAt || i.createdAt || i.date).getTime() >= shiftStart,
+  const incidents = useMemo(() => incRes?.rows || [], [incRes]);
+  const shiftIncidents = useMemo(
+    () =>
+      incidents.filter(
+        (i) => new Date(i.incidentAt || i.createdAt || i.date).getTime() >= shiftStart,
+      ),
+    [incidents, shiftStart],
   );
   const incidentCount = shiftIncidents.length;
   const alerts = (shiftIncidents.length ? shiftIncidents : incidents).slice(0, 2);
   const alertBadge = (shiftIncidents.length ? shiftIncidents : incidents).filter(isOpenIncident).length;
 
   // Patrol progress.
-  const { data: patrols } = useAsync<any[]>(() => rondasService.patrols().catch(() => []), []);
-  const { data: scans } = useAsync<any[]>(() => rondasService.scans({ limit: 100 }).catch(() => []), []);
+  const { data: patrols, loading: patrolsLoading } = useAsync<any[]>(
+    () => rondasService.patrols().catch(() => []),
+    [],
+  );
+  const { data: scans, loading: scansLoading } = useAsync<any[]>(
+    () => rondasService.scans({ limit: 100 }).catch(() => []),
+    [],
+  );
   const activePatrol = (patrols || [])[0] || null;
   const tagsList: any[] = Array.isArray(activePatrol?.tags) ? activePatrol.tags : [];
   const totalCheckpoints =
     activePatrol?.checkpointCount ??
     activePatrol?.tagsCount ??
     (tagsList.length || null);
-  const shiftScans = (scans || []).filter((s) => new Date(s.scannedAt).getTime() >= shiftStart);
+  const shiftScans = useMemo(
+    () => (scans || []).filter((s) => new Date(s.scannedAt).getTime() >= shiftStart),
+    [scans, shiftStart],
+  );
   const scannedCount = Math.min(shiftScans.length, totalCheckpoints ?? shiftScans.length);
-  const scannedIds = new Set(
-    shiftScans.map((s) => s.tagIdentifier || s.tag?.tagIdentifier).filter(Boolean),
+  const scannedIds = useMemo(
+    () =>
+      new Set(
+        shiftScans.map((s) => s.tagIdentifier || s.tag?.tagIdentifier).filter(Boolean),
+      ),
+    [shiftScans],
   );
   const nextTag = tagsList.find((tg) => !scannedIds.has(tg.tagIdentifier)) || null;
   const routeName =
@@ -136,22 +169,44 @@ export default function OnDutyView({ data }: { data: any }) {
 
   // Team on duty at my sitio de servicio (post site) — guards across all the
   // sitio's stations, nobody from other sitios.
-  const { data: team } = useAsync<any>(() => guardService.team().catch(() => null), []);
+  const { data: team, loading: teamLoading } = useAsync<any>(
+    () => guardService.team().catch(() => null),
+    [],
+  );
   // Zones the guard covers, with a real status from open incidents at each.
-  const zones = stations.map((st) => {
-    const open = incidents.some(
-      (i) => isOpenIncident(i) && (i.stationId === st.id || i.station?.id === st.id),
-    );
-    const crit = incidents.some(
-      (i) => isOpenIncident(i) && isCritical(i) && (i.stationId === st.id || i.station?.id === st.id),
-    );
-    return {
-      name: st.stationName || st.name,
-      status: crit ? "alert" : open ? "patrol" : "clear",
-    };
-  });
+  const zones = useMemo(
+    () =>
+      stations.map((st) => {
+        const open = incidents.some(
+          (i) => isOpenIncident(i) && (i.stationId === st.id || i.station?.id === st.id),
+        );
+        const crit = incidents.some(
+          (i) =>
+            isOpenIncident(i) && isCritical(i) && (i.stationId === st.id || i.station?.id === st.id),
+        );
+        return {
+          id: st.id,
+          name: st.stationName || st.name,
+          status: crit ? "alert" : open ? "patrol" : "clear",
+        };
+      }),
+    [stations, incidents],
+  );
   const activeCount = team?.count ?? zones.length ?? 1;
+  // Consolidated first-load state: the four feeds populate the cards. Surface a
+  // single skeleton on the initial load so cards don't pop in one-by-one.
+  const initialLoading = incLoading && patrolsLoading && scansLoading && teamLoading;
   const sector = station.stationName || station.name || "—";
+
+  if (initialLoading) {
+    return (
+      <div className="space-y-4">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="h-32 animate-pulse rounded-2xl border border-line bg-surface-2" />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -171,9 +226,10 @@ export default function OnDutyView({ data }: { data: any }) {
             </span>
           </div>
 
-          <p className="mt-2 font-mono text-[44px] font-bold leading-none tracking-tight text-gold tabular-nums">
-            {elapsed.clock}
-          </p>
+          {/* Live 1s tick is isolated in this leaf so the rest of the on-duty
+              tree only re-renders on data changes, not every second. */}
+          <ShiftClock since={punchInTime} />
+
           <p className="mt-2 text-sm text-muted">
             {schedStart && schedEnd ? (
               <>
@@ -190,7 +246,7 @@ export default function OnDutyView({ data }: { data: any }) {
           </p>
 
           <div className="mt-4 grid grid-cols-3 divide-x divide-gold/15 border-t border-gold/15 pt-3">
-            <ShiftStat value={`${elapsed.hours}h ${String(elapsed.mins).padStart(2, "0")}m`} label={t("onduty.elapsed", "Transcurrido")} />
+            <ElapsedStat since={punchInTime} label={t("onduty.elapsed", "Transcurrido")} />
             <ShiftStat value={String(incidentCount).padStart(2, "0")} label={t("onduty.incidents", "Incidentes")} tone={incidentCount > 0 ? "gold" : "ink"} />
             <ShiftStat
               value={totalCheckpoints != null ? `${scannedCount}/${totalCheckpoints}` : "—"}
@@ -324,7 +380,7 @@ export default function OnDutyView({ data }: { data: any }) {
         <div className="mt-3 flex items-center gap-4">
           <Radar zones={zones} />
           <div className="min-w-0 flex-1 space-y-2">
-            {(zones.length ? zones : [{ name: sector, status: "clear" }]).slice(0, 4).map((z, i) => {
+            {(zones.length ? zones : [{ id: "sector", name: sector, status: "clear" }]).slice(0, 4).map((z, i) => {
               const color =
                 z.status === "alert" ? "bg-critical" : z.status === "patrol" ? "bg-gold" : "bg-online";
               const label =
@@ -334,7 +390,7 @@ export default function OnDutyView({ data }: { data: any }) {
                     ? t("onduty.zonePatrol", "ronda")
                     : t("onduty.zoneClear", "despejado");
               return (
-                <div key={i} className="flex items-center gap-2 text-sm">
+                <div key={z.id ?? z.name ?? i} className="flex items-center gap-2 text-sm">
                   <span className={`h-2 w-2 shrink-0 rounded-full ${color}`} />
                   <span className="truncate text-ink">{z.name}</span>
                   <span className="text-muted">— {label}</span>
@@ -403,7 +459,7 @@ function ShieldRoute() {
 }
 
 /** Tactical radar with the guard at center + dots per covered zone. */
-function Radar({ zones }: { zones: { name: string; status: string }[] }) {
+function Radar({ zones }: { zones: { id?: string; name: string; status: string }[] }) {
   const pts = [
     [38, 30],
     [78, 38],
@@ -421,7 +477,7 @@ function Radar({ zones }: { zones: { name: string; status: string }[] }) {
       {zones.slice(0, 4).map((z, i) => {
         const [x, y] = pts[i] || pts[0];
         const fill = z.status === "alert" ? "#ef4444" : z.status === "patrol" ? "#d4a017" : "#22c55e";
-        return <circle key={i} cx={x} cy={y} r="4" fill={fill} />;
+        return <circle key={z.id ?? z.name ?? i} cx={x} cy={y} r="4" fill={fill} />;
       })}
       <circle cx="55" cy="55" r="5" fill="#d4a017" />
       <circle cx="55" cy="55" r="9" fill="none" stroke="#d4a017" strokeOpacity="0.5" />

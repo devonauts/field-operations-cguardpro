@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHistory } from "react-router-dom";
 import {
@@ -123,40 +123,42 @@ export default function Profile() {
   };
 
   // Performance metrics — real data from the score engine, gracefully empty.
-  const comp = (k: string) => perf?.components?.find((c) => c.key === k)?.score;
-  const metrics: { tone: Tone; icon: any; value: string; label: string }[] = [
-    {
-      tone: "green",
-      icon: <CircleCheckBig size={20} />,
-      value: comp("rondas") != null ? `${Math.round(comp("rondas")!)}%` : "—",
-      label: t("profile.metricPatrols", "Rondas completas"),
-    },
-    {
-      tone: "blue",
-      icon: <BadgeCheck size={20} />,
-      // Consignas compliance when available; otherwise fall back to the overall
-      // compliance base so the tile isn't empty when a guard has no consignas.
-      value:
-        comp("consignas") != null
-          ? `${Math.round(comp("consignas")!)}%`
-          : perf?.base != null
-          ? `${Math.round(perf.base)}%`
-          : "—",
-      label: t("profile.metricCompliance", "Cumplimiento"),
-    },
-    {
-      tone: "purple",
-      icon: <Clock size={20} />,
-      value: comp("punctuality") != null ? `${Math.round(comp("punctuality")!)}%` : "—",
-      label: t("profile.metricPunctuality", "Puntualidad"),
-    },
-    {
-      tone: "amber",
-      icon: <Star size={20} />,
-      value: perf?.score != null ? (perf.score / 20).toFixed(1) : "—",
-      label: t("profile.metricScore", "Calificación"),
-    },
-  ];
+  const metrics = useMemo<{ tone: Tone; icon: any; value: string; label: string }[]>(() => {
+    const comp = (k: string) => perf?.components?.find((c) => c.key === k)?.score;
+    return [
+      {
+        tone: "green",
+        icon: <CircleCheckBig size={20} />,
+        value: comp("rondas") != null ? `${Math.round(comp("rondas")!)}%` : "—",
+        label: t("profile.metricPatrols", "Rondas completas"),
+      },
+      {
+        tone: "blue",
+        icon: <BadgeCheck size={20} />,
+        // Consignas compliance when available; otherwise fall back to the overall
+        // compliance base so the tile isn't empty when a guard has no consignas.
+        value:
+          comp("consignas") != null
+            ? `${Math.round(comp("consignas")!)}%`
+            : perf?.base != null
+            ? `${Math.round(perf.base)}%`
+            : "—",
+        label: t("profile.metricCompliance", "Cumplimiento"),
+      },
+      {
+        tone: "purple",
+        icon: <Clock size={20} />,
+        value: comp("punctuality") != null ? `${Math.round(comp("punctuality")!)}%` : "—",
+        label: t("profile.metricPunctuality", "Puntualidad"),
+      },
+      {
+        tone: "amber",
+        icon: <Star size={20} />,
+        value: perf?.score != null ? (perf.score / 20).toFixed(1) : "—",
+        label: t("profile.metricScore", "Calificación"),
+      },
+    ];
+  }, [perf, t]);
 
   return (
     <Screen
@@ -480,7 +482,10 @@ function LangSheet({ i18n, t, onClose }: { i18n: any; t: any; onClose: () => voi
 }
 
 function LogsSheet({ t, onClose }: { t: any; onClose: () => void }) {
-  const [logs, setLogs] = useState<LogEntry[]>(getErrorLog());
+  // Seeded fresh each time the sheet mounts (it is conditionally rendered, so
+  // opening it re-reads the log). Lazy initializer avoids calling getErrorLog()
+  // on every render of this component.
+  const [logs, setLogs] = useState<LogEntry[]>(() => getErrorLog());
   const copy = async () => {
     try {
       const text = logs.map((l) => `${l.t} [${l.ctx}] ${l.msg}`).join("\n");

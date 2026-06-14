@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ClipboardCheck, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { Screen } from "@/components/Screen";
@@ -26,11 +26,29 @@ export default function GuardQuiz() {
   const { data, loading, reload } = useAsync(() =>
     guardService.quiz().catch(() => null),
   );
-  const startedAt = useMemo(() => new Date().toISOString(), [data]);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<QuizResult | null>(null);
+
+  // Quiz start time: stamped when the question set first arrives and re-stamped
+  // on each reload() (retake). Explicit ref decouples it from render memoization.
+  const startedAt = useRef(new Date().toISOString());
+  const stamped = useRef(false);
+  useEffect(() => {
+    if (data && !stamped.current) {
+      startedAt.current = new Date().toISOString();
+      stamped.current = true;
+    }
+  }, [data]);
+
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const quiz = data && data.hasQuiz ? data : null;
   const questions: QuizQuestion[] = quiz?.questions || [];
@@ -47,20 +65,22 @@ export default function GuardQuiz() {
       const res = await guardService.submitQuiz({
         bankId: quiz.bankId,
         stationId: quiz.stationId,
-        startedAt,
+        startedAt: startedAt.current,
         answers: questions.map((q) => ({
           questionId: q.id,
           chosenIndex: answers[q.id],
         })),
       });
+      if (!mounted.current) return;
       setResult(res as QuizResult);
       if ((res as QuizResult).passed) fb.success();
       else fb.error();
     } catch (e: any) {
+      if (!mounted.current) return;
       setError(e?.message || "error");
       fb.error();
     } finally {
-      setBusy(false);
+      if (mounted.current) setBusy(false);
     }
   };
 
@@ -68,6 +88,7 @@ export default function GuardQuiz() {
     fb.tap();
     setResult(null);
     setAnswers({});
+    stamped.current = false; // re-stamp start time when the new question set loads
     reload();
   };
 

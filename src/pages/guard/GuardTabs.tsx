@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Redirect, Route, useHistory, useLocation } from "react-router-dom";
 import {
   IonTabs,
@@ -34,10 +34,13 @@ import Profile from "../shared/Profile";
 import { messageService } from "@/lib/services";
 import { onPush } from "@/lib/pushEvents";
 import { getDuty, subscribeDuty, setDuty } from "@/lib/dutyState";
+import { useAuth } from "@/context/AuthContext";
 import fb from "@/lib/feedback";
 
 export default function GuardTabs() {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const history = useHistory();
   const location = useLocation();
   const radioActive = location.pathname === "/guard/radio";
@@ -47,14 +50,31 @@ export default function GuardTabs() {
   useEffect(() => subscribeDuty(setOnDuty), []);
 
   // Unread badge on the Messages tab. Seeded from the inbox, bumped by push,
-  // cleared when the guard opens Messages. (emitPush only reaches mounted
-  // handlers, so this shell-level subscriber is what keeps the badge live.)
+  // reconciled (not hard-zeroed) when the guard opens Messages. (emitPush only
+  // reaches mounted handlers, so this shell-level subscriber keeps it live.)
   const [unread, setUnread] = useState(0);
-  useEffect(() => {
-    let active = true;
+
+  // Fetch the true unread total from the inbox. Guarded so a stale response
+  // can't write after the effect that issued it is torn down.
+  const seedUnread = useCallback((alive: () => boolean) => {
     messageService.listThreads({ limit: 50 })
-      .then((r: any) => { if (active) setUnread((r?.rows || []).reduce((s: number, c: any) => s + (c.unreadCount || 0), 0)); })
+      .then((r: any) => {
+        if (alive()) setUnread((r?.rows || []).reduce((s: number, c: any) => s + (c.unreadCount || 0), 0));
+      })
       .catch(() => {});
+  }, []);
+
+  // Re-seed whenever the signed-in guard changes (Gate keeps GuardTabs mounted
+  // across a same-role re-auth, so this must key on the user id, not just mount).
+  useEffect(() => {
+    let alive = true;
+    setUnread(0);
+    seedUnread(() => alive);
+    return () => { alive = false; };
+  }, [userId, seedUnread]);
+
+  // Push-driven updates: live badge increments + navigation side effects.
+  useEffect(() => {
     const off = onPush((d: any) => {
       if (d?.type === "message.new") setUnread((n) => n + 1);
       // A radio-check request: jump the guard straight to the Radio screen.
@@ -65,9 +85,17 @@ export default function GuardTabs() {
         history.push("/guard/dashboard");
       }
     });
-    return () => { active = false; off(); };
-  }, []);
-  useEffect(() => { if (location.pathname.startsWith("/guard/messages")) setUnread(0); }, [location.pathname]);
+    return () => { off(); };
+  }, [history]);
+
+  // Returning to the Messages tab: reconcile against the inbox (it may have been
+  // read elsewhere, and push deltas can drift) rather than blindly zeroing.
+  useEffect(() => {
+    if (!location.pathname.startsWith("/guard/messages")) return;
+    let alive = true;
+    seedUnread(() => alive);
+    return () => { alive = false; };
+  }, [location.pathname, seedUnread]);
 
   // Draggable radio FAB — the guard can place it anywhere; position persists in
   // localStorage (native app storage). A press that doesn't move opens the radio.

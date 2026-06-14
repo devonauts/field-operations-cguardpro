@@ -38,10 +38,13 @@ export default function CheckInOut() {
     return c;
   }, [guards]);
 
-  const filtered = guards.filter((g: any) => {
-    const name = (g.fullName || g.name || "").toLowerCase();
-    return !query || name.includes(query.toLowerCase());
-  });
+  const filtered = useMemo(() => {
+    const q = query.toLowerCase();
+    return guards.filter((g: any) => {
+      const name = (g.fullName || g.name || "").toLowerCase();
+      return !q || name.includes(q);
+    });
+  }, [guards, query]);
 
   const tiles: { key: Status; cls: string }[] = [
     { key: "checkedIn", cls: "text-online" },
@@ -96,7 +99,7 @@ export default function CheckInOut() {
                 const st = statusOf(g);
                 const name = g.fullName || g.name || "—";
                 return (
-                  <Card key={g.id || i} className="flex items-center gap-3 p-3">
+                  <Card key={g.id ?? `${name}-${i}`} className="flex items-center gap-3 p-3">
                     <Avatar name={name} className="h-9 w-9" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-ink">{name}</p>

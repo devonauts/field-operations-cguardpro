@@ -1,8 +1,11 @@
 import { api, tenantPath, asRows, unwrap, getToken } from "./api";
 import { setAppTimeZone } from "./format";
 
-// Adopt the tenant timezone from any guard payload that carries it, so all
-// time formatting renders in the tenant's local time.
+// Adopt the tenant timezone so all time formatting renders in the tenant's
+// local time. Applied ONLY from the guard dashboard (/guard/me) — the single
+// authoritative bootstrap payload — rather than as a side effect of arbitrary
+// list/detail fetches, so display tz no longer depends on fetch ordering. It is
+// cleared on signOut (see AuthContext).
 const adoptTz = (d: any) => {
   if (d && d.timezone) setAppTimeZone(d.timezone);
   return d;
@@ -17,7 +20,7 @@ export const guardService = {
     const qs = params && (params.from || params.to)
       ? "?" + new URLSearchParams(Object.entries(params).filter(([, v]) => Boolean(v)) as [string, string][]).toString()
       : "";
-    return api.get(tenantPath("/guard/me/schedule") + qs).then(unwrap).then(adoptTz);
+    return api.get(tenantPath("/guard/me/schedule") + qs).then(unwrap);
   },
   /** Summary of my most recent completed shift (off-duty "last shift" card). */
   lastShift: () => api.get(tenantPath("/guard/me/last-shift")).then(unwrap),

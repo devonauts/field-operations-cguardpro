@@ -91,7 +91,10 @@ export interface RondaSettings {
   notifyClient: boolean;
 }
 
-export const DEFAULT_SETTINGS: RondaSettings = {
+// Frozen so a consumer that uses it directly as initial state can't mutate a
+// field in place and corrupt the shared default for every other consumer. Spread
+// it (`{ ...DEFAULT_SETTINGS }`) before editing.
+export const DEFAULT_SETTINGS: RondaSettings = Object.freeze({
   frequencyMinutes: 60,
   roundsPerShift: null,
   graceMinutes: 10,
@@ -104,7 +107,7 @@ export const DEFAULT_SETTINGS: RondaSettings = {
   notifyTenantOnComplete: true,
   notifyTenantOnMissed: true,
   notifyClient: false,
-};
+});
 
 export const ISSUE_TYPES = [
   "unsafe_condition",

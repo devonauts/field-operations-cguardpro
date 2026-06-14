@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Bell, BellRing } from "lucide-react";
 import { Screen } from "@/components/Screen";
@@ -12,11 +13,15 @@ export default function GuardNotices() {
   const { data, loading, reload } = useAsync(() =>
     notificationService.list({ limit: 50 }).catch(() => [])
   );
-  const notices = (data || []).slice().sort((a: any, b: any) => {
-    const ta = new Date(pick(a, "createdAt") as any).getTime() || 0;
-    const tb = new Date(pick(b, "createdAt") as any).getTime() || 0;
-    return tb - ta;
-  });
+  const notices = useMemo(
+    () =>
+      (data || []).slice().sort((a: any, b: any) => {
+        const ta = new Date(pick(a, "createdAt") as any).getTime() || 0;
+        const tb = new Date(pick(b, "createdAt") as any).getTime() || 0;
+        return tb - ta;
+      }),
+    [data]
+  );
 
   return (
     <Screen title={t("notices.title")} subtitle={t("notices.subtitle")} onRefresh={reload}>

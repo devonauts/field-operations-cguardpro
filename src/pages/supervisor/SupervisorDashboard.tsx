@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import {
@@ -43,13 +44,15 @@ export default function SupervisorDashboard() {
     (data?.kpis || []).find((k: any) => k.id === id)?.value ?? "—";
 
   const incidents = data?.incidents || [];
-  const openIncidents = incidents.filter(
-    (i: any) => normalizeStatus(i.status) === "open"
-  ).length;
+  const openIncidents = useMemo(
+    () =>
+      incidents.filter((i: any) => normalizeStatus(i.status) === "open").length,
+    [incidents]
+  );
   const guards = data?.guards || [];
 
   // Incidents this week, grouped by weekday — computed from real data.
-  const weekData = (() => {
+  const weekData = useMemo(() => {
     const counts = new Array(7).fill(0);
     incidents.forEach((i: any) => {
       const d = new Date(pick(i, "incidentAt", "dateTime", "createdAt") as any);
@@ -59,7 +62,7 @@ export default function SupervisorDashboard() {
       }
     });
     return WEEKDAYS.map((d, idx) => ({ day: d, count: counts[idx] }));
-  })();
+  }, [incidents]);
 
   return (
     <Screen
@@ -88,7 +91,14 @@ export default function SupervisorDashboard() {
             />
             <StatCard
               label={t("dashboard.openIncidentsKpi")}
-              value={openIncidents || kpiVal("incidents")}
+              // Prefer the real count from the loaded incident list (a genuine 0
+              // open incidents must show as 0, not silently fall back to the KPI);
+              // only use the KPI when the incident list never loaded.
+              value={
+                incidents.length > 0 || data?.incidents
+                  ? openIncidents
+                  : kpiVal("incidents")
+              }
               accent="critical"
               icon={<AlertTriangle size={16} />}
             />
@@ -146,7 +156,7 @@ export default function SupervisorDashboard() {
                 {guards.slice(0, 6).map((g: any, i: number) => {
                   const name = g.fullName || g.name || g.guardName || "—";
                   return (
-                    <div key={g.id || i} className="flex items-center gap-3">
+                    <div key={g.id ?? `${name}-${i}`} className="flex items-center gap-3">
                       <Dot color="online" />
                       <Avatar name={name} className="h-8 w-8" />
                       <div className="min-w-0 flex-1">
@@ -179,7 +189,7 @@ export default function SupervisorDashboard() {
             </SectionTitle>
             <div className="space-y-3">
               {incidents.slice(0, 4).map((inc: any, i: number) => (
-                <IncidentRow key={inc.id || i} incident={inc} />
+                <IncidentRow key={inc.id ?? `${inc.referenceNumber || inc.subject || ""}-${i}`} incident={inc} />
               ))}
               {incidents.length === 0 && (
                 <p className="text-xs text-muted">{t("app.noData")}</p>

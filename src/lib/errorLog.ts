@@ -12,8 +12,17 @@ export interface LogEntry {
 
 const KEY = "errorLog";
 const MAX = 100;
+const PERSIST_DEBOUNCE_MS = 1500;
 
-function read(): LogEntry[] {
+// In-memory ring buffer is the source of truth at runtime; localStorage is just
+// the persistence layer (read once on init, written back throttled). This keeps
+// each log call O(1) instead of re-parse + re-stringify of the whole buffer,
+// which matters under an error storm (render loop → onerror → logError).
+let buffer: LogEntry[] = loadFromStorage();
+let persistTimer: ReturnType<typeof setTimeout> | null = null;
+let persistBound = false;
+
+function loadFromStorage(): LogEntry[] {
   try {
     const raw = localStorage.getItem(KEY);
     return raw ? (JSON.parse(raw) as LogEntry[]) : [];
@@ -22,12 +31,42 @@ function read(): LogEntry[] {
   }
 }
 
-function write(entries: LogEntry[]) {
+function flushToStorage() {
+  if (persistTimer) { clearTimeout(persistTimer); persistTimer = null; }
   try {
-    localStorage.setItem(KEY, JSON.stringify(entries.slice(-MAX)));
+    localStorage.setItem(KEY, JSON.stringify(buffer));
   } catch {
     /* storage full / unavailable — ignore */
   }
+}
+
+function schedulePersist() {
+  // Flush on tab hide so we don't lose buffered entries if the throttle window
+  // hasn't elapsed. Bound once, lazily.
+  if (!persistBound && typeof window !== "undefined") {
+    persistBound = true;
+    window.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") flushToStorage();
+    });
+    window.addEventListener("pagehide", flushToStorage);
+  }
+  if (persistTimer) return;
+  persistTimer = setTimeout(flushToStorage, PERSIST_DEBOUNCE_MS);
+}
+
+function read(): LogEntry[] {
+  return buffer;
+}
+
+function push(entry: LogEntry) {
+  buffer.push(entry);
+  if (buffer.length > MAX) buffer = buffer.slice(-MAX);
+  schedulePersist();
+}
+
+function write(entries: LogEntry[]) {
+  buffer = entries.slice(-MAX);
+  flushToStorage();
 }
 
 /** Record an error against a context label. Safe to call from anywhere. */
@@ -56,7 +95,7 @@ export function logError(ctx: string, err: any, extra?: Record<string, any>) {
   // eslint-disable-next-line no-console
   console.error(`[${ctx}]`, err, extra ?? "");
   const entry: LogEntry = { t: new Date().toISOString(), ctx, msg, stack };
-  write([...read(), entry]);
+  push(entry);
   return entry;
 }
 
@@ -72,7 +111,7 @@ export function logInfo(ctx: string, msg: string, extra?: Record<string, any>) {
   }
   // eslint-disable-next-line no-console
   console.info(`[${ctx}]`, msg, extra ?? "");
-  write([...read(), { t: new Date().toISOString(), ctx, msg: m }]);
+  push({ t: new Date().toISOString(), ctx, msg: m });
 }
 
 export function getErrorLog(): LogEntry[] {

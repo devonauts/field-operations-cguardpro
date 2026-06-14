@@ -191,31 +191,37 @@ export default function GuardDashboard() {
   // immediately (works in the foreground and when the guard taps the
   // notification), and announce the outcome. The poll above remains a fallback
   // for when push is unavailable (web/dev, denied permission, no FCM token).
-  useEffect(() => {
-    const off = onPush((d) => {
-      const type = d?.type;
-      // Shift ended → the backend force-closed the shift. Reload (flips off-duty)
-      // and let the guard know.
-      if (type === "guard.forced_clockout") {
-        fb.warning();
-        reload();
-        presentToast({
-          message: t("clock.forcedOut", "Tu turno terminó y se registró tu salida automáticamente."),
-          duration: 6000,
-          color: "warning",
-          position: "top",
-        });
-        return;
-      }
-      if (type !== "attendance.clockout_approved" && type !== "attendance.clockout_rejected") {
-        return;
-      }
-      const status = type === "attendance.clockout_approved" ? "approved" : "rejected";
+  //
+  // The subscription is registered once on mount, but its handler closes over
+  // `t`/`presentToast`/`reload`. Keep the live logic in a ref refreshed each
+  // render so a mid-session language change (or a no-longer-stable reload)
+  // surfaces the toast in the current language instead of the mount-time one.
+  const pushHandlerRef = useRef<(d: any) => void>(() => {});
+  pushHandlerRef.current = (d: any) => {
+    const type = d?.type;
+    // Shift ended → the backend force-closed the shift. Reload (flips off-duty)
+    // and let the guard know.
+    if (type === "guard.forced_clockout") {
+      fb.warning();
       reload();
-      showDecisionToast(status);
-    });
+      presentToast({
+        message: t("clock.forcedOut", "Tu turno terminó y se registró tu salida automáticamente."),
+        duration: 6000,
+        color: "warning",
+        position: "top",
+      });
+      return;
+    }
+    if (type !== "attendance.clockout_approved" && type !== "attendance.clockout_rejected") {
+      return;
+    }
+    const status = type === "attendance.clockout_approved" ? "approved" : "rejected";
+    reload();
+    showDecisionToast(status);
+  };
+  useEffect(() => {
+    const off = onPush((d) => pushHandlerRef.current(d));
     return off;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Refresh when the app returns to the foreground (an approval may have landed
@@ -308,14 +314,6 @@ export default function GuardDashboard() {
   const greeting = firstName
     ? t(greetingKey, { name: firstName })
     : t("guard.myPanel");
-  const punchInTime = data?.activeClockIn?.punchInTime || data?.activeClockIn?.createdAt;
-  const fmtClock = (d: any) => {
-    try {
-      return new Date(d).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-    } catch {
-      return "";
-    }
-  };
 
   const beginClockIn = (station: any) => {
     setGpsError(null);

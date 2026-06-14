@@ -69,6 +69,8 @@ export default function GuardPatrol() {
   const [issueOpen, setIssueOpen] = useState(false);
   const [pending, setPending] = useState<PendingScan[]>(() => ls.get<PendingScan[]>(PENDING_KEY, []));
   const [showHistory, setShowHistory] = useState(false);
+  const flushingRef = useRef(false);
+  const flushPendingRef = useRef<() => void>(() => {});
 
   const { data, loading, reload } = useAsync(async () => {
     const dash = await guardService.dashboard().catch(() => null);
@@ -125,14 +127,16 @@ export default function GuardPatrol() {
     return () => clearInterval(id);
   }, [startedAt]);
 
-  // auto-flush pending scans when back online
+  // auto-flush pending scans when back online — installed once; reads the queue
+  // from localStorage each tick (so it never needs the live `pending` snapshot).
   useEffect(() => {
-    const onOnline = () => flushPending();
+    const onOnline = () => flushPendingRef.current();
     window.addEventListener("online", onOnline);
-    const id = setInterval(() => { if (navigator.onLine && pending.length) flushPending(); }, 20000);
+    const id = setInterval(() => {
+      if (navigator.onLine && ls.get<PendingScan[]>(PENDING_KEY, []).length) flushPendingRef.current();
+    }, 20000);
     return () => { window.removeEventListener("online", onOnline); clearInterval(id); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pending]);
+  }, []);
 
   const persistScanned = (next: Set<string>) => ls.set(scKey(routeId), Array.from(next));
 
@@ -209,25 +213,41 @@ export default function GuardPatrol() {
   };
 
   const flushPending = async () => {
+    // In-flight guard: prevent overlapping runs (online event + 20s interval +
+    // manual button) from reading the same snapshot and double-submitting scans.
+    if (flushingRef.current) return;
     const queue = ls.get<PendingScan[]>(PENDING_KEY, []);
     if (!queue.length || !navigator.onLine) return;
-    const remaining: PendingScan[] = [];
-    for (const it of queue) {
-      try {
-        let photoPrivateUrl: string | undefined, photoFileToken: string | undefined;
-        if (it.photoDataUrl) {
-          const up = await rondasService.uploadPhoto(dataUrlToFile(it.photoDataUrl, `ronda-${Date.now()}.jpg`));
-          photoPrivateUrl = up.privateUrl; photoFileToken = up.fileToken;
-        }
-        await rondasService.scan({
-          tagIdentifier: it.tagIdentifier, latitude: it.latitude, longitude: it.longitude, stationId: it.stationId,
-          scannedData: { checkpointName: it.checkpointName, notes: it.notes, status: it.status, photoPrivateUrl, photoFileToken },
-        });
-      } catch { remaining.push(it); }
+    flushingRef.current = true;
+    const failed: PendingScan[] = [];
+    try {
+      for (const it of queue) {
+        try {
+          let photoPrivateUrl: string | undefined, photoFileToken: string | undefined;
+          if (it.photoDataUrl) {
+            const up = await rondasService.uploadPhoto(dataUrlToFile(it.photoDataUrl, `ronda-${Date.now()}.jpg`));
+            photoPrivateUrl = up.privateUrl; photoFileToken = up.fileToken;
+          }
+          await rondasService.scan({
+            tagIdentifier: it.tagIdentifier, latitude: it.latitude, longitude: it.longitude, stationId: it.stationId,
+            scannedData: { checkpointName: it.checkpointName, notes: it.notes, status: it.status, photoPrivateUrl, photoFileToken },
+          });
+        } catch { failed.push(it); }
+      }
+    } finally {
+      flushingRef.current = false;
     }
+    // Merge against a fresh read at write time: drop the items we just processed
+    // (failed ones are re-queued below), but keep anything queued meanwhile. Items
+    // are compared by structural identity since each ls.get returns fresh objects.
+    const sig = (it: PendingScan) => JSON.stringify(it);
+    const processed = new Set(queue.map(sig));
+    const current = ls.get<PendingScan[]>(PENDING_KEY, []);
+    const remaining = [...failed, ...current.filter((it) => !processed.has(sig(it)))];
     setPending(remaining); ls.set(PENDING_KEY, remaining);
     if (remaining.length === 0) present({ message: t("rondas.synced"), duration: 2000, color: "success", position: "top" });
   };
+  flushPendingRef.current = flushPending;
 
   return (
     <Screen
@@ -406,11 +426,19 @@ function ScanConfirm({ checkpoint, settings, onClose, onSubmit }: {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const alive = useRef(true);
   const fetchGps = () => {
     setGpsError(false);
-    getCurrentPosition().then(setCoords).catch(() => setGpsError(true));
+    getCurrentPosition()
+      .then((c) => { if (alive.current) setCoords(c); })
+      .catch(() => { if (alive.current) setGpsError(true); });
   };
-  useEffect(() => { fetchGps(); }, []);
+  useEffect(() => {
+    alive.current = true;
+    fetchGps();
+    return () => { alive.current = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // distance to checkpoint (if it has coordinates)
   const cpLat = Number(checkpoint.latitude), cpLng = Number(checkpoint.longitude);

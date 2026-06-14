@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { IonModal } from "@ionic/react";
 import { useTranslation } from "react-i18next";
 import { X, Loader2, Check, AlertTriangle } from "lucide-react";
@@ -75,20 +75,24 @@ function IncidentBody({
   const [severity, setSeverity] = useState<Severity>("medium");
   const [subject, setSubject] = useState("");
 
-  // Built-in taxonomy + any tenant types not already covered by it.
-  const builtinOptions = INCIDENT_TYPE_KEYS.map((k) => ({
-    value: `k:${k}`,
-    label: t(`incidents.types.${k}`),
-  }));
-  const backendExtra = (types || [])
-    .filter(
-      (it: any) =>
-        !builtinOptions.some(
-          (b) => b.label.toLowerCase() === String(it.name || it.title || "").toLowerCase()
-        )
-    )
-    .map((it: any) => ({ value: `id:${it.id}`, label: it.name || it.title }));
-  const typeOptions = [...builtinOptions, ...backendExtra];
+  // Built-in taxonomy + any tenant types not already covered by it. Pure derived
+  // data over [types, t] — memoized so the O(builtin*backend) dedupe scan doesn't
+  // re-run on every keystroke in the form's text fields.
+  const typeOptions = useMemo(() => {
+    const builtinOptions = INCIDENT_TYPE_KEYS.map((k) => ({
+      value: `k:${k}`,
+      label: t(`incidents.types.${k}`),
+    }));
+    const backendExtra = (types || [])
+      .filter(
+        (it: any) =>
+          !builtinOptions.some(
+            (b) => b.label.toLowerCase() === String(it.name || it.title || "").toLowerCase()
+          )
+      )
+      .map((it: any) => ({ value: `id:${it.id}`, label: it.name || it.title }));
+    return [...builtinOptions, ...backendExtra];
+  }, [types, t]);
 
   const onSelectType = (value: string) => {
     setTypeValue(value);

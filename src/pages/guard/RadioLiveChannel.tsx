@@ -23,6 +23,11 @@ export default function RadioLiveChannel() {
   const [hint, setHint] = useState<string | null>(null);
 
   useEffect(() => {
+    // `user` populates asynchronously (AuthContext fetches the profile after mount).
+    // Wait for a resolved id before connecting so selfId is never captured as
+    // undefined — otherwise the guard would hear a chirp for their own
+    // transmissions and self labels ('tú' / 'Estás hablando') would mis-identify.
+    if (!myId) return;
     const vc = new VoiceChannel();
     vcRef.current = vc;
     vc.connect(
@@ -35,13 +40,18 @@ export default function RadioLiveChannel() {
       },
     );
     let alive = true;
+    let id: ReturnType<typeof setInterval> | null = null;
     const tryJoin = () => {
-      vc.join().then(({ roster, speaker }) => { if (alive) { setRoster(roster); setSpeaker(speaker); } }).catch(() => {});
+      vc.join().then(({ roster, speaker }) => {
+        if (alive) { setRoster(roster); setSpeaker(speaker); }
+        // Joined — stop the retry poll so it doesn't keep waking every 400ms.
+        if (id !== null) { clearInterval(id); id = null; }
+      }).catch(() => {});
     };
-    // join once connected
-    const id = setInterval(() => { if (vc.connected && !vc.joined) tryJoin(); }, 400);
-    return () => { alive = false; clearInterval(id); vc.disconnect(); };
-  }, []);
+    // Retry join until connected+joined, then the poll clears itself.
+    id = setInterval(() => { if (vc.connected && !vc.joined) tryJoin(); }, 400);
+    return () => { alive = false; if (id !== null) clearInterval(id); vc.disconnect(); };
+  }, [myId]);
 
   const someoneElseTalking = !!speaker && speaker.userId !== myId;
   const pressedRef = useRef(false);

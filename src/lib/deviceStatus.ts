@@ -76,6 +76,11 @@ async function refreshBattery() {
   } catch { /* battery not available (e.g. web) */ }
 }
 
+// Track whether the window online/offline listeners are attached so we can
+// remove exactly what we added (and so an HMR re-eval that re-runs start after a
+// stop doesn't stack duplicate listeners).
+let windowListenersAttached = false;
+
 /** Begin monitoring. Idempotent — safe to call once at app start. */
 export function startDeviceStatus() {
   if (started) return;
@@ -86,9 +91,10 @@ export function startDeviceStatus() {
   refreshNetwork();
 
   // Belt-and-suspenders: the webview's own events as a fallback signal.
-  if (typeof window !== "undefined") {
+  if (typeof window !== "undefined" && !windowListenersAttached) {
     window.addEventListener("online", refreshNetwork);
     window.addEventListener("offline", refreshNetwork);
+    windowListenersAttached = true;
   }
 
   // @capacitor/device has no battery event, so poll. Cheap (every 60s) and the
@@ -100,5 +106,11 @@ export function startDeviceStatus() {
 export function stopDeviceStatus() {
   if (batteryTimer) { clearInterval(batteryTimer); batteryTimer = null; }
   Network.removeAllListeners().catch?.(() => { /* ignore */ });
+  // Symmetry: remove the window listeners we added (named refs, so removable).
+  if (typeof window !== "undefined" && windowListenersAttached) {
+    window.removeEventListener("online", refreshNetwork);
+    window.removeEventListener("offline", refreshNetwork);
+    windowListenersAttached = false;
+  }
   started = false;
 }

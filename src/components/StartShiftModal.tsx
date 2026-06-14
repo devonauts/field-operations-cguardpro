@@ -48,6 +48,7 @@ export function StartShiftModal({
 
   useEffect(() => {
     if (!isOpen) return;
+    let cancelled = false;
     setItems([
       { key: "station", label: t("startShift.itemStation"), desc: t("startShift.itemStationDesc"), done: false, icon: ShieldCheck },
       { key: "battery", label: t("startShift.itemBattery"), done: false, icon: BatteryFull },
@@ -55,12 +56,16 @@ export function StartShiftModal({
       { key: "tasks", label: t("startShift.itemTasks"), desc: t("startShift.itemTasksDesc"), done: false, icon: ListChecks },
     ]);
     getBatteryStatus().then((b) => {
+      if (cancelled) return;
       setBattery(b);
       // auto-tick battery if charged enough or charging
       if (b.supported && (b.charging || (b.level ?? 0) >= 30)) {
         setItems((prev) => prev.map((it) => (it.key === "battery" ? { ...it, done: true } : it)));
       }
     });
+    return () => {
+      cancelled = true;
+    };
   }, [isOpen, t]);
 
   const toggle = (key: string) =>

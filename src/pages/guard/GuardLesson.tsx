@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHistory, useParams } from "react-router-dom";
 import {
@@ -55,6 +55,14 @@ export default function GuardLesson() {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
 
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
   const lessons = useMemo(
     () => (data?.lessons || []).slice().sort((a, b) => a.order - b.order),
     [data],
@@ -73,12 +81,13 @@ export default function GuardLesson() {
         enrollmentId,
         timeSpentSeconds: Math.round((Date.now() - startedAt.current) / 1000),
       });
+      if (!mounted.current) return;
       setDone(true);
       fb.success();
     } catch {
-      fb.error();
+      if (mounted.current) fb.error();
     } finally {
-      setBusy(false);
+      if (mounted.current) setBusy(false);
     }
   };
 

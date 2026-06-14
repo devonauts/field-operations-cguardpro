@@ -74,7 +74,7 @@ export function PhotoStrip({
       {photos.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-2">
           {photos.map((p, i) => (
-            <div key={i} className="relative h-20 w-20">
+            <div key={`${p.file.name}-${p.file.size}`} className="relative h-20 w-20">
               <img src={p.dataUrl} alt="" className="h-full w-full rounded-xl border border-line object-cover" />
               <button onClick={() => onRemove(i)} className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-critical text-white">
                 <X size={12} />

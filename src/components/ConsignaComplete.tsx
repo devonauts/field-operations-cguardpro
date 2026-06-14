@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { IonModal } from "@ionic/react";
 import {
@@ -21,11 +21,58 @@ export function ConsignaComplete({
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const recRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
+  const mountedRef = useRef(true);
   const photoInput = useRef<HTMLInputElement>(null);
   const videoInput = useRef<HTMLInputElement>(null);
 
-  const reset = () => { setNote(""); setPhotos([]); setVideo(null); setAudioBlob(null); setAudioUrl(null); };
+  // Keep a ref to the current object URL so we can revoke the previous one
+  // whenever it changes or on unmount (object URLs hold the audio Blob alive).
+  useEffect(() => {
+    audioUrlRef.current = audioUrl;
+  }, [audioUrl]);
+
+  // Replace the audio URL, revoking any previous one first.
+  const setAudio = (blob: Blob | null, url: string | null) => {
+    if (audioUrlRef.current && audioUrlRef.current !== url) {
+      URL.revokeObjectURL(audioUrlRef.current);
+    }
+    setAudioBlob(blob);
+    setAudioUrl(url);
+  };
+
+  // Tear down the mic stream + recorder and revoke the audio URL on unmount.
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      const mr = recRef.current;
+      if (mr && mr.state !== "inactive") mr.stop();
+      streamRef.current?.getTracks().forEach((tr) => tr.stop());
+      streamRef.current = null;
+      recRef.current = null;
+      if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
+    };
+  }, []);
+
+  const stopMic = () => {
+    const mr = recRef.current;
+    if (mr && mr.state !== "inactive") mr.stop();
+    streamRef.current?.getTracks().forEach((tr) => tr.stop());
+    streamRef.current = null;
+    recRef.current = null;
+  };
+
+  const handleClose = () => {
+    stopMic();
+    setRecording(false);
+    onClose();
+  };
+
+  const reset = () => { setNote(""); setPhotos([]); setVideo(null); setAudio(null, null); setError(null); };
 
   const onPhoto = async (file?: File | null) => {
     if (!file) return;
@@ -35,13 +82,18 @@ export function ConsignaComplete({
   const startAudio = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // If we unmounted while awaiting permission, drop the stream immediately.
+      if (!mountedRef.current) { stream.getTracks().forEach((tr) => tr.stop()); return; }
+      streamRef.current = stream;
       const mr = new MediaRecorder(stream);
       const chunks: BlobPart[] = [];
       mr.ondataavailable = (e) => e.data.size && chunks.push(e.data);
       mr.onstop = () => {
-        const blob = new Blob(chunks, { type: "audio/webm" });
-        setAudioBlob(blob); setAudioUrl(URL.createObjectURL(blob));
         stream.getTracks().forEach((tr) => tr.stop());
+        if (streamRef.current === stream) streamRef.current = null;
+        if (!mountedRef.current) return;
+        const blob = new Blob(chunks, { type: "audio/webm" });
+        setAudio(blob, URL.createObjectURL(blob));
       };
       mr.start(); recRef.current = mr; setRecording(true);
     } catch { /* mic denied */ }
@@ -51,6 +103,7 @@ export function ConsignaComplete({
   const submit = async () => {
     if (!consigna) return;
     setBusy(true);
+    setError(null);
     try {
       const photoUrls: any[] = [];
       for (const p of photos) {
@@ -69,19 +122,22 @@ export function ConsignaComplete({
         videoUrl, audioUrl: audioUrlUp,
         occurrenceDate: consigna.occurrenceDate,
       });
+      if (!mountedRef.current) return;
       reset(); onDone();
     } catch (e) {
-      /* surface via parent toast on reload */
-    } finally { setBusy(false); }
+      if (mountedRef.current) setError(t("consignas.completeError", "No se pudo completar la consigna. Intenta de nuevo."));
+    } finally {
+      if (mountedRef.current) setBusy(false);
+    }
   };
 
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={onClose}>
+    <IonModal isOpen={isOpen} onDidDismiss={handleClose}>
       <div className="flex h-full flex-col bg-navy">
         <div className="safe-top flex items-center gap-2 border-b border-line px-4 py-3">
           <ClipboardCheck size={18} className="text-gold" />
           <h2 className="flex-1 text-base font-semibold text-ink">{t("consignas.complete", "Completar consigna")}</h2>
-          <button onClick={onClose} className="text-muted"><X size={22} /></button>
+          <button onClick={handleClose} className="text-muted"><X size={22} /></button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
@@ -105,7 +161,7 @@ export function ConsignaComplete({
           <Field label={t("consignas.photos", "Fotos")}>
             <div className="flex flex-wrap gap-2">
               {photos.map((p, i) => (
-                <div key={i} className="relative h-16 w-16 overflow-hidden rounded-lg border border-line">
+                <div key={`${p.file.name}-${p.file.size}`} className="relative h-16 w-16 overflow-hidden rounded-lg border border-line">
                   <img src={p.dataUrl} className="h-full w-full object-cover" alt="" />
                   <button onClick={() => setPhotos((x) => x.filter((_, j) => j !== i))}
                     className="absolute right-0.5 top-0.5 rounded bg-black/60 p-0.5 text-white"><Trash2 size={11} /></button>
@@ -138,7 +194,7 @@ export function ConsignaComplete({
             {audioUrl ? (
               <div className="flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2">
                 <audio src={audioUrl} controls className="h-8 flex-1" />
-                <button onClick={() => { setAudioBlob(null); setAudioUrl(null); }} className="text-muted"><Trash2 size={14} /></button>
+                <button onClick={() => setAudio(null, null)} className="text-muted"><Trash2 size={14} /></button>
               </div>
             ) : recording ? (
               <button onClick={stopAudio} className="flex w-full items-center justify-center gap-2 rounded-lg bg-critical/15 py-3 text-sm font-semibold text-critical">
@@ -156,6 +212,11 @@ export function ConsignaComplete({
         </div>
 
         <div className="border-t border-line px-4 pt-3" style={footerStyle}>
+          {error && (
+            <p className="mb-2 flex items-center gap-1.5 text-xs text-critical">
+              <AlertCircle size={14} className="shrink-0" />{error}
+            </p>
+          )}
           <button onClick={submit} disabled={busy}
             className="btn-xl w-full bg-gold-strong text-navy active:bg-gold-hover disabled:opacity-50">
             {busy ? <Loader2 size={18} className="animate-spin" /> : <><Check size={18} />{t("consignas.markDone", "Marcar como hecha")}</>}

@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Users, MapPin, ShieldCheck } from "lucide-react";
 import { Screen } from "@/components/Screen";
@@ -32,19 +33,30 @@ export default function GuardMap() {
   const incidents = incRes?.rows || [];
   const members: any[] = team?.members || [];
 
-  const zones: Zone[] = stations.map((st) => {
-    const here = (i: any) => i.stationId === st.id || i.station?.id === st.id;
-    const crit = incidents.some((i) => isOpenIncident(i) && isCritical(i) && here(i));
-    const open = incidents.some((i) => isOpenIncident(i) && here(i));
-    return { name: st.stationName || st.name, status: crit ? "alert" : open ? "patrol" : "clear" };
-  });
+  const zones: Zone[] = useMemo(() => {
+    // Precompute, in a single O(incidents) pass, which stations have an open /
+    // critical incident — avoids the O(stations * incidents) nested some() scans.
+    const openStations = new Set<string>();
+    const critStations = new Set<string>();
+    for (const i of incidents) {
+      if (!isOpenIncident(i)) continue;
+      const sid = i.stationId ?? i.station?.id;
+      if (sid == null) continue;
+      openStations.add(sid);
+      if (isCritical(i)) critStations.add(sid);
+    }
+    return stations.map((st) => ({
+      name: st.stationName || st.name,
+      status: critStations.has(st.id) ? "alert" : openStations.has(st.id) ? "patrol" : "clear",
+    }));
+  }, [stations, incidents]);
   const activeCount = team?.count ?? zones.length ?? 1;
 
-  const STATUS = {
+  const STATUS = useMemo(() => ({
     clear: { color: "#22c55e", label: t("onduty.zoneClear", "despejado") },
     patrol: { color: "#d4a017", label: t("onduty.zonePatrol", "ronda") },
     alert: { color: "#ef4444", label: t("onduty.zoneAlert", "alerta") },
-  } as const;
+  } as const), [t]);
 
   return (
     <Screen

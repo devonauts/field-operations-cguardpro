@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { App as CapacitorApp } from "@capacitor/app";
 import { useTranslation } from "react-i18next";
 import { Map as MapIcon, CheckCircle2, Circle, Activity } from "lucide-react";
 import { Screen } from "@/components/Screen";
@@ -20,16 +21,53 @@ export default function PatrolTracking() {
 
   const { data, loading, reload } = useAsync(async () => {
     const routes: RondaRoute[] = await rondasService.routes().catch(() => []);
-    for (const r of routes) {
-      try {
-        r.tags = await rondasService.tags(r.id);
-      } catch {
-        r.tags = [];
-      }
-    }
+    // Fetch every route's tags in parallel — sequential awaits serialize N
+    // round-trips and make load/refresh slow proportional to route count.
+    await Promise.all(
+      routes.map(async (r) => {
+        try {
+          r.tags = await rondasService.tags(r.id);
+        } catch {
+          r.tags = [];
+        }
+      })
+    );
     const scans: TagScan[] = await rondasService.scans({ limit: 200 }).catch(() => []);
     return { routes, scans };
   });
+
+  // The screen advertises "live" checkpoint state, so poll for fresh scans on a
+  // bounded interval instead of only on mount / manual pull-to-refresh. Pause
+  // while the app is backgrounded (timers are throttled there anyway) and
+  // refresh once on return to the foreground; clean up on unmount.
+  const reloadRef = useRef(reload);
+  reloadRef.current = reload;
+  useEffect(() => {
+    let id: ReturnType<typeof setInterval> | null = null;
+    const start = () => {
+      if (id == null) id = setInterval(() => reloadRef.current(), 20000);
+    };
+    const stop = () => {
+      if (id != null) {
+        clearInterval(id);
+        id = null;
+      }
+    };
+    start();
+    const sub = CapacitorApp.addListener("appStateChange", (state) => {
+      if (state.isActive) {
+        reloadRef.current();
+        start();
+      } else {
+        stop();
+      }
+    });
+    return () => {
+      stop();
+      sub.then((h) => h.remove()).catch(() => {});
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const routes: RondaRoute[] = data?.routes || [];
   const scans: TagScan[] = data?.scans || [];
@@ -116,7 +154,7 @@ export default function PatrolTracking() {
                 {checkpoints.map((cp, i) => {
                   const done = scannedTagIds.has(cp.id);
                   return (
-                    <Card key={cp.id || i} className="flex items-center gap-3 p-3.5">
+                    <Card key={cp.id ?? `${cp.name || "cp"}-${i}`} className="flex items-center gap-3 p-3.5">
                       {done ? (
                         <CheckCircle2 className="shrink-0 text-online" size={20} />
                       ) : (
@@ -154,7 +192,7 @@ export default function PatrolTracking() {
                 {scans.slice(0, 8).map((s, i) => {
                   const data: any = s.scannedData || {};
                   return (
-                    <Card key={s.id || i} className="flex items-center gap-3 p-3">
+                    <Card key={s.id ?? `${s.scannedAt || ""}-${i}`} className="flex items-center gap-3 p-3">
                       <CheckCircle2 size={16} className="shrink-0 text-online" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm text-ink">

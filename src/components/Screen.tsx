@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import {
   IonPage,
   IonContent,
@@ -79,7 +79,23 @@ export function Screen({
     else history.push("/guard/dashboard");
   };
 
+  // Large-title collapse only needs the 0..52px range; clamp + rAF-throttle so we
+  // re-render at most once per frame and never once the header is fully collapsed.
+  const COLLAPSE = 52; // px of scroll over which the large title collapses
   const [scrollTop, setScrollTop] = useState(0);
+  const scrollRafRef = useRef<number | null>(null);
+  const onScroll = useCallback((e: CustomEvent<{ scrollTop: number }>) => {
+    const next = Math.min(COLLAPSE, Math.max(0, e.detail.scrollTop));
+    if (scrollRafRef.current != null) return;
+    scrollRafRef.current = requestAnimationFrame(() => {
+      scrollRafRef.current = null;
+      setScrollTop((prev) => (prev === next ? prev : next));
+    });
+  }, []);
+  useEffect(() => () => {
+    if (scrollRafRef.current != null) cancelAnimationFrame(scrollRafRef.current);
+  }, []);
+
   const refresher = onRefresh && (
     <IonRefresher
       slot="fixed"
@@ -117,14 +133,13 @@ export function Screen({
 
   // -------------------------------------------------- Large-title mode
   if (largeTitle) {
-    const COLLAPSE = 52; // px of scroll over which the large title collapses
     const p = Math.min(1, Math.max(0, scrollTop / COLLAPSE)); // 0 open → 1 collapsed
     return (
       <IonPage>
         <IonContent
           scrollEvents
           forceOverscroll={REFRESH_MODE === "ios"}
-          onIonScroll={(e) => setScrollTop(e.detail.scrollTop)}
+          onIonScroll={onScroll}
         >
           {refresher}
 

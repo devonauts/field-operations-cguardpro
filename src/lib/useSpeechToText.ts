@@ -128,6 +128,16 @@ export function useSpeechToText(opts: {
       setSupported(false);
       return;
     }
+    // If a recognizer is already running (direct start() without stop()), tear it
+    // down first so its onresult/onend handlers don't linger on an orphan.
+    if (webRecRef.current) {
+      try {
+        webRecRef.current.stop();
+      } catch {
+        /* ignore */
+      }
+      webRecRef.current = null;
+    }
     const rec = new Rec();
     rec.lang = lang;
     rec.continuous = true;

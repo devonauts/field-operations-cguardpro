@@ -1,13 +1,17 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
+  useMemo,
+  useRef,
   useState,
   ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
 import { AuthService, Credentials } from "@/lib/auth";
 import { ApiError, setToken, setTenantId, getToken, setUnauthorizedHandler } from "@/lib/api";
+import { clearAppTimeZone } from "@/lib/format";
 import {
   hasAllowedRole,
   resolveWorkerRole,
@@ -77,7 +81,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .finally(() => setLoading(false));
   }, []);
 
-  const signIn = async (credentials: Credentials): Promise<AuthResult> => {
+  const signIn = useCallback(async (credentials: Credentials): Promise<AuthResult> => {
     try {
       const resp = await AuthService.signIn(credentials);
       if (!resp?.token) return { success: false, error: t("auth.errorGeneric") };
@@ -115,24 +119,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       return { success: false, error: t("auth.errorGeneric") };
     }
-  };
+  }, [t]);
 
-  const signOut = () => {
+  const signOut = useCallback(() => {
     setToken(null);
     setTenantId(null);
     setUser(null);
     setRole(null);
-  };
+    // Drop the tenant display timezone so the next session starts clean.
+    clearAppTimeZone();
+  }, []);
+
+  // Keep the latest signOut reachable from the (empty-dep) unauthorized handler
+  // effect without re-registering it on every identity change.
+  const signOutRef = useRef(signOut);
+  signOutRef.current = signOut;
 
   // Sign out automatically when any authenticated request gets a 401 — e.g. this
   // device's session was ended by a login elsewhere (single active session).
   useEffect(() => {
-    setUnauthorizedHandler(() => signOut());
+    setUnauthorizedHandler(() => signOutRef.current());
     return () => setUnauthorizedHandler(null);
   }, []);
 
   // Re-fetch the signed-in profile (used by pull-to-refresh on the Profile tab).
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     if (!getToken()) return;
     try {
       const profile = await AuthService.getProfile();
@@ -143,21 +154,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch {
       /* keep the current session on a transient failure */
     }
-  };
+  }, []);
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        role,
-        loading,
-        isAuthenticated: !!user,
-        signIn,
-        signOut,
-        refreshUser,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo<AuthContextType>(
+    () => ({
+      user,
+      role,
+      loading,
+      isAuthenticated: !!user,
+      signIn,
+      signOut,
+      refreshUser,
+    }),
+    [user, role, loading, signIn, signOut, refreshUser]
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

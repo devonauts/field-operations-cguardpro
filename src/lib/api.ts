@@ -26,6 +26,11 @@ export class ApiError extends Error {
   }
 }
 
+// Sentinel status for client-side configuration errors (e.g. no tenant). Kept
+// distinct from 0 (connectivity) so it is never misread as a retryable network
+// failure or surfaced as an "offline" message.
+export const CONFIG_ERROR_STATUS = -1;
+
 export const getToken = () => localStorage.getItem(TOKEN_KEY);
 export const setToken = (t: string | null) =>
   t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY);
@@ -38,7 +43,9 @@ export const setUnauthorizedHandler = (fn: (() => void) | null) => { onUnauthori
 
 export const getTenantId = (): string => {
   const t = localStorage.getItem(TENANT_KEY);
-  if (!t) throw new ApiError("Tenant not configured", 0, null);
+  // Distinct CONFIG_ERROR_STATUS (not 0) so this non-transient config problem is
+  // not retried or labeled as a connectivity error.
+  if (!t) throw new ApiError("Tenant not configured", CONFIG_ERROR_STATUS, null);
   return t;
 };
 export const setTenantId = (t: string | null) =>
@@ -56,6 +63,11 @@ export const isNetworkError = (e: unknown): boolean =>
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const backoff = (attempt: number) => Math.min(2500, 250 * 2 ** (attempt - 1));
 
+// De-dup identical concurrent GETs: while one is in flight, other callers for
+// the same URL share its promise instead of firing a duplicate request. Cleared
+// the moment the request settles, so this is in-flight de-dup, not a cache.
+const inflightGets = new Map<string, Promise<any>>();
+
 async function request<T = any>(
   endpoint: string,
   options: RequestOptions = {}
@@ -67,19 +79,39 @@ async function request<T = any>(
   const idempotent = method === "GET" || method === "HEAD";
   const maxAttempts = idempotent ? 3 : 1;
 
-  let lastErr: unknown;
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      return await doRequest<T>(endpoint, options);
-    } catch (e) {
-      lastErr = e;
-      const transient =
-        e instanceof ApiError && (e.status === 0 || e.status === 429 || e.status >= 500);
-      if (!transient || attempt >= maxAttempts) throw e;
-      await sleep(backoff(attempt)); // 250ms, 500ms, …
-    }
+  // Only de-dup plain GETs with no custom headers/body — a request whose options
+  // could change the response (auth override etc.) must not be shared.
+  const dedupable =
+    method === "GET" && !options.body && !options.headers && !options.skipAuth;
+  if (dedupable) {
+    const existing = inflightGets.get(endpoint);
+    if (existing) return existing as Promise<T>;
   }
-  throw lastErr;
+
+  const exec = (async () => {
+    let lastErr: unknown;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await doRequest<T>(endpoint, options);
+      } catch (e) {
+        lastErr = e;
+        const transient =
+          e instanceof ApiError && (e.status === 0 || e.status === 429 || e.status >= 500);
+        if (!transient || attempt >= maxAttempts) throw e;
+        await sleep(backoff(attempt)); // 250ms, 500ms, …
+      }
+    }
+    throw lastErr;
+  })();
+
+  if (!dedupable) return exec;
+
+  inflightGets.set(endpoint, exec);
+  try {
+    return await exec;
+  } finally {
+    inflightGets.delete(endpoint);
+  }
 }
 
 async function doRequest<T = any>(

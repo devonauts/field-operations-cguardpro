@@ -26,6 +26,10 @@ export function setAppTimeZone(tz?: string | null) {
 export function getAppTimeZone(): string | undefined {
   return APP_TZ;
 }
+/** Reset the tenant timezone (e.g. on sign-out) so the next session starts clean. */
+export function clearAppTimeZone() {
+  APP_TZ = undefined;
+}
 
 export function fmtTime(v: any): string {
   if (!v) return "—";

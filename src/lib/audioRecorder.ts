@@ -40,6 +40,10 @@ function extFor(type: string): string {
 
 export async function startRecording(): Promise<void> {
   if (!isRecordingSupported()) throw new Error('La grabación de audio no está disponible en este dispositivo.');
+  // A second start before stop (double-tap / re-entry race) would otherwise
+  // orphan the prior MediaStream — its tracks stay live (mic hot, OS indicator
+  // on). Tear down anything in flight first.
+  if (mediaRecorder || stream) cleanup();
   stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   const mimeType = pickMime();
   chunks = [];
