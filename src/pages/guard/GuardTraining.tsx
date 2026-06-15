@@ -24,10 +24,10 @@ import {
 type Tab = "courses" | "achievements";
 
 const STATUS_COLOR: Record<TrainingCourseRow["status"], string> = {
-  assigned: "#9aa4b2",
-  in_progress: "#d4a017",
-  completed: "#22c55e",
-  expired: "#ef4444",
+  assigned: "var(--low)",
+  in_progress: "var(--gold)",
+  completed: "var(--online)",
+  expired: "var(--critical)",
 };
 
 export default function GuardTraining() {
@@ -77,7 +77,7 @@ function SegBtn({
     <button
       onClick={onClick}
       className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-sm font-semibold transition ${
-        active ? "bg-navy-50 text-ink shadow" : "text-muted"
+        active ? "bg-surface text-ink shadow" : "text-muted"
       }`}
     >
       {icon}
@@ -157,7 +157,11 @@ function CourseCard({
           </p>
           <span
             className="mt-1.5 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold"
-            style={{ color, borderColor: `${color}55`, background: `${color}14` }}
+            style={{
+              color,
+              borderColor: `color-mix(in srgb, ${color} 33%, transparent)`,
+              background: `color-mix(in srgb, ${color} 8%, transparent)`,
+            }}
           >
             {course.status === "completed" ? (
               <CheckCircle2 size={11} />

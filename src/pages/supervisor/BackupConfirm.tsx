@@ -77,7 +77,7 @@ export default function BackupConfirm() {
                 <button
                   onClick={() => act(ev.id, true)}
                   disabled={busyId === ev.id}
-                  className="flex min-h-[46px] flex-1 items-center justify-center gap-2 rounded-xl bg-gold-strong text-sm font-semibold text-navy active:bg-gold-hover disabled:opacity-50"
+                  className="flex min-h-[46px] flex-1 items-center justify-center gap-2 rounded-xl bg-gold-strong text-sm font-semibold text-on-accent active:bg-gold-hover disabled:opacity-50"
                 >
                   {busyId === ev.id ? (
                     <Loader2 size={16} className="animate-spin" />

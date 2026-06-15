@@ -20,6 +20,11 @@ import App from "./App";
 import { Capacitor } from "@capacitor/core";
 import { installGlobalErrorLogging, logInfo } from "./lib/errorLog";
 import { initTapFeedback } from "./lib/feedback";
+import { applyThemeClass, getStoredTheme } from "./context/ThemeContext";
+
+// Apply the persisted theme class to <html> BEFORE React renders so there is no
+// flash of the wrong theme on cold start. Default is DARK (no class).
+applyThemeClass(getStoredTheme());
 
 // Capture uncaught errors + unhandled rejections app-wide (viewable in
 // Profile → Diagnostics). Install before anything else can throw.

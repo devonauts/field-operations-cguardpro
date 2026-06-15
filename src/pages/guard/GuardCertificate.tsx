@@ -108,7 +108,7 @@ export default function GuardCertificate() {
             </button>
             <button
               onClick={download}
-              className="btn-xl flex items-center justify-center gap-2 bg-gold-strong text-navy active:bg-gold-hover"
+              className="btn-xl flex items-center justify-center gap-2 bg-gold-strong text-on-accent active:bg-gold-hover"
             >
               <Download size={18} /> {t("training.certificate.download")}
             </button>

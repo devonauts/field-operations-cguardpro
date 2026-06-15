@@ -183,7 +183,7 @@ export default function GuardTabs() {
             <span style={{ position: "relative", display: "inline-flex" }}>
               <MessageSquare size={22} />
               {unread > 0 && (
-                <span style={{ position: "absolute", top: -5, right: -8, minWidth: 16, height: 16, padding: "0 4px", borderRadius: 9999, background: "#ef4444", color: "#fff", fontSize: 9, fontWeight: 700, display: "grid", placeItems: "center" }}>
+                <span style={{ position: "absolute", top: -5, right: -8, minWidth: 16, height: 16, padding: "0 4px", borderRadius: 9999, background: "var(--critical)", color: "#fff", fontSize: 9, fontWeight: 700, display: "grid", placeItems: "center" }}>
                   {unread > 99 ? "99+" : unread}
                 </span>
               )}

@@ -169,7 +169,7 @@ function IncidentBody({
   };
 
   return (
-    <div className="flex h-full flex-col bg-navy">
+    <div className="flex h-full flex-col bg-background">
       <Inputs />
       <div className="safe-top flex items-center gap-2 border-b border-line px-4 py-3">
         <AlertTriangle size={18} className="text-high" />
@@ -245,7 +245,7 @@ function IncidentBody({
         <button
           onClick={submit}
           disabled={submitting || !subject.trim()}
-          className="btn-xl w-full bg-gold-strong text-navy active:bg-gold-hover disabled:opacity-50"
+          className="btn-xl w-full bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-50"
         >
           {submitting ? <Loader2 size={18} className="animate-spin" /> : <><Check size={18} />{t("incidents.submit")}</>}
         </button>

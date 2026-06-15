@@ -53,9 +53,9 @@ export default function GuardMap() {
   const activeCount = team?.count ?? zones.length ?? 1;
 
   const STATUS = useMemo(() => ({
-    clear: { color: "#22c55e", label: t("onduty.zoneClear", "despejado") },
-    patrol: { color: "#d4a017", label: t("onduty.zonePatrol", "ronda") },
-    alert: { color: "#ef4444", label: t("onduty.zoneAlert", "alerta") },
+    clear: { color: "var(--online)", label: t("onduty.zoneClear", "despejado") },
+    patrol: { color: "var(--gold)", label: t("onduty.zonePatrol", "ronda") },
+    alert: { color: "var(--critical)", label: t("onduty.zoneAlert", "alerta") },
   } as const), [t]);
 
   return (
@@ -95,7 +95,7 @@ export default function GuardMap() {
                       <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-ink">{z.name}</span>
                       <span
                         className="rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide"
-                        style={{ color: s.color, background: `${s.color}1f` }}
+                        style={{ color: s.color, background: `color-mix(in srgb, ${s.color} 12%, transparent)` }}
                       >
                         {s.label}
                       </span>
@@ -156,15 +156,15 @@ function BigRadar({ zones }: { zones: Zone[] }) {
   ];
   return (
     <svg width="210" height="210" viewBox="0 0 210 210" aria-hidden>
-      <rect x="1" y="1" width="208" height="208" rx="18" fill="#0d111a" stroke="#1f2630" />
+      <rect x="1" y="1" width="208" height="208" rx="18" fill="var(--surface-2)" stroke="var(--line)" />
       {[88, 64, 40, 18].map((r) => (
-        <circle key={r} cx="105" cy="105" r={r} fill="none" stroke="#d4a017" strokeOpacity="0.16" />
+        <circle key={r} cx="105" cy="105" r={r} fill="none" stroke="var(--gold)" strokeOpacity="0.16" />
       ))}
-      <line x1="105" y1="17" x2="105" y2="193" stroke="#d4a017" strokeOpacity="0.1" />
-      <line x1="17" y1="105" x2="193" y2="105" stroke="#d4a017" strokeOpacity="0.1" />
+      <line x1="105" y1="17" x2="105" y2="193" stroke="var(--gold)" strokeOpacity="0.1" />
+      <line x1="17" y1="105" x2="193" y2="105" stroke="var(--gold)" strokeOpacity="0.1" />
       {zones.slice(0, 5).map((z, i) => {
         const [x, y] = pts[i] || pts[0];
-        const fill = z.status === "alert" ? "#ef4444" : z.status === "patrol" ? "#d4a017" : "#22c55e";
+        const fill = z.status === "alert" ? "var(--critical)" : z.status === "patrol" ? "var(--gold)" : "var(--online)";
         return (
           <g key={i}>
             <circle cx={x} cy={y} r="9" fill={fill} fillOpacity="0.18" />
@@ -172,8 +172,8 @@ function BigRadar({ zones }: { zones: Zone[] }) {
           </g>
         );
       })}
-      <circle cx="105" cy="105" r="6" fill="#d4a017" />
-      <circle cx="105" cy="105" r="11" fill="none" stroke="#d4a017" strokeOpacity="0.5" />
+      <circle cx="105" cy="105" r="6" fill="var(--gold)" />
+      <circle cx="105" cy="105" r="11" fill="none" stroke="var(--gold)" strokeOpacity="0.5" />
     </svg>
   );
 }

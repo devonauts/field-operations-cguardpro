@@ -147,10 +147,14 @@ export function Screen({
           <div
             className="safe-top sticky top-0 z-30"
             style={{
-              background: `rgba(10,14,22,${0.55 + 0.4 * p})`,
+              background: `color-mix(in srgb, var(--background) ${
+                (0.55 + 0.4 * p) * 100
+              }%, transparent)`,
               backdropFilter: p > 0.02 ? "blur(14px)" : "none",
               WebkitBackdropFilter: p > 0.02 ? "blur(14px)" : "none",
-              borderBottom: `1px solid rgba(31,38,48,${p})`,
+              borderBottom: `1px solid color-mix(in srgb, var(--line) ${
+                p * 100
+              }%, transparent)`,
             }}
           >
             <div className="flex h-12 items-center justify-between gap-3 px-4">
@@ -193,14 +197,14 @@ export function Screen({
     return (
       <IonPage>
         <IonContent className="chat-fill" forceOverscroll={false}>
-          <div className="safe-top bg-navy-50 border-b border-line shrink-0">
+          <div className="safe-top bg-surface-2 border-b border-line shrink-0">
             <div className="flex items-start justify-between gap-3 px-4 pb-3 pt-3">
               <div className="flex min-w-0 items-start gap-1.5">
                 {showBack && (
                   <button
                     onClick={goBack}
                     aria-label="Atrás"
-                    className="pressable -ml-1.5 mt-0.5 shrink-0 rounded-full p-1.5 text-ink active:bg-white/10"
+                    className="pressable -ml-1.5 mt-0.5 shrink-0 rounded-full p-1.5 text-ink active:bg-surface-2"
                   >
                     <ChevronLeft size={22} />
                   </button>
@@ -213,7 +217,7 @@ export function Screen({
               {right && <div className="shrink-0">{right}</div>}
             </div>
           </div>
-          <div className="flex min-h-0 flex-1 flex-col bg-navy">{children}</div>
+          <div className="flex min-h-0 flex-1 flex-col bg-background">{children}</div>
         </IonContent>
       </IonPage>
     );
@@ -223,14 +227,14 @@ export function Screen({
   return (
     <IonPage>
       <IonContent forceOverscroll={REFRESH_MODE === "ios"}>
-        <div className="safe-top bg-navy-50 border-b border-line">
+        <div className="safe-top bg-surface-2 border-b border-line">
           <div className="flex items-start justify-between gap-3 px-4 pb-3 pt-3">
             <div className="flex min-w-0 items-start gap-1.5">
               {showBack && (
                 <button
                   onClick={goBack}
                   aria-label="Atrás"
-                  className="-ml-1.5 mt-0.5 shrink-0 rounded-full p-1.5 text-ink active:bg-white/10"
+                  className="-ml-1.5 mt-0.5 shrink-0 rounded-full p-1.5 text-ink active:bg-surface-2"
                 >
                   <ChevronLeft size={22} />
                 </button>

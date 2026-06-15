@@ -29,7 +29,7 @@ export default function GuardIncidents() {
             fb.tap();
             setFormOpen(true);
           }}
-          className="flex min-h-[40px] items-center gap-1.5 rounded-lg bg-gold-strong px-4 text-xs font-semibold text-navy active:bg-gold-hover"
+          className="flex min-h-[40px] items-center gap-1.5 rounded-lg bg-gold-strong px-4 text-xs font-semibold text-on-accent active:bg-gold-hover"
         >
           <Plus size={16} />
           {t("incidents.logIncident")}

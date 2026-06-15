@@ -21,7 +21,7 @@ const TONE_TILE: Record<Tone, string> = {
   teal: "bg-teal/15 text-teal",
   red: "bg-critical/15 text-critical",
   gold: "bg-gold/15 text-gold",
-  neutral: "bg-white/8 text-muted",
+  neutral: "bg-surface-2 text-muted",
 };
 
 /** tone → solid text color (for values/labels). */
@@ -113,7 +113,7 @@ export function MenuRow({
     <button
       type="button"
       onClick={onClick ? () => { fb.select(); onClick(); } : undefined}
-      className="pressable flex w-full items-center gap-4 rounded-2xl border border-line bg-surface px-5 py-5 text-left active:bg-white/[0.05] [@media(hover:hover)]:hover:bg-white/[0.03]"
+      className="pressable flex w-full items-center gap-4 rounded-2xl border border-line bg-surface px-5 py-5 text-left active:bg-surface-2 [@media(hover:hover)]:hover:bg-surface-2"
     >
       <IconTile tone={tone}>{icon}</IconTile>
       <div className="min-w-0 flex-1">
@@ -247,7 +247,7 @@ export function QuickActionTile({
     <button
       type="button"
       onClick={onClick}
-      className={`pressable flex min-h-26 flex-col items-center justify-center gap-2.5 rounded-2xl border bg-surface/60 p-3 ${ring[tone]}`}
+      className={`pressable flex min-h-26 flex-col items-center justify-center gap-2.5 rounded-2xl border bg-surface p-3 ${ring[tone]}`}
     >
       <span className={TONE_TEXT[tone]}>{icon}</span>
       <span className="text-sm font-semibold text-ink">{label}</span>
@@ -311,9 +311,9 @@ export function Button({
   const base =
     "btn-xl pressable disabled:opacity-50 disabled:pointer-events-none";
   const variants: Record<string, string> = {
-    primary: "bg-gold-strong text-navy hover:bg-gold-hover",
-    outline: "border border-line-2 text-ink hover:bg-white/[0.04]",
-    ghost: "text-ink hover:bg-white/[0.04]",
+    primary: "bg-gold-strong text-on-accent hover:bg-gold-hover",
+    outline: "border border-line-2 text-ink hover:bg-surface-2",
+    ghost: "text-ink hover:bg-surface-2",
     danger: "border border-critical/40 text-critical hover:bg-critical/10",
   };
   const handleClick = () => {

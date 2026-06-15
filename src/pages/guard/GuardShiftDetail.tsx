@@ -77,7 +77,7 @@ export default function GuardShiftDetail() {
       ) : (
         <div className="space-y-4">
           {/* Live timer */}
-          <div className="glow-gold relative overflow-hidden rounded-2xl border border-gold/20 bg-gradient-to-br from-gold/10 via-surface to-navy p-5 text-center">
+          <div className="glow-gold relative overflow-hidden rounded-2xl border border-gold/20 bg-gradient-to-br from-gold/10 via-surface to-background p-5 text-center">
             <div className="grid-overlay absolute inset-0 opacity-40" />
             <div className="relative">
               <span className="label-eyebrow">{t("onduty.elapsedTime", "Tiempo en turno")}</span>

@@ -54,7 +54,7 @@ export default function SupervisorIncidents() {
             fb.press();
             setFormOpen(true);
           }}
-          className="flex items-center gap-1.5 rounded-lg bg-gold-strong px-3 py-2 text-xs font-semibold text-navy active:bg-gold-hover"
+          className="flex items-center gap-1.5 rounded-lg bg-gold-strong px-3 py-2 text-xs font-semibold text-on-accent active:bg-gold-hover"
         >
           <Plus size={15} />
           {t("incidents.logIncident")}

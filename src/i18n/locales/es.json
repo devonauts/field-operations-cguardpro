@@ -514,6 +514,10 @@
   },
   "profile": {
     "title": "Perfil",
+    "theme": "Tema",
+    "themeSub": "Apariencia de la app",
+    "themeLight": "Claro",
+    "themeDark": "Oscuro",
     "language": "Idioma",
     "languageAuto": "Automático (dispositivo)",
     "spanish": "Español",

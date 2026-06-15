@@ -120,7 +120,7 @@ export default function GuardSchedule() {
           <button
             key={v}
             onClick={() => { fb.select(); setView(v); }}
-            className={`flex-1 rounded-lg py-1.5 text-[13px] font-semibold transition-colors ${view === v ? "bg-gold text-navy" : "text-muted"}`}
+            className={`flex-1 rounded-lg py-1.5 text-[13px] font-semibold transition-colors ${view === v ? "bg-gold text-on-accent" : "text-muted"}`}
           >
             {v === "day" ? t("schedule.day", "Día") : v === "week" ? t("schedule.week", "Semana") : t("schedule.month", "Mes")}
           </button>
@@ -192,14 +192,14 @@ function MonthGrid({ anchor, today, weekdayLabels, byDay, freeDays, onPick }: an
             <button key={i} onClick={() => onPick(d)} className="relative flex aspect-square flex-col items-center justify-center rounded-xl">
               <span className={[
                 "grid h-8 w-8 place-items-center rounded-full text-[13px]",
-                isSel ? "bg-gold font-bold text-navy" : isToday ? "font-bold text-gold" : inMonth ? "text-ink" : "text-faint",
+                isSel ? "bg-gold font-bold text-on-accent" : isToday ? "font-bold text-gold" : inMonth ? "text-ink" : "text-faint",
                 !isSel && free ? "bg-online/10" : "",
               ].join(" ")}>{d.getDate()}</span>
               {/* bottom marker: shift dot, else "L" for a free/resting day */}
               {count > 0 ? (
-                <span className={`absolute bottom-1 h-1.5 w-1.5 rounded-full ${isSel ? "bg-navy/70" : "bg-gold"}`} />
+                <span className={`absolute bottom-1 h-1.5 w-1.5 rounded-full ${isSel ? "bg-on-accent/70" : "bg-gold"}`} />
               ) : free ? (
-                <span className={`absolute bottom-0.5 text-[9px] font-bold leading-none ${isSel ? "text-navy" : "text-online"}`}>L</span>
+                <span className={`absolute bottom-0.5 text-[9px] font-bold leading-none ${isSel ? "text-on-accent" : "text-online"}`}>L</span>
               ) : null}
             </button>
           );
@@ -251,13 +251,13 @@ function WeekTimeline({ anchor, today, weekdayLabels, byDay, freeDays, onPick }:
             const count = (byDay.get(ymd(d)) || []).length;
             const free = freeDays.has(ymd(d));
             return (
-              <button key={i} onClick={() => onPick(d)} className={`flex flex-col items-center rounded-lg py-1 ${isSel ? "bg-gold text-navy" : "active:bg-surface-2"}`}>
-                <span className={`text-[9px] font-semibold uppercase ${isSel ? "text-navy/70" : "text-muted"}`}>{weekdayLabels[i]}</span>
-                <span className={`text-[14px] font-bold leading-tight ${isSel ? "text-navy" : isToday ? "text-gold" : "text-ink"}`}>{d.getDate()}</span>
+              <button key={i} onClick={() => onPick(d)} className={`flex flex-col items-center rounded-lg py-1 ${isSel ? "bg-gold text-on-accent" : "active:bg-surface-2"}`}>
+                <span className={`text-[9px] font-semibold uppercase ${isSel ? "text-on-accent/70" : "text-muted"}`}>{weekdayLabels[i]}</span>
+                <span className={`text-[14px] font-bold leading-tight ${isSel ? "text-on-accent" : isToday ? "text-gold" : "text-ink"}`}>{d.getDate()}</span>
                 {count > 0 ? (
-                  <span className={`mt-0.5 h-1 w-1 rounded-full ${isSel ? "bg-navy/70" : "bg-gold"}`} />
+                  <span className={`mt-0.5 h-1 w-1 rounded-full ${isSel ? "bg-on-accent/70" : "bg-gold"}`} />
                 ) : free ? (
-                  <span className={`mt-0.5 text-[9px] font-bold leading-none ${isSel ? "text-navy" : "text-online"}`}>L</span>
+                  <span className={`mt-0.5 text-[9px] font-bold leading-none ${isSel ? "text-on-accent" : "text-online"}`}>L</span>
                 ) : (
                   <span className="mt-0.5 h-1 w-1" />
                 )}

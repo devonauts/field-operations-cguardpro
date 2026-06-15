@@ -394,13 +394,13 @@ export function SelfieClockIn({
                 <div className="h-[42%] w-[64%] rounded-[50%] border-2 border-white/40" />
               </div>
               {starting && !camError && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-navy/80">
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/80">
                   <Loader2 size={32} className="animate-spin text-gold" />
                   <p className="text-sm text-muted">{t("selfie.starting", "Abriendo cámara…")}</p>
                 </div>
               )}
               {camError && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-navy p-8 text-center">
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background p-8 text-center">
                   <Camera size={40} className="text-faint" />
                   <p className="text-sm text-muted">{t("selfie.cameraError")}</p>
                   {/* Show the real reason so we can diagnose on-device. */}
@@ -412,7 +412,7 @@ export function SelfieClockIn({
                   </p>
                   <button
                     onClick={() => startCamera(() => true)}
-                    className="mt-1 rounded-lg border border-line px-4 py-2 text-sm text-white active:bg-white/5"
+                    className="mt-1 rounded-lg border border-line px-4 py-2 text-sm text-ink active:bg-surface-2"
                   >
                     {t("selfie.retry", "Reintentar")}
                   </button>
@@ -441,7 +441,7 @@ export function SelfieClockIn({
         </div>
 
         {/* footer controls */}
-        <div className="border-t border-line bg-navy px-4 pt-4" style={footerStyle}>
+        <div className="border-t border-line bg-background px-4 pt-4" style={footerStyle}>
           {phase === "camera" ? (
             <div className="flex flex-col items-center gap-3">
               <button
@@ -456,12 +456,12 @@ export function SelfieClockIn({
             </div>
           ) : (
             <div className="flex gap-2">
-              <button onClick={retake} className="btn-xl flex-1 border border-line text-muted active:bg-white/5">
+              <button onClick={retake} className="btn-xl flex-1 border border-line text-muted active:bg-surface-2">
                 <RefreshCw size={18} />{t("selfie.retake")}
               </button>
               <button
                 onClick={confirm}
-                className="btn-xl flex-[2] bg-gold-strong text-navy active:bg-gold-hover disabled:opacity-50"
+                className="btn-xl flex-[2] bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-50"
               >
                 <Check size={18} />{t("selfie.confirm")}
               </button>

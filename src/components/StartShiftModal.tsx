@@ -96,7 +96,7 @@ export function StartShiftModal({
 
   return (
     <IonModal isOpen={isOpen} onDidDismiss={onClose}>
-      <div className="flex h-full flex-col bg-navy text-ink">
+      <div className="flex h-full flex-col bg-background text-ink">
         {/* header */}
         <div
           className="flex items-center justify-between border-b border-line px-4 pb-3"
@@ -106,7 +106,7 @@ export function StartShiftModal({
             <p className="label-eyebrow">{t("startShift.eyebrow")}</p>
             <h2 className="text-lg font-bold">{t("startShift.title")}</h2>
           </div>
-          <button onClick={onClose} className="rounded-full p-2 text-muted active:bg-white/5">
+          <button onClick={onClose} className="rounded-full p-2 text-muted active:bg-surface-2">
             <X size={22} />
           </button>
         </div>
@@ -158,7 +158,7 @@ export function StartShiftModal({
                   key={it.key}
                   onClick={() => toggle(it.key)}
                   className={`flex w-full items-start gap-3 rounded-card border p-3.5 text-left transition-colors ${
-                    it.done ? "border-online/40 bg-online-soft" : "border-line bg-surface active:bg-white/5"
+                    it.done ? "border-online/40 bg-online-soft" : "border-line bg-surface active:bg-surface-2"
                   }`}
                 >
                   {it.done ? (
@@ -181,7 +181,7 @@ export function StartShiftModal({
           <button
             onClick={start}
             disabled={!allDone}
-            className="btn-xl w-full bg-gold-strong text-navy active:bg-gold-hover disabled:opacity-40"
+            className="btn-xl w-full bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-40"
           >
             {t("startShift.startBtn")}
             <ArrowRight size={18} />

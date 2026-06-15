@@ -296,7 +296,7 @@ export default function GuardPatrol() {
               <p className="text-base font-semibold text-ink">{route?.name}</p>
               <p className="mt-1 text-xs text-muted">{t("rondas.startHint")}</p>
               <p className="mt-1 text-xs text-faint">{checkpoints.length} {t("rondas.allCheckpoints").toLowerCase()}</p>
-              <button onClick={startPatrol} className="btn-xl mt-5 w-full bg-gold-strong text-navy active:bg-gold-hover">
+              <button onClick={startPatrol} className="btn-xl mt-5 w-full bg-gold-strong text-on-accent active:bg-gold-hover">
                 <Play size={18} />
                 {doneCount > 0 ? t("rondas.resume") : t("rondas.start")}
               </button>
@@ -358,9 +358,9 @@ export default function GuardPatrol() {
 
       {/* action bar */}
       {checkpoints.length > 0 && startedAt && (
-        <div className="sticky bottom-0 -mx-4 mt-4 space-y-2 border-t border-line bg-navy px-4 pt-3" style={footerStyle}>
+        <div className="sticky bottom-0 -mx-4 mt-4 space-y-2 border-t border-line bg-background px-4 pt-3" style={footerStyle}>
           {!allDone ? (
-            <button onClick={() => { fb.tap(); setScannerOpen(true); }} className="btn-xl w-full bg-gold-strong text-navy active:bg-gold-hover">
+            <button onClick={() => { fb.tap(); setScannerOpen(true); }} className="btn-xl w-full bg-gold-strong text-on-accent active:bg-gold-hover">
               <ScanLine size={18} />{t("rondas.scanQR")}
             </button>
           ) : (
@@ -475,7 +475,7 @@ function ScanConfirm({ checkpoint, settings, onClose, onSubmit }: {
 
   return (
     <IonModal isOpen onDidDismiss={onClose}>
-      <div className="flex h-full flex-col bg-navy">
+      <div className="flex h-full flex-col bg-background">
         <Inputs />
         <div className="safe-top flex items-center justify-between border-b border-line px-4 py-3">
           <h2 className="flex items-center gap-2 text-base font-semibold text-ink">
@@ -535,7 +535,7 @@ function ScanConfirm({ checkpoint, settings, onClose, onSubmit }: {
         </div>
 
         <div className="border-t border-line px-4 pt-3" style={footerStyle}>
-          <button onClick={submit} disabled={busy} className="btn-xl w-full bg-gold-strong text-navy active:bg-gold-hover disabled:opacity-50">
+          <button onClick={submit} disabled={busy} className="btn-xl w-full bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-50">
             {busy ? <Loader2 size={18} className="animate-spin" /> : <><CheckCircle2 size={18} />{t("rondas.submitScan")}</>}
           </button>
         </div>

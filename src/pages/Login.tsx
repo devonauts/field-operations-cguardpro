@@ -55,7 +55,7 @@ export default function Login() {
           <div className="mx-auto w-full max-w-sm">
             {/* Brand */}
             <div className="mb-8 text-center">
-              <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl border border-gold/30 bg-navy-50">
+              <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl border border-gold/30 bg-surface-2">
                 <img src={brandLogo} alt="CGuardPro" className="h-14 w-14 object-contain" />
               </div>
               <h1 className="text-2xl font-bold tracking-tight text-ink">
@@ -115,7 +115,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="flex min-h-[54px] w-full items-center justify-center gap-2 rounded-xl bg-gold-strong px-4 py-4 text-base font-semibold leading-none text-navy transition active:bg-gold-hover disabled:opacity-60"
+                className="flex min-h-[54px] w-full items-center justify-center gap-2 rounded-xl bg-gold-strong px-4 py-4 text-base font-semibold leading-none text-on-accent transition active:bg-gold-hover disabled:opacity-60"
               >
                 {submitting ? (
                   <>

@@ -25,6 +25,8 @@ import {
   Loader2,
   Volume2,
   VolumeX,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { Screen } from "@/components/Screen";
 import { Avatar } from "@/components/ui";
@@ -41,6 +43,7 @@ import {
   Tone,
 } from "@/components/ui/kit";
 import { useAuth } from "@/context/AuthContext";
+import { useTheme } from "@/context/ThemeContext";
 import { useAsync } from "@/lib/useAsync";
 import { guardService } from "@/lib/services";
 import { useFileUrl } from "@/lib/fileUrl";
@@ -67,6 +70,7 @@ function fmtDate(d: any): string {
 export default function Profile() {
   const { t, i18n } = useTranslation();
   const { user, role, signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
   const history = useHistory();
 
   // Real profile + station data.
@@ -320,6 +324,46 @@ export default function Profile() {
               onClick={() => setSheet("lang")}
             />
             <MenuRow
+              tone="amber"
+              icon={theme === "light" ? <Sun size={18} /> : <Moon size={18} />}
+              title={t("profile.theme", "Tema")}
+              subtitle={t("profile.themeSub", "Apariencia de la app")}
+              showChevron={false}
+              trailing={
+                <div className="inline-flex items-center gap-1 rounded-full border border-line bg-surface-2 p-0.5">
+                  {(
+                    [
+                      ["light", t("profile.themeLight", "Claro"), <Sun size={13} key="l" />],
+                      ["dark", t("profile.themeDark", "Oscuro"), <Moon size={13} key="d" />],
+                    ] as const
+                  ).map(([id, label, icon]) => {
+                    const active = theme === id;
+                    return (
+                      <span
+                        key={id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (theme !== id) {
+                            fb.select();
+                            setTheme(id);
+                          }
+                        }}
+                        role="button"
+                        className={`pressable inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                          active
+                            ? "bg-gold-strong text-on-accent"
+                            : "text-muted"
+                        }`}
+                      >
+                        {icon}
+                        {label}
+                      </span>
+                    );
+                  })}
+                </div>
+              }
+            />
+            <MenuRow
               tone="purple"
               icon={fbOn ? <Volume2 size={18} /> : <VolumeX size={18} />}
               title={t("profile.sounds", "Sonidos y vibración")}
@@ -328,7 +372,7 @@ export default function Profile() {
               trailing={
                 <span
                   className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
-                    fbOn ? "bg-online/15 text-online" : "bg-white/8 text-muted"
+                    fbOn ? "bg-online/15 text-online" : "bg-surface-2 text-muted"
                   }`}
                 >
                   {fbOn ? t("app.on", "Activado") : t("app.off", "Desactivado")}
@@ -441,7 +485,7 @@ function PhoneSheet({
         onChange={(e) => setPhone(e.target.value)}
         inputMode="tel"
         placeholder="+593 ..."
-        className="mb-4 w-full rounded-xl border border-line bg-navy-50 px-3.5 py-3 text-ink outline-none focus:border-gold/50"
+        className="mb-4 w-full rounded-xl border border-line bg-surface-2 px-3.5 py-3 text-ink outline-none focus:border-gold/50"
       />
       <Button variant="primary" full disabled={busy} onClick={save}>
         {busy ? <Loader2 size={18} className="animate-spin" /> : t("app.save", "Guardar")}
@@ -529,7 +573,7 @@ function LogsSheet({ t, onClose }: { t: any; onClose: () => void }) {
           </p>
         ) : (
           logs.map((l, i) => (
-            <div key={i} className="rounded-lg border border-line bg-navy-50 p-2">
+            <div key={i} className="rounded-lg border border-line bg-surface-2 p-2">
               <p className="flex items-center justify-between text-[10px] text-faint">
                 <span className="font-semibold text-gold">{l.ctx}</span>
                 <span>{l.t.slice(11, 19)}</span>

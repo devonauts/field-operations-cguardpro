@@ -52,7 +52,7 @@ export default function ResetPassword({ token, onDone }: { token: string; onDone
         <div className="safe-top safe-bottom flex min-h-full flex-col justify-center px-6 py-10">
           <div className="mx-auto w-full max-w-sm">
             <div className="mb-8 text-center">
-              <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl border border-gold/30 bg-navy-50">
+              <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl border border-gold/30 bg-surface-2">
                 <img src={brandLogo} alt="CGuardPro" className="h-14 w-14 object-contain" />
               </div>
               <h1 className="text-2xl font-bold tracking-tight text-ink">
@@ -73,7 +73,7 @@ export default function ResetPassword({ token, onDone }: { token: string; onDone
                 </p>
                 <button
                   onClick={() => { fb.tap(); onDone(); }}
-                  className="flex min-h-[54px] w-full items-center justify-center rounded-xl bg-gold-strong px-4 py-4 text-base font-semibold text-navy active:bg-gold-hover"
+                  className="flex min-h-[54px] w-full items-center justify-center rounded-xl bg-gold-strong px-4 py-4 text-base font-semibold text-on-accent active:bg-gold-hover"
                 >
                   {t("auth.reset.goLogin", "Ir a iniciar sesión")}
                 </button>
@@ -116,7 +116,7 @@ export default function ResetPassword({ token, onDone }: { token: string; onDone
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex min-h-[54px] w-full items-center justify-center gap-2 rounded-xl bg-gold-strong px-4 py-4 text-base font-semibold leading-none text-navy active:bg-gold-hover disabled:opacity-60"
+                  className="flex min-h-[54px] w-full items-center justify-center gap-2 rounded-xl bg-gold-strong px-4 py-4 text-base font-semibold leading-none text-on-accent active:bg-gold-hover disabled:opacity-60"
                 >
                   {submitting ? <><Loader2 size={18} className="animate-spin" />{t("auth.reset.saving", "Guardando…")}</> : (
                     <><ShieldCheck size={18} />{t("auth.reset.submit", "Guardar contraseña")}</>

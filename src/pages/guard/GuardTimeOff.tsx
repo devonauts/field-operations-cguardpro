@@ -42,7 +42,7 @@ export default function GuardTimeOff() {
       right={
         <button
           onClick={() => { fb.tap(); setOpen(true); }}
-          className="flex min-h-[40px] items-center gap-1.5 rounded-lg bg-gold-strong px-4 text-xs font-semibold text-navy active:bg-gold-hover"
+          className="flex min-h-[40px] items-center gap-1.5 rounded-lg bg-gold-strong px-4 text-xs font-semibold text-on-accent active:bg-gold-hover"
         >
           <Plus size={16} />
           {t("timeoff.request")}
@@ -136,7 +136,7 @@ function RequestModal({
 
   return (
     <IonModal isOpen={isOpen} onDidDismiss={onClose} initialBreakpoint={1} breakpoints={[0, 1]}>
-      <div className="flex h-full flex-col bg-navy safe-bottom">
+      <div className="flex h-full flex-col bg-background safe-bottom">
         <div className="safe-top flex items-center justify-between border-b border-line px-4 py-3">
           <h2 className="text-base font-semibold text-ink">{t("timeoff.newRequest")}</h2>
           <button onClick={() => { fb.tap(); onClose(); }} className="rounded-full p-1 text-muted">
@@ -180,7 +180,7 @@ function RequestModal({
           <button
             onClick={submit}
             disabled={busy || !startDate || !endDate}
-            className="btn-xl w-full bg-gold-strong text-navy active:bg-gold-hover disabled:opacity-50"
+            className="btn-xl w-full bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-50"
           >
             {busy ? <Loader2 size={18} className="animate-spin" /> : t("timeoff.submit")}
           </button>

@@ -213,7 +213,7 @@ export default function OnDutyView({ data }: { data: any }) {
       {/* ============================ CURRENT SHIFT ============================ */}
       <NavCard
         onClick={() => history.push("/guard/shift")}
-        className="glow-gold relative overflow-hidden rounded-2xl border border-gold/20 bg-gradient-to-br from-gold/10 via-surface to-navy"
+        className="glow-gold relative overflow-hidden rounded-2xl border border-gold/20 bg-gradient-to-br from-gold/10 via-surface to-surface"
       >
         <span className="absolute inset-y-0 left-0 w-1 bg-gold" />
         <div className="grid-overlay absolute inset-0 opacity-40" />
@@ -443,17 +443,17 @@ function ShieldRoute() {
       <path
         d="M6 30 L22 32 L40 14 L58 6"
         fill="none"
-        stroke="#d4a017"
+        stroke="var(--gold)"
         strokeWidth="2"
         strokeDasharray="3 4"
         strokeLinecap="round"
         opacity="0.8"
       />
       {[[22, 32], [40, 14]].map(([x, y]) => (
-        <circle key={x} cx={x} cy={y} r="3.5" fill="#0a0e16" stroke="#d4a017" strokeWidth="2" />
+        <circle key={x} cx={x} cy={y} r="3.5" fill="var(--background)" stroke="var(--gold)" strokeWidth="2" />
       ))}
-      <circle cx="6" cy="30" r="5" fill="#d4a017" />
-      <circle cx="58" cy="6" r="4" fill="none" stroke="#d4a017" strokeWidth="2" />
+      <circle cx="6" cy="30" r="5" fill="var(--gold)" />
+      <circle cx="58" cy="6" r="4" fill="none" stroke="var(--gold)" strokeWidth="2" />
     </svg>
   );
 }
@@ -468,19 +468,19 @@ function Radar({ zones }: { zones: { id?: string; name: string; status: string }
   ];
   return (
     <svg width="104" height="104" viewBox="0 0 110 110" className="shrink-0" aria-hidden>
-      <rect x="1" y="1" width="108" height="108" rx="14" fill="#0d111a" stroke="#1f2630" />
+      <rect x="1" y="1" width="108" height="108" rx="14" fill="var(--surface-2)" stroke="var(--line)" />
       {[40, 26, 12].map((r) => (
-        <circle key={r} cx="55" cy="55" r={r} fill="none" stroke="#d4a017" strokeOpacity="0.18" />
+        <circle key={r} cx="55" cy="55" r={r} fill="none" stroke="var(--gold)" strokeOpacity="0.18" />
       ))}
-      <line x1="55" y1="15" x2="55" y2="95" stroke="#d4a017" strokeOpacity="0.12" />
-      <line x1="15" y1="55" x2="95" y2="55" stroke="#d4a017" strokeOpacity="0.12" />
+      <line x1="55" y1="15" x2="55" y2="95" stroke="var(--gold)" strokeOpacity="0.12" />
+      <line x1="15" y1="55" x2="95" y2="55" stroke="var(--gold)" strokeOpacity="0.12" />
       {zones.slice(0, 4).map((z, i) => {
         const [x, y] = pts[i] || pts[0];
-        const fill = z.status === "alert" ? "#ef4444" : z.status === "patrol" ? "#d4a017" : "#22c55e";
+        const fill = z.status === "alert" ? "var(--critical)" : z.status === "patrol" ? "var(--gold)" : "var(--online)";
         return <circle key={z.id ?? z.name ?? i} cx={x} cy={y} r="4" fill={fill} />;
       })}
-      <circle cx="55" cy="55" r="5" fill="#d4a017" />
-      <circle cx="55" cy="55" r="9" fill="none" stroke="#d4a017" strokeOpacity="0.5" />
+      <circle cx="55" cy="55" r="5" fill="var(--gold)" />
+      <circle cx="55" cy="55" r="9" fill="none" stroke="var(--gold)" strokeOpacity="0.5" />
     </svg>
   );
 }

@@ -80,7 +80,7 @@ export function PhotoStrip({
                 <X size={12} />
               </button>
               {i === 0 && firstLabel && (
-                <span className="absolute inset-x-0 bottom-0 rounded-b-xl bg-navy/70 py-0.5 text-center text-[9px] text-gold">
+                <span className="absolute inset-x-0 bottom-0 rounded-b-xl bg-background/70 py-0.5 text-center text-[9px] text-gold">
                   {firstLabel}
                 </span>
               )}

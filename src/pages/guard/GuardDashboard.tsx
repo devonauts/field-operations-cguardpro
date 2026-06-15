@@ -47,19 +47,19 @@ import { StartShiftModal, ChecklistResult } from "@/components/StartShiftModal";
 import { SelfieClockIn, SelfieResult } from "@/components/SelfieClockIn";
 
 const TIER_COLOR: Record<Tier, string> = {
-  excellent: "#22c55e",
-  good: "#d4a017",
-  fair: "#f97316",
-  needs_improvement: "#ef4444",
+  excellent: "var(--online)",
+  good: "var(--gold)",
+  fair: "var(--high)",
+  needs_improvement: "var(--critical)",
 };
 const COMPONENT_COLOR: Record<ComponentKey, string> = {
-  punctuality: "#38bdf8",
-  uniform: "#22c55e",
-  inventory: "#14b8a6",
-  consignas: "#d4a017",
-  rondas: "#a855f7",
+  punctuality: "var(--info)",
+  uniform: "var(--online)",
+  inventory: "var(--teal)",
+  consignas: "var(--gold)",
+  rondas: "var(--route)",
   quiz: "#6366f1",
-  training: "#f97316",
+  training: "var(--high)",
 };
 
 /** The C-Guard Pro shield-and-eye glyph (gold), drawn inline to avoid an asset. */
@@ -69,12 +69,12 @@ function BrandMark() {
       <path
         d="M15 2 L27 6 V16 C27 24 21 30 15 32 C9 30 3 24 3 16 V6 Z"
         fill="none"
-        stroke="#d4a017"
+        stroke="var(--gold)"
         strokeWidth="2"
         strokeLinejoin="round"
       />
-      <ellipse cx="15" cy="16" rx="7" ry="4.5" fill="none" stroke="#d4a017" strokeWidth="2" />
-      <circle cx="15" cy="16" r="2.3" fill="#d4a017" />
+      <ellipse cx="15" cy="16" rx="7" ry="4.5" fill="none" stroke="var(--gold)" strokeWidth="2" />
+      <circle cx="15" cy="16" r="2.3" fill="var(--gold)" />
     </svg>
   );
 }
@@ -96,7 +96,7 @@ function OnDutyHeader({ guardName, sector }: { guardName: string; sector: string
         </div>
         <span className="relative">
           <Avatar name={guardName} className="h-11 w-11 text-sm ring-2 ring-gold/40" />
-          <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-navy bg-online" />
+          <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background bg-online" />
         </span>
       </div>
 
@@ -481,7 +481,7 @@ export default function GuardDashboard() {
                     beginClockIn(primaryTarget);
                   }}
                   disabled={busy || !primaryTarget}
-                  className="btn-xl glow-gold w-full bg-gradient-to-b from-gold to-gold-strong text-navy active:from-gold-hover active:to-gold-hover disabled:opacity-50"
+                  className="btn-xl glow-gold w-full bg-gradient-to-b from-gold to-gold-strong text-on-accent active:from-gold-hover active:to-gold-hover disabled:opacity-50"
                 >
                   {busy ? (
                     <Loader2 size={20} className="animate-spin" />
@@ -745,7 +745,7 @@ function LastShiftCard() {
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2.5">
         {cells.map((c) => (
-          <div key={c.label} className="rounded-xl border border-line bg-navy/40 p-3">
+          <div key={c.label} className="rounded-xl border border-line bg-surface-2 p-3">
             <p className={`text-lg font-bold tabular-nums ${toneClass(c.tone)}`}>{c.value}</p>
             <p className="mt-0.5 text-[10px] uppercase leading-tight tracking-wide text-muted">
               {c.label}
@@ -828,7 +828,7 @@ function NextShiftCard({ shift, isCurrent }: { shift: any; isCurrent: boolean })
     shift?.endTimeLabel || fmtTime(shift?.endTime)
   }`;
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-gold/30 bg-gradient-to-br from-gold/10 via-navy to-navy p-4">
+    <div className="relative overflow-hidden rounded-2xl border border-gold/30 bg-gradient-to-br from-gold/10 via-surface to-surface p-4">
       <div className="flex items-center justify-between">
         <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-gold">
           <Clock size={15} />
@@ -924,7 +924,7 @@ function LateWarning({
                 fb.press();
                 onClockIn();
               }}
-              className="mt-3.5 flex min-h-[52px] w-full items-center justify-center gap-2.5 rounded-xl bg-gradient-to-b from-gold to-gold-strong px-5 py-3.5 text-sm font-bold uppercase tracking-wide text-navy active:from-gold-hover active:to-gold-hover"
+              className="mt-3.5 flex min-h-[52px] w-full items-center justify-center gap-2.5 rounded-xl bg-gradient-to-b from-gold to-gold-strong px-5 py-3.5 text-sm font-bold uppercase tracking-wide text-on-accent active:from-gold-hover active:to-gold-hover"
             >
               <Power size={18} className="shrink-0" strokeWidth={2.5} />
               {t("late.clockInNow", "Marcar entrada")}
@@ -995,7 +995,11 @@ function PerformanceSection({ perf }: { perf: ReturnType<typeof useAsync<any>> }
               <ScoreRing score={p.score} color={color} label={t("perf.score")} />
               <span
                 className="mt-3 rounded-full border px-3 py-1 text-xs font-semibold"
-                style={{ color, borderColor: `${color}66`, background: `${color}14` }}
+                style={{
+                  color,
+                  borderColor: `color-mix(in srgb, ${color} 40%, transparent)`,
+                  background: `color-mix(in srgb, ${color} 8%, transparent)`,
+                }}
               >
                 {t(`perf.tier.${p.tier}`)}
               </span>

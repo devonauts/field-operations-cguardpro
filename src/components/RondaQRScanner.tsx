@@ -62,7 +62,7 @@ export function RondaQRScanner({
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[1000] flex flex-col bg-navy" style={{ zIndex: 100000 }}>
+    <div className="fixed inset-0 z-[1000] flex flex-col bg-background" style={{ zIndex: 100000 }}>
       <div className="safe-top flex items-center justify-between border-b border-line px-4 py-3">
         <h2 className="text-base font-semibold text-ink">{t("rondas.scanTitle")}</h2>
         <button onClick={onClose} className="text-muted">
@@ -109,7 +109,7 @@ export function RondaQRScanner({
             <button
               onClick={() => manualValue.trim() && onScan(manualValue.trim())}
               disabled={!manualValue.trim()}
-              className="btn-xl w-full bg-gold-strong text-navy active:bg-gold-hover disabled:opacity-50"
+              className="btn-xl w-full bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-50"
             >
               {t("rondas.useCode")}
             </button>

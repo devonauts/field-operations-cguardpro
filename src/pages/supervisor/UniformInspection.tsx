@@ -127,7 +127,7 @@ function RateModal({
       initialBreakpoint={1}
       breakpoints={[0, 1]}
     >
-      <div className="flex h-full flex-col bg-navy safe-bottom">
+      <div className="flex h-full flex-col bg-background safe-bottom">
         <div className="safe-top flex items-center justify-between border-b border-line px-4 py-3">
           <h2 className="text-base font-semibold text-ink">
             {t("uniform.rate", { name: guard?.fullName || "" })}
@@ -185,7 +185,7 @@ function RateModal({
           <button
             onClick={submit}
             disabled={busy || stars < 1}
-            className="btn-xl w-full bg-gold-strong text-navy active:bg-gold-hover disabled:opacity-50"
+            className="btn-xl w-full bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-50"
           >
             {busy ? (
               <Loader2 size={18} className="animate-spin" />

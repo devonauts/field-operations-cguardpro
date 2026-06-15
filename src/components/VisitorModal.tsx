@@ -201,7 +201,7 @@ export function VisitorFlow({ station, onClose, embedded }: { station: any; onCl
   };
 
   return (
-    <div className="flex h-full flex-col bg-navy">
+    <div className="flex h-full flex-col bg-background">
       <div className="safe-top flex items-center gap-2 border-b border-line px-4 py-3">
         {mode === "list" ? (
           <Users size={18} className="text-gold" />
@@ -316,7 +316,7 @@ function ListView({ loading, visits, reload, onNew }: { loading: boolean; visits
         )}
       </div>
       <div className="border-t border-line px-4 pt-3" style={footerStyle}>
-        <button onClick={onNew} className="btn-xl w-full bg-gold-strong text-navy active:bg-gold-hover">
+        <button onClick={onNew} className="btn-xl w-full bg-gold-strong text-on-accent active:bg-gold-hover">
           <UserPlus size={18} />
           {t("visitor.register")}
         </button>
@@ -374,7 +374,7 @@ function CaptureView({ photo, scanProgress, scanFailed, onCamera, onGallery, onC
             </div>
           )}
           {scanning && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-navy/70">
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/70">
               <ScanLine size={28} className="mb-2 animate-pulse text-gold" />
               <p className="text-sm font-medium text-gold">{t("visitor.scanning")}</p>
               {scanProgress! > 0 && (
@@ -401,7 +401,7 @@ function CaptureView({ photo, scanProgress, scanFailed, onCamera, onGallery, onC
 
       <div className="flex gap-2 border-t border-line px-4 pt-3" style={footerStyle}>
         <button onClick={onSkip} className="btn-xl flex-1 border border-line text-muted">{t("visitor.skipPhoto")}</button>
-        <button onClick={onContinue} disabled={!photo || scanning} className="btn-xl flex-[2] bg-gold-strong text-navy active:bg-gold-hover disabled:opacity-50">
+        <button onClick={onContinue} disabled={!photo || scanning} className="btn-xl flex-[2] bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-50">
           {scanning ? <Loader2 size={18} className="animate-spin" /> : t("visitor.continue")}
         </button>
       </div>
@@ -430,7 +430,7 @@ function PhotoStrip({ photos, onAdd, onRemove }: {
                 <X size={12} />
               </button>
               {i === 0 && (
-                <span className="absolute bottom-0 left-0 right-0 rounded-b-xl bg-navy/70 py-0.5 text-center text-[9px] text-gold">
+                <span className="absolute bottom-0 left-0 right-0 rounded-b-xl bg-on-accent/70 py-0.5 text-center text-[9px] text-gold">
                   {t("visitor.idPhotoLabel")}
                 </span>
               )}
@@ -514,7 +514,7 @@ function PersonForm({ fields, setFields, photos, addPhoto, removePhoto, station,
         </Field>
 
         <Field label={t("visitor.idType")}>
-          <div className="flex gap-1 rounded-full border border-line bg-white/5 p-1">
+          <div className="flex gap-1 rounded-full border border-line bg-surface-2 p-1">
             {ID_TYPES.map((ty) => (
               <button
                 key={ty}
@@ -522,8 +522,8 @@ function PersonForm({ fields, setFields, photos, addPhoto, removePhoto, station,
                 onClick={() => set("idType", ty)}
                 className={`flex-1 rounded-full px-2 py-2.5 text-[13px] font-semibold transition-colors ${
                   fields.idType === ty
-                    ? "bg-gold text-navy shadow-sm"
-                    : "text-muted active:bg-white/5"
+                    ? "bg-gold text-on-accent shadow-sm"
+                    : "text-muted active:bg-surface"
                 }`}
               >
                 {t(`visitor.idTypes.${ty}`)}
@@ -568,7 +568,7 @@ function PersonForm({ fields, setFields, photos, addPhoto, removePhoto, station,
       </div>
 
       <div className="border-t border-line px-4 pt-3" style={footerStyle}>
-        <button onClick={submit} disabled={busy || !fields.firstName.trim()} className="btn-xl w-full bg-gold-strong text-navy active:bg-gold-hover disabled:opacity-50">
+        <button onClick={submit} disabled={busy || !fields.firstName.trim()} className="btn-xl w-full bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-50">
           {busy ? <Loader2 size={18} className="animate-spin" /> : <><Check size={18} />{t("visitor.save")}</>}
         </button>
       </div>
@@ -625,7 +625,7 @@ function VehicleForm({ photos, addPhoto, removePhoto, station, onDone }: {
         </Field>
 
         <Field label={t("visitor.vehicleType")}>
-          <div className="flex gap-1 rounded-full border border-line bg-white/5 p-1">
+          <div className="flex gap-1 rounded-full border border-line bg-surface-2 p-1">
             {VEHICLE_TYPES.map((ty) => (
               <button
                 key={ty}
@@ -633,8 +633,8 @@ function VehicleForm({ photos, addPhoto, removePhoto, station, onDone }: {
                 onClick={() => setVehicleType(ty)}
                 className={`flex-1 rounded-full px-1 py-2.5 text-xs font-semibold transition-colors ${
                   vehicleType === ty
-                    ? "bg-gold text-navy shadow-sm"
-                    : "text-muted active:bg-white/5"
+                    ? "bg-gold text-on-accent shadow-sm"
+                    : "text-muted active:bg-surface"
                 }`}
               >
                 {t(`visitor.vehicleTypes.${ty}`)}
@@ -668,7 +668,7 @@ function VehicleForm({ photos, addPhoto, removePhoto, station, onDone }: {
       </div>
 
       <div className="border-t border-line px-4 pt-3" style={footerStyle}>
-        <button onClick={submit} disabled={busy || !plate.trim()} className="btn-xl w-full bg-gold-strong text-navy active:bg-gold-hover disabled:opacity-50">
+        <button onClick={submit} disabled={busy || !plate.trim()} className="btn-xl w-full bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-50">
           {busy ? <Loader2 size={18} className="animate-spin" /> : <><Check size={18} />{t("visitor.save")}</>}
         </button>
       </div>

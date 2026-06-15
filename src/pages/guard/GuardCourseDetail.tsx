@@ -147,7 +147,7 @@ function CourseDetailView({
                 fb.press();
                 history.push(`/guard/training/${enrollmentId}/quiz`);
               }}
-              className="btn-xl flex w-full items-center justify-center gap-2 bg-gold-strong text-navy active:bg-gold-hover"
+              className="btn-xl flex w-full items-center justify-center gap-2 bg-gold-strong text-on-accent active:bg-gold-hover"
             >
               <ClipboardCheck size={18} /> {t("training.course.takeQuiz")}
             </button>

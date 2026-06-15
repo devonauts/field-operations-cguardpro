@@ -16,7 +16,14 @@ import { incidentService } from "@/lib/services";
 import { normalizeStatus, pick } from "@/lib/normalize";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const PIE_COLORS = ["#ef4444", "#d4a017", "#38bdf8", "#a855f7", "#22c55e", "#94a3b8"];
+const PIE_COLORS = [
+  "var(--critical)",
+  "var(--gold)",
+  "var(--info)",
+  "var(--route)",
+  "var(--online)",
+  "var(--low)",
+];
 
 export default function Reports() {
   const { t } = useTranslation();
@@ -102,12 +109,12 @@ export default function Reports() {
                 <BarChart data={monthly} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
                   <XAxis
                     dataKey="month"
-                    tick={{ fill: "#8b93a1", fontSize: 10 }}
+                    tick={{ fill: "var(--muted)", fontSize: 10 }}
                     axisLine={false}
                     tickLine={false}
                   />
-                  <Bar dataKey="reported" fill="#b91c1c" radius={[3, 3, 0, 0]} maxBarSize={14} />
-                  <Bar dataKey="resolved" fill="#15803d" radius={[3, 3, 0, 0]} maxBarSize={14} />
+                  <Bar dataKey="reported" fill="var(--critical)" radius={[3, 3, 0, 0]} maxBarSize={14} />
+                  <Bar dataKey="resolved" fill="var(--online)" radius={[3, 3, 0, 0]} maxBarSize={14} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

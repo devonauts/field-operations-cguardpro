@@ -28,7 +28,7 @@ export function StatusBanner() {
         </div>
       )}
       {online && lowBattery && (
-        <div className="flex items-center justify-center gap-2 bg-high px-3 py-1.5 text-[11px] font-bold text-navy">
+        <div className="flex items-center justify-center gap-2 bg-high px-3 py-1.5 text-[11px] font-bold text-on-accent">
           <BatteryWarning size={13} />
           {`${t("net.lowBattery", "Batería baja")}${pct != null ? ` (${pct}%)` : ""} — ${t("net.charge", "conecta un cargador.")}`}
         </div>

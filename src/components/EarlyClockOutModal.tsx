@@ -39,7 +39,7 @@ export function EarlyClockOutModal({
 
   return (
     <IonModal isOpen={isOpen} onDidDismiss={onCancel}>
-      <div className="flex h-full flex-col bg-navy">
+      <div className="flex h-full flex-col bg-background">
         <div className="safe-top flex items-center gap-2 border-b border-line px-4 py-3">
           <Clock size={18} className="text-gold" />
           <h2 className="flex-1 text-base font-semibold text-ink">
@@ -75,7 +75,7 @@ export function EarlyClockOutModal({
           <button
             onClick={submit}
             disabled={busy}
-            className="btn-xl w-full bg-gold-strong text-navy active:bg-gold-hover disabled:opacity-50"
+            className="btn-xl w-full bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-50"
           >
             {busy ? (
               <Loader2 size={18} className="animate-spin" />

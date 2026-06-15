@@ -51,7 +51,7 @@ export function CustomSelect({
             />
             {/* bottom sheet anchored to the real viewport bottom (dvh) */}
             <div
-              className="fixed inset-x-0 bottom-0 flex flex-col rounded-t-2xl border-t border-line bg-navy-50"
+              className="fixed inset-x-0 bottom-0 flex flex-col rounded-t-2xl border-t border-line bg-surface"
               style={{ zIndex: 100001, maxHeight: "85dvh" }}
               onClick={(e) => e.stopPropagation()}
             >

@@ -3,6 +3,7 @@ import { IonApp, IonSpinner } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import { App as CapApp } from "@capacitor/app";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { ThemeProvider } from "./context/ThemeContext";
 import { registerPush, reportDevice } from "./lib/push";
 import AnimatedSplash from "./components/AnimatedSplash";
 import { StatusBanner } from "./components/StatusBanner";
@@ -46,8 +47,8 @@ function Gate() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-navy">
-        <IonSpinner name="crescent" style={{ color: "#d4a017" }} />
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <IonSpinner name="crescent" className="text-gold" />
       </div>
     );
   }
@@ -100,18 +101,20 @@ export default function App() {
   }, []);
 
   return (
-    <IonApp>
-      <AnimatedSplash />
-      <StatusBanner />
-      <AuthProvider>
-        <IonReactRouter>
-          {resetToken ? (
-            <ResetPassword token={resetToken} onDone={() => setResetToken(null)} />
-          ) : (
-            <Gate />
-          )}
-        </IonReactRouter>
-      </AuthProvider>
-    </IonApp>
+    <ThemeProvider>
+      <IonApp>
+        <AnimatedSplash />
+        <StatusBanner />
+        <AuthProvider>
+          <IonReactRouter>
+            {resetToken ? (
+              <ResetPassword token={resetToken} onDone={() => setResetToken(null)} />
+            ) : (
+              <Gate />
+            )}
+          </IonReactRouter>
+        </AuthProvider>
+      </IonApp>
+    </ThemeProvider>
   );
 }

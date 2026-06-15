@@ -1,13 +1,33 @@
 /* ------------------------------------------------------------------ */
-/* Ionic theme — CGuardPro dark navy + gold (matches Figma design)     */
+/* CGuardPro Worker App — runtime theme tokens                         */
+/* ------------------------------------------------------------------ */
+/* This file defines the SINGLE source of truth for every runtime color */
+/* variable that index.css's @theme maps onto Tailwind utilities.       */
+/*                                                                      */
+/*   :root          → DARK theme (the default; matte black + dark gray) */
+/*   html.theme-light → LIGHT theme (white bg + crisp white components) */
+/*                                                                      */
+/* Switching theme = toggling the `theme-light` class on <html> (see    */
+/* ThemeContext). Every bg-*/
+/* /text-*/
+/* /border-* utility re-resolves          */
+/* automatically because they all resolve to these vars. Adding a 3rd   */
+/* theme later = adding one more `html.theme-xxx { … }` block here.      */
+/*                                                                      */
+/* Both layers are defined per theme:                                   */
+/*   1. Tailwind runtime vars (--background, --surface, --ink, --gold…)  */
+/*   2. Ionic chrome vars (--ion-*) so Ionic components follow the theme.*/
 /* ------------------------------------------------------------------ */
 
+/* ================================================================== */
+/* DARK (default)                                                      */
+/* ================================================================== */
 :root {
-  /* Primary = gold/amber accent */
+  /* ---- Brand accent: gold (Ionic primary) ---- */
   --ion-color-primary: #d4a017;
   --ion-color-primary-rgb: 212, 160, 23;
-  --ion-color-primary-contrast: #0a0e16;
-  --ion-color-primary-contrast-rgb: 10, 14, 22;
+  --ion-color-primary-contrast: #0b0c0e;
+  --ion-color-primary-contrast-rgb: 11, 12, 14;
   --ion-color-primary-shade: #b37809;
   --ion-color-primary-tint: #dcae33;
 
@@ -19,7 +39,7 @@
 
   --ion-color-warning: #eab308;
   --ion-color-warning-rgb: 234, 179, 8;
-  --ion-color-warning-contrast: #0a0e16;
+  --ion-color-warning-contrast: #0b0c0e;
   --ion-color-warning-shade: #ce9e07;
   --ion-color-warning-tint: #ecbb21;
 
@@ -28,46 +48,197 @@
   --ion-color-danger-contrast: #ffffff;
   --ion-color-danger-shade: #d23c3c;
   --ion-color-danger-tint: #f15757;
-}
 
-/* Force dark UI everywhere (this app is dark-only, like the Figma). */
-:root,
-.ion-palette-dark,
-body {
-  --ion-background-color: #0a0e16;
-  --ion-background-color-rgb: 10, 14, 22;
-  --ion-text-color: #f5f7fa;
-  --ion-text-color-rgb: 245, 247, 250;
+  /* -------- Tailwind runtime tokens (DARK) -------- */
+  /* Surfaces / structure — matte black bg, dark-gray components */
+  --background: #0b0c0e;
+  --surface: #17191e;
+  --surface-2: #202228;
+  /* Elevated card surface (subtle top sheen over the base surface) */
+  --surface-elev: linear-gradient(180deg, #1b1d23 0%, #16181d 100%);
+  --line: #2b2e35;
+  --line-2: #383c44;
 
-  --ion-toolbar-background: #0c111b;
-  --ion-toolbar-color: #f5f7fa;
-  --ion-tab-bar-background: #0b0f18;
-  --ion-tab-bar-color: #8b93a1;
+  /* Text */
+  --ink: #f2f4f7;
+  --muted: #9aa1ad;
+  --faint: #656c78;
+
+  /* Accent (gold) — constant gold in both themes */
+  --gold: #d4a017;
+  --gold-strong: #c8860a;
+  --gold-hover: #b37809;
+  --gold-soft: rgba(212, 160, 23, 0.12);
+
+  /* Dark text shown ON gold (constant dark in both themes — old "navy") */
+  --on-accent: #0b0c0e;
+
+  /* Status colors (+ soft tints) */
+  --online: #22c55e;
+  --online-soft: rgba(34, 197, 94, 0.12);
+  --critical: #ef4444;
+  --critical-soft: rgba(239, 68, 68, 0.12);
+  --high: #f97316;
+  --medium: #eab308;
+  --low: #94a3b8;
+  --info: #38bdf8;
+  --info-soft: rgba(56, 189, 248, 0.12);
+  --route: #a855f7;
+  --route-soft: rgba(168, 85, 247, 0.12);
+  --teal: #14b8a6;
+  --teal-soft: rgba(20, 184, 166, 0.12);
+
+  /* Elevation — subtle inset sheen + deep drop in dark */
+  --shadow-card-runtime: 0 1px 0 0 rgba(255, 255, 255, 0.02) inset,
+    0 10px 30px -18px rgba(0, 0, 0, 0.7);
+
+  /* -------- Ionic chrome (DARK) -------- */
+  --ion-background-color: #0b0c0e;
+  --ion-background-color-rgb: 11, 12, 14;
+  --ion-text-color: #f2f4f7;
+  --ion-text-color-rgb: 242, 244, 247;
+
+  --ion-toolbar-background: #121317;
+  --ion-toolbar-color: #f2f4f7;
+  --ion-tab-bar-background: #101115;
+  --ion-tab-bar-color: #9aa1ad;
   --ion-tab-bar-color-selected: #d4a017;
 
-  --ion-item-background: #12161f;
-  --ion-card-background: #12161f;
+  --ion-item-background: #17191e;
+  --ion-card-background: #17191e;
 
-  --ion-color-step-50: #14181f;
-  --ion-color-step-100: #1a1e26;
-  --ion-color-step-150: #20242c;
-  --ion-color-step-200: #262a33;
-  --ion-color-step-250: #2c3039;
-  --ion-color-step-300: #333740;
-  --ion-color-step-400: #4a4e57;
-  --ion-color-step-500: #61656e;
+  --ion-color-step-50: #16181d;
+  --ion-color-step-100: #1c1e24;
+  --ion-color-step-150: #22242b;
+  --ion-color-step-200: #282a32;
+  --ion-color-step-250: #2e3038;
+  --ion-color-step-300: #34363f;
+  --ion-color-step-400: #4a4d56;
+  --ion-color-step-500: #61646d;
   --ion-color-step-600: #787c85;
   --ion-color-step-700: #8f939c;
   --ion-color-step-800: #a6aab3;
   --ion-color-step-900: #bdc1ca;
+
+  /* Device safe-area insets (notch / home indicator) */
+  --ion-safe-area-top: env(safe-area-inset-top);
+  --ion-safe-area-bottom: env(safe-area-inset-bottom);
+  --ion-safe-area-left: env(safe-area-inset-left);
+  --ion-safe-area-right: env(safe-area-inset-right);
 }
 
 ion-content {
-  --background: #0a0e16;
+  --background: var(--background);
 }
 
 /* Tighter, app-like ion typography */
 ion-toolbar {
   --border-width: 0 0 1px 0;
-  --border-color: #1f2630;
+  --border-color: var(--line);
+}
+
+/* ================================================================== */
+/* LIGHT — white background, crisp white components                    */
+/* ================================================================== */
+html.theme-light {
+  /* ---- Brand accent: gold (deeper for white-bg contrast) ---- */
+  --ion-color-primary: #b9860c;
+  --ion-color-primary-rgb: 185, 134, 12;
+  --ion-color-primary-contrast: #0b0c0e;
+  --ion-color-primary-contrast-rgb: 11, 12, 14;
+  --ion-color-primary-shade: #a3760a;
+  --ion-color-primary-tint: #c5952a;
+
+  --ion-color-success: #16a34a;
+  --ion-color-success-rgb: 22, 163, 74;
+  --ion-color-success-contrast: #ffffff;
+  --ion-color-success-shade: #138f41;
+  --ion-color-success-tint: #2eac5c;
+
+  --ion-color-warning: #d97706;
+  --ion-color-warning-rgb: 217, 119, 6;
+  --ion-color-warning-contrast: #ffffff;
+  --ion-color-warning-shade: #bf6905;
+  --ion-color-warning-tint: #df8520;
+
+  --ion-color-danger: #dc2626;
+  --ion-color-danger-rgb: 220, 38, 38;
+  --ion-color-danger-contrast: #ffffff;
+  --ion-color-danger-shade: #c22020;
+  --ion-color-danger-tint: #e03c3c;
+
+  /* -------- Tailwind runtime tokens (LIGHT) -------- */
+  --background: #f4f6f9;
+  --surface: #ffffff;
+  --surface-2: #eef1f5;
+  /* Elevated card surface — flat clean white (depth comes from the shadow) */
+  --surface-elev: #ffffff;
+  --line: #e3e7ee;
+  --line-2: #d3d9e1;
+
+  --ink: #0f172a;
+  --muted: #5b6573;
+  --faint: #98a2b2;
+
+  /* Accent (gold) — deeper gold for contrast on white */
+  --gold: #b9860c;
+  --gold-strong: #a3760a;
+  --gold-hover: #8f6708;
+  --gold-soft: rgba(185, 134, 12, 0.1);
+
+  /* Dark text shown ON gold stays constant dark */
+  --on-accent: #0b0c0e;
+
+  /* Status colors — deepened for legibility on light surfaces */
+  --online: #16a34a;
+  --online-soft: rgba(22, 163, 74, 0.12);
+  --critical: #dc2626;
+  --critical-soft: rgba(220, 38, 38, 0.1);
+  --high: #ea580c;
+  --medium: #d97706;
+  --low: #64748b;
+  --info: #0284c7;
+  --info-soft: rgba(2, 132, 199, 0.1);
+  --route: #9333ea;
+  --route-soft: rgba(147, 51, 234, 0.1);
+  --teal: #0d9488;
+  --teal-soft: rgba(13, 148, 136, 0.1);
+
+  /* Elevation — soft, layered drop shadow (no inset sheen) */
+  --shadow-card-runtime: 0 1px 2px 0 rgba(15, 23, 42, 0.04),
+    0 6px 16px -8px rgba(15, 23, 42, 0.12);
+
+  /* -------- Ionic chrome (LIGHT) -------- */
+  --ion-background-color: #f4f6f9;
+  --ion-background-color-rgb: 244, 246, 249;
+  --ion-text-color: #0f172a;
+  --ion-text-color-rgb: 15, 23, 42;
+
+  --ion-toolbar-background: #ffffff;
+  --ion-toolbar-color: #0f172a;
+  --ion-tab-bar-background: #ffffff;
+  --ion-tab-bar-color: #5b6573;
+  --ion-tab-bar-color-selected: #b9860c;
+
+  --ion-item-background: #ffffff;
+  --ion-card-background: #ffffff;
+
+  /* Light theme color steps ramp from white upward toward ink */
+  --ion-color-step-50: #f7f9fb;
+  --ion-color-step-100: #eef1f5;
+  --ion-color-step-150: #e6eaf0;
+  --ion-color-step-200: #dde2ea;
+  --ion-color-step-250: #d3d9e1;
+  --ion-color-step-300: #c5ccd6;
+  --ion-color-step-400: #aab2bf;
+  --ion-color-step-500: #8a93a2;
+  --ion-color-step-600: #6b7484;
+  --ion-color-step-700: #4f5868;
+  --ion-color-step-800: #333b49;
+  --ion-color-step-900: #1a2230;
+}
+
+/* Ion content background must follow the theme too */
+html.theme-light ion-content {
+  --background: var(--background);
 }

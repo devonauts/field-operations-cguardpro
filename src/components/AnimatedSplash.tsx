@@ -39,7 +39,7 @@ export default function AnimatedSplash() {
         justifyContent: "center",
         gap: 4,
         background:
-          "radial-gradient(120% 90% at 50% 38%, #111A30 0%, #0A0F1D 52%, #04060C 100%)",
+          "radial-gradient(120% 90% at 50% 38%, color-mix(in srgb, var(--background) 88%, var(--ink) 4%) 0%, var(--background) 52%, color-mix(in srgb, var(--background) 92%, #000 8%) 100%)",
         opacity: phase === "out" ? 0 : 1,
         transition: `opacity ${FADE_MS}ms ease`,
         pointerEvents: phase === "out" ? "none" : "auto",
@@ -75,7 +75,7 @@ const css = `
   position: absolute;
   inset: -10%;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(231,180,58,0.45) 0%, rgba(200,144,26,0.15) 45%, rgba(200,144,26,0) 72%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--gold) 45%, transparent) 0%, color-mix(in srgb, var(--gold-strong) 15%, transparent) 45%, transparent 72%);
   filter: blur(6px);
   animation: asGlowPulse 2.6s ease-in-out infinite;
 }
@@ -83,7 +83,7 @@ const css = `
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  border: 2.5px solid rgba(212,160,23,0.9);
+  border: 2.5px solid color-mix(in srgb, var(--gold) 90%, transparent);
   animation: asRingPulse 2.4s ease-out infinite;
 }
 .asLogo {
@@ -100,16 +100,16 @@ const css = `
   font-weight: 800;
   font-size: 30px;
   letter-spacing: -0.5px;
-  color: #F3F6FC;
+  color: var(--ink);
   animation: asRise 0.6s ease-out 0.55s both;
 }
-.asWord span { color: #D4A017; }
+.asWord span { color: var(--gold); }
 .asTag {
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-weight: 600;
   font-size: 11px;
   letter-spacing: 4px;
-  color: #9AA3B7;
+  color: var(--muted);
   animation: asRise 0.6s ease-out 0.8s both;
 }
 

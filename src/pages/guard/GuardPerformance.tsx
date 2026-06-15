@@ -28,19 +28,19 @@ import fb from "@/lib/feedback";
 
 /* Tier + component palettes — mirror GuardDashboard's PerformanceSection. */
 const TIER_COLOR: Record<Tier, string> = {
-  excellent: "#22c55e",
-  good: "#d4a017",
-  fair: "#f97316",
-  needs_improvement: "#ef4444",
+  excellent: "var(--online)",
+  good: "var(--gold)",
+  fair: "var(--high)",
+  needs_improvement: "var(--critical)",
 };
 const COMPONENT_COLOR: Record<ComponentKey, string> = {
-  punctuality: "#38bdf8",
-  uniform: "#22c55e",
-  inventory: "#14b8a6",
-  consignas: "#d4a017",
-  rondas: "#a855f7",
-  quiz: "#6366f1",
-  training: "#f97316",
+  punctuality: "var(--info)",
+  uniform: "var(--online)",
+  inventory: "var(--teal)",
+  consignas: "var(--gold)",
+  rondas: "var(--route)",
+  quiz: "#6366f1", // distinct indigo data-viz series (no semantic token)
+  training: "var(--high)",
 };
 
 const PERIODS = [7, 30, 90] as const;
@@ -72,7 +72,7 @@ export default function GuardPerformance() {
               setPeriod(d);
             }}
             className={`flex-1 rounded-lg py-1.5 text-[13px] font-semibold transition-colors ${
-              period === d ? "bg-gold text-navy" : "text-muted"
+              period === d ? "bg-gold text-on-accent" : "text-muted"
             }`}
           >
             {t(`perfDetail.period${d}`)}
@@ -138,7 +138,11 @@ function Content({ p, t }: { p: any; t: (k: string, o?: any) => string }) {
           <ScoreRing score={p.score} color={color} label={t("perf.score")} />
           <span
             className="mt-3 rounded-full border px-3 py-1 text-xs font-semibold"
-            style={{ color, borderColor: `${color}66`, background: `${color}14` }}
+            style={{
+              color,
+              borderColor: `color-mix(in srgb, ${color} 40%, transparent)`,
+              background: `color-mix(in srgb, ${color} 8%, transparent)`,
+            }}
           >
             {t(`perf.tier.${p.tier}`)}
           </span>

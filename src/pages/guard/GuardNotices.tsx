@@ -52,7 +52,7 @@ export default function GuardNotices() {
                     <div className="flex items-center justify-between gap-2">
                       <p className="truncate text-sm font-semibold text-ink">{title}</p>
                       {unread && (
-                        <span className="shrink-0 rounded-full bg-gold px-1.5 py-0.5 text-[9px] font-bold uppercase text-navy">
+                        <span className="shrink-0 rounded-full bg-gold px-1.5 py-0.5 text-[9px] font-bold uppercase text-on-accent">
                           {t("notices.new")}
                         </span>
                       )}

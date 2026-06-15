@@ -39,7 +39,7 @@ export default function GuardMessages() {
             <button
               key={c.id}
               onClick={() => { fb.tap(); history.push(`/guard/messages/${c.id}`); }}
-              className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left active:bg-white/[0.04]"
+              className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left active:bg-surface-2"
             >
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gold/15 text-gold">
                 <MessageSquare size={18} />

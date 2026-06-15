@@ -176,7 +176,7 @@ export default function GuardLesson() {
             </div>
             <button
               onClick={goNext}
-              className="btn-xl w-full bg-gold-strong text-navy active:bg-gold-hover"
+              className="btn-xl w-full bg-gold-strong text-on-accent active:bg-gold-hover"
             >
               {next ? t("training.lesson.next") : t("training.course.lessons")}
             </button>
@@ -185,7 +185,7 @@ export default function GuardLesson() {
           <button
             onClick={complete}
             disabled={busy}
-            className="btn-xl flex w-full items-center justify-center gap-2 bg-gold-strong text-navy active:bg-gold-hover disabled:opacity-50"
+            className="btn-xl flex w-full items-center justify-center gap-2 bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-50"
           >
             {busy ? (
               <Loader2 size={18} className="animate-spin" />

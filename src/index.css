@@ -5,58 +5,70 @@
 /* Tailwind v4 @theme: each --color-* generates utilities (bg-/text-)  */
 /* ------------------------------------------------------------------ */
 @theme {
-  /* Surfaces */
-  --color-navy: #0a0e16;
-  --color-navy-50: #0c111b;
-  --color-surface: #12161f;
-  --color-surface-2: #161b26;
-  --color-line: #1f2630;
-  --color-line-2: #2a323e;
+  /* ----------------------------------------------------------------- */
+  /* Every --color-* references a RUNTIME variable defined per theme in  */
+  /* theme/variables.css (:root = DARK default, html.theme-light = LIGHT).*/
+  /* So switching theme = toggling `.theme-light` on <html>; every        */
+  /* bg-*/
+  /* /text-* utility re-resolves automatically. Adding a 3rd theme = one  */
+  /* CSS block in variables.css. NEVER hardcode a color in a component.   */
+  /* ----------------------------------------------------------------- */
 
-  /* Brand gold/amber */
-  --color-gold: #d4a017;
-  --color-gold-strong: #c8860a;
-  --color-gold-hover: #b37809;
-  --color-gold-soft: rgba(212, 160, 23, 0.12);
+  /* Surfaces / structure */
+  --color-background: var(--background);
+  --color-navy: var(--on-accent); /* legacy: text-navy = constant dark ON gold */
+  --color-navy-50: var(--surface-2); /* legacy bg-navy-50 inset → themed */
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+
+  /* Brand gold/amber (stays gold in both themes; tuned for contrast) */
+  --color-gold: var(--gold);
+  --color-gold-strong: var(--gold-strong);
+  --color-gold-hover: var(--gold-hover);
+  --color-gold-soft: var(--gold-soft);
+
+  /* Dark text shown ON gold (constant dark in both themes) */
+  --color-on-accent: var(--on-accent);
 
   /* Text */
-  --color-ink: #f5f7fa;
-  --color-muted: #8b93a1;
-  --color-faint: #5b6472;
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
 
-  /* Status */
-  --color-online: #22c55e;
-  --color-online-soft: rgba(34, 197, 94, 0.12);
-  --color-critical: #ef4444;
-  --color-critical-soft: rgba(239, 68, 68, 0.12);
-  --color-high: #f97316;
-  --color-medium: #eab308;
-  --color-low: #94a3b8;
-  --color-info: #38bdf8;
-  --color-info-soft: rgba(56, 189, 248, 0.12);
-  --color-route: #a855f7;
-  --color-route-soft: rgba(168, 85, 247, 0.12);
-  --color-teal: #14b8a6;
-  --color-teal-soft: rgba(20, 184, 166, 0.12);
+  /* Status (meaning preserved across themes) */
+  --color-online: var(--online);
+  --color-online-soft: var(--online-soft);
+  --color-critical: var(--critical);
+  --color-critical-soft: var(--critical-soft);
+  --color-high: var(--high);
+  --color-medium: var(--medium);
+  --color-low: var(--low);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-route: var(--route);
+  --color-route-soft: var(--route-soft);
+  --color-teal: var(--teal);
+  --color-teal-soft: var(--teal-soft);
 
   /* Semantic roles — point these at the brand to re-skin the whole app.
      Components reference --color-primary, not raw gold, so a rebrand is a
      one-line change here. */
-  --color-primary: #d4a017;
-  --color-primary-contrast: #0a0e16;
+  --color-primary: var(--gold);
+  --color-primary-contrast: var(--on-accent);
 
   --radius-card: 0.875rem;
   --radius-tile: 0.75rem;
 
-  /* Elevation */
-  --shadow-card: 0 1px 0 0 rgba(255, 255, 255, 0.02) inset,
-    0 10px 30px -18px rgba(0, 0, 0, 0.7);
+  /* Elevation — theme-aware (soft shadow in light, subtle inset in dark) */
+  --shadow-card: var(--shadow-card-runtime);
 }
 
 html,
 body {
-  background: #0a0e16;
-  color: #f5f7fa;
+  background: var(--background);
+  color: var(--ink);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -71,11 +83,11 @@ ion-content.chat-fill::part(scroll) {
   flex-direction: column;
 }
 
-/* Ionic content wrappers should inherit the navy background */
+/* Ionic content wrappers should inherit the page background */
 ion-app,
 ion-content,
 ion-router-outlet {
-  background: #0a0e16;
+  background: var(--background);
 }
 
 /* Uppercase tracked label used across the design */
@@ -84,26 +96,28 @@ ion-router-outlet {
   letter-spacing: 0.08em;
   font-size: 0.6875rem;
   font-weight: 600;
-  color: #8b93a1;
+  color: var(--muted);
 }
 
 /* Card surface from the Figma */
 .card {
-  background: #12161f;
-  border: 1px solid #1f2630;
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: 0.875rem;
 }
-/* Elevated enterprise card (subtle depth + top sheen) */
+/* Elevated enterprise card (subtle depth + top sheen).
+   The gradient + shadow are theme-driven runtime vars so the card reads as a
+   dark-gray inset in DARK and a crisp white card with a soft shadow in LIGHT. */
 .card-elev {
-  background: linear-gradient(180deg, #141925 0%, #11151e 100%);
-  border: 1px solid #1f2630;
+  background: var(--surface-elev);
+  border: 1px solid var(--line);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
 }
 /* Hairline divider that matches the line token */
 .hairline {
   height: 1px;
-  background: #1f2630;
+  background: var(--line);
 }
 /* ------------------------------------------------------------------ */
 /* Press system — the canonical native tap affordance                  */
@@ -305,7 +319,7 @@ ion-modal {
   --height: 100%;
   --width: 100%;
   --border-radius: 0;
-  --background: #0a0e16;
+  --background: var(--background);
 }
 /* Make the modal's content part a full-height flex column so form bodies that use
    `flex h-full` (IncidentForm, VisitorModal) fill the screen instead of collapsing
@@ -357,7 +371,7 @@ ion-tab-button {
   width: 1px;
 }
 .tab-radio-slot .radio-label {
-  color: #d4a017 !important;
+  color: var(--gold) !important;
   font-weight: 700;
 }
 
@@ -375,10 +389,10 @@ ion-tab-button {
   height: 58px;
   width: 58px;
   border-radius: 9999px;
-  color: #0a0e16;
+  color: var(--on-accent);
   background: radial-gradient(circle at 50% 30%, #e9bb46, #c8860a);
   box-shadow:
-    0 0 0 6px #0a0e16,
+    0 0 0 6px var(--background),
     0 0 0 7px rgba(212, 160, 23, 0.5),
     0 0 0 13px rgba(212, 160, 23, 0.12),
     0 10px 30px -6px rgba(212, 160, 23, 0.85);
@@ -395,7 +409,7 @@ ion-tab-button {
    the inline style wins and there's no translateX to preserve. */
 .radio-fab-float.is-active {
   box-shadow:
-    0 0 0 6px #0a0e16,
+    0 0 0 6px var(--background),
     0 0 0 8px rgba(212, 160, 23, 0.85),
     0 0 0 14px rgba(212, 160, 23, 0.18),
     0 10px 34px -6px rgba(212, 160, 23, 0.95);

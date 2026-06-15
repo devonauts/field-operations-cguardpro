@@ -173,7 +173,7 @@ export default function GuardThread() {
               {loadError || t("messages.threadEmpty", "Aún no hay mensajes en esta conversación.")}
             </p>
             {loadError && (
-              <button onClick={() => { fb.tap(); load(true); }} className="rounded-lg border border-line px-3 py-1.5 text-xs text-ink active:bg-white/10">
+              <button onClick={() => { fb.tap(); load(true); }} className="rounded-lg border border-line px-3 py-1.5 text-xs text-ink active:bg-surface-2">
                 {t("common.retry", "Reintentar")}
               </button>
             )}
@@ -183,13 +183,13 @@ export default function GuardThread() {
             const mine = m.senderType === "guard";
             return (
               <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-sm ${mine ? "bg-gold text-navy" : "bg-surface-2 text-ink"} ${m._pending ? "opacity-60" : ""}`}>
+                <div className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-sm ${mine ? "bg-gold text-on-accent" : "bg-surface-2 text-ink"} ${m._pending ? "opacity-60" : ""}`}>
                   {!mine && m.senderName && <p className="mb-0.5 text-[10px] font-semibold opacity-70">{m.senderName}</p>}
                   {Array.isArray(m.attachments) && m.attachments.length > 0 && (
                     <div className="mb-1 grid gap-1.5">
                       {m.attachments.map((a: any, i: number) => (
                         a.type === "video" ? (
-                          <AttachmentVideo key={a.id || a.url || i} src={a.url} className="max-h-64 w-full rounded-lg bg-black/30" />
+                          <AttachmentVideo key={a.id || a.url || i} src={a.url} className="max-h-64 w-full rounded-lg bg-surface-2" />
                         ) : (
                           <AttachmentLink key={a.id || a.url || i} src={a.url}>
                             <AttachmentImage src={a.url} alt={a.name || "imagen"} className="max-h-64 w-full rounded-lg object-cover" />
@@ -199,7 +199,7 @@ export default function GuardThread() {
                     </div>
                   )}
                   {m.body && <p className="whitespace-pre-wrap break-words">{m.body}</p>}
-                  <p className={`mt-0.5 text-right text-[10px] ${mine ? "text-navy/60" : "text-muted"}`}>{fmt(m.createdAt)}</p>
+                  <p className={`mt-0.5 text-right text-[10px] ${mine ? "text-on-accent/60" : "text-muted"}`}>{fmt(m.createdAt)}</p>
                 </div>
               </div>
             );
@@ -210,14 +210,14 @@ export default function GuardThread() {
       {/* Composer pinned at the bottom, clear of the home indicator + keyboard. */}
       {conversation?.isOneWay ? (
         <p
-          className="shrink-0 border-t border-line bg-navy px-4 pt-3 text-center text-xs text-muted"
+          className="shrink-0 border-t border-line bg-background px-4 pt-3 text-center text-xs text-muted"
           style={{ paddingBottom: "max(env(safe-area-inset-bottom), 0.75rem)" }}
         >
           {t("messages.readOnly", "Esta conversación es solo de lectura.")}
         </p>
       ) : (
         <div
-          className="shrink-0 border-t border-line bg-navy px-4 pt-2"
+          className="shrink-0 border-t border-line bg-background px-4 pt-2"
           style={{ paddingBottom: "max(env(safe-area-inset-bottom), 0.5rem)" }}
         >
           {sendError && <p className="mb-1 text-[11px] text-critical">{sendError}</p>}
@@ -226,11 +226,11 @@ export default function GuardThread() {
               {pending.map((a, i) => (
                 <div key={(a as any).id || a.url || i} className="relative h-16 w-16 overflow-hidden rounded-lg border border-line-2">
                   {a.type === "video" ? (
-                    <div className="flex h-full w-full items-center justify-center bg-black/60 text-white"><Play size={18} /></div>
+                    <div className="flex h-full w-full items-center justify-center bg-surface-2 text-muted"><Play size={18} /></div>
                   ) : (
                     <AttachmentImage src={a.url} alt="" className="h-full w-full object-cover" />
                   )}
-                  <button onClick={() => { fb.tap(); setPending((p) => p.filter((_, j) => j !== i)); }} className="absolute right-0 top-0 grid h-5 w-5 place-items-center rounded-bl bg-black/70 text-white"><X size={12} /></button>
+                  <button onClick={() => { fb.tap(); setPending((p) => p.filter((_, j) => j !== i)); }} className="absolute right-0 top-0 grid h-5 w-5 place-items-center rounded-bl bg-background/80 text-ink"><X size={12} /></button>
                 </div>
               ))}
             </div>
@@ -241,7 +241,7 @@ export default function GuardThread() {
               onClick={() => { fb.tap(); fileRef.current?.click(); }}
               disabled={uploading}
               aria-label={t("messages.attach", "Adjuntar")}
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-line-2 text-muted active:bg-white/5 disabled:opacity-50"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-line-2 text-muted active:bg-surface-2 disabled:opacity-50"
             >
               {uploading ? <Loader2 size={18} className="animate-spin" /> : <Paperclip size={18} />}
             </button>
@@ -255,7 +255,7 @@ export default function GuardThread() {
             <button
               onClick={send}
               disabled={sending || uploading || (!draft.trim() && pending.length === 0)}
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gold-strong text-navy active:bg-gold-hover disabled:opacity-50"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-50"
             >
               {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
             </button>

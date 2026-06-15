@@ -124,13 +124,13 @@ export default function SupervisorDashboard() {
                 <BarChart data={weekData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
                   <XAxis
                     dataKey="day"
-                    tick={{ fill: "#8b93a1", fontSize: 11 }}
+                    tick={{ fill: "var(--muted)", fontSize: 11 }}
                     axisLine={false}
                     tickLine={false}
                   />
                   <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={26}>
                     {weekData.map((_, i) => (
-                      <Cell key={i} fill="#d4a017" />
+                      <Cell key={i} fill="var(--gold)" />
                     ))}
                   </Bar>
                 </BarChart>

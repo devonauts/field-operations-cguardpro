@@ -83,7 +83,7 @@ export default function GuardBackup() {
                   <button
                     onClick={() => volunteer(s.shiftId)}
                     disabled={busyId === s.shiftId}
-                    className="flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-xl bg-gold-strong px-4 text-sm font-semibold text-navy active:bg-gold-hover disabled:opacity-50"
+                    className="flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-xl bg-gold-strong px-4 text-sm font-semibold text-on-accent active:bg-gold-hover disabled:opacity-50"
                   >
                     {busyId === s.shiftId ? (
                       <Loader2 size={16} className="animate-spin" />

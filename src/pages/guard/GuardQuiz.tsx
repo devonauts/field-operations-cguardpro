@@ -134,7 +134,7 @@ export default function GuardQuiz() {
                       <span
                         className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold ${
                           selected
-                            ? "border-gold bg-gold text-navy"
+                            ? "border-gold bg-gold text-on-accent"
                             : "border-line"
                         }`}
                       >
@@ -153,7 +153,7 @@ export default function GuardQuiz() {
           <button
             onClick={submit}
             disabled={!allAnswered || busy}
-            className="btn-xl w-full bg-gold-strong text-navy active:bg-gold-hover disabled:opacity-50"
+            className="btn-xl w-full bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-50"
           >
             {busy ? (
               <Loader2 size={18} className="animate-spin" />
@@ -175,14 +175,18 @@ function ResultView({
   onRetake: () => void;
 }) {
   const { t } = useTranslation();
-  const color = result.passed ? "#22c55e" : "#ef4444";
+  const color = result.passed ? "var(--online)" : "var(--critical)";
   return (
     <div className="space-y-4">
       <Card className="flex flex-col items-center p-6">
         <ScoreRing score={result.scorePct} color={color} label={t("quiz.score")} />
         <span
           className="mt-4 flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold"
-          style={{ color, borderColor: `${color}66`, background: `${color}14` }}
+          style={{
+            color,
+            borderColor: `color-mix(in srgb, ${color} 40%, transparent)`,
+            background: `color-mix(in srgb, ${color} 8%, transparent)`,
+          }}
         >
           {result.passed ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
           {result.passed ? t("quiz.passed") : t("quiz.failed")}
