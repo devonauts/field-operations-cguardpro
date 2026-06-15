@@ -10,7 +10,14 @@ export function postSiteLogoUrl(postSite: any): string | null {
   const logo = postSite?.logo;
   const file = Array.isArray(logo) ? logo[0] : logo;
   if (!file) return null;
-  const raw = file.publicUrl || file.downloadUrl || file.url || file.privateUrl;
+  // Prefer public/token URLs; never fall back to a raw privateUrl (the
+  // /file/download IDOR being closed). A token-based downloadUrl is honored
+  // only when it isn't itself a raw ?privateUrl= URL.
+  const downloadUrl =
+    typeof file.downloadUrl === "string" && !/[?&]privateUrl=/.test(file.downloadUrl)
+      ? file.downloadUrl
+      : null;
+  const raw = file.publicUrl || downloadUrl || file.url;
   if (!raw) return null;
   if (/^https?:\/\//i.test(raw)) return raw;
   // Relative path stored on the server → serve from the API origin.

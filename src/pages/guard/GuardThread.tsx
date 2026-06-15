@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams, useLocation } from "react-router-dom";
 import { App as CapacitorApp } from "@capacitor/app";
@@ -7,11 +7,26 @@ import { Screen } from "@/components/Screen";
 import { messageService, type MessageAttachment } from "@/lib/services";
 import { onPush } from "@/lib/pushEvents";
 import { fb } from "@/lib/feedback";
+import { useFileUrl } from "@/lib/fileUrl";
 
-const API_BASE = ((import.meta.env.VITE_API_URL as string | undefined) ?? "https://api.cguardpro.com/api").replace(/\/+$/, "");
-/** Displayable URL for a stored private attachment (works in <img>/<video>). */
-const fileUrl = (u?: string | null) =>
-  !u ? "" : /^https?:\/\//i.test(u) ? u : `${API_BASE}/file/download?privateUrl=${encodeURIComponent(u)}`;
+/**
+ * Message attachments are stored as raw private paths (no token downloadUrl on
+ * the wire), so each one resolves its displayable URL via a token fetch.
+ * Wrapped in tiny components because the resolver is a hook and attachments are
+ * rendered inside a list .map().
+ */
+function AttachmentImage({ src, alt, className }: { src?: string | null; alt?: string; className?: string }) {
+  const url = useFileUrl(src);
+  return <img src={url} alt={alt} loading="lazy" className={className} />;
+}
+function AttachmentLink({ src, children }: { src?: string | null; children: ReactNode }) {
+  const url = useFileUrl(src);
+  return <a href={url} target="_blank" rel="noreferrer">{children}</a>;
+}
+function AttachmentVideo({ src, className }: { src?: string | null; className?: string }) {
+  const url = useFileUrl(src);
+  return <video src={url} controls preload="metadata" className={className} />;
+}
 
 const fmt = (d?: string | null) => {
   if (!d) return "";
@@ -174,11 +189,11 @@ export default function GuardThread() {
                     <div className="mb-1 grid gap-1.5">
                       {m.attachments.map((a: any, i: number) => (
                         a.type === "video" ? (
-                          <video key={a.id || a.url || i} src={fileUrl(a.url)} controls preload="metadata" className="max-h-64 w-full rounded-lg bg-black/30" />
+                          <AttachmentVideo key={a.id || a.url || i} src={a.url} className="max-h-64 w-full rounded-lg bg-black/30" />
                         ) : (
-                          <a key={a.id || a.url || i} href={fileUrl(a.url)} target="_blank" rel="noreferrer">
-                            <img src={fileUrl(a.url)} alt={a.name || "imagen"} loading="lazy" className="max-h-64 w-full rounded-lg object-cover" />
-                          </a>
+                          <AttachmentLink key={a.id || a.url || i} src={a.url}>
+                            <AttachmentImage src={a.url} alt={a.name || "imagen"} className="max-h-64 w-full rounded-lg object-cover" />
+                          </AttachmentLink>
                         )
                       ))}
                     </div>
@@ -213,7 +228,7 @@ export default function GuardThread() {
                   {a.type === "video" ? (
                     <div className="flex h-full w-full items-center justify-center bg-black/60 text-white"><Play size={18} /></div>
                   ) : (
-                    <img src={fileUrl(a.url)} alt="" className="h-full w-full object-cover" />
+                    <AttachmentImage src={a.url} alt="" className="h-full w-full object-cover" />
                   )}
                   <button onClick={() => { fb.tap(); setPending((p) => p.filter((_, j) => j !== i)); }} className="absolute right-0 top-0 grid h-5 w-5 place-items-center rounded-bl bg-black/70 text-white"><X size={12} /></button>
                 </div>

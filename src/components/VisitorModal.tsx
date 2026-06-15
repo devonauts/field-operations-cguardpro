@@ -21,6 +21,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { visitorService, VisitorPhoto } from "@/lib/services";
+import { fileUrlFromFile } from "@/lib/fileUrl";
 import { useAsync } from "@/lib/useAsync";
 import { fmtTime } from "@/lib/format";
 import { Loader } from "./ui";
@@ -284,7 +285,8 @@ function ListView({ loading, visits, reload, onNew }: { loading: boolean; visits
               const name = [v.firstName, v.lastName].filter(Boolean).join(" ") || (v.vehiclePlate || "—");
               const isVehicle = !v.firstName && !v.lastName && !!v.vehiclePlate;
               const out = !!v.exitTime;
-              const photoUrl = Array.isArray(v.idPhoto) && v.idPhoto[0]?.downloadUrl;
+              // Prefer the backend's token-based downloadUrl (never a raw privateUrl).
+              const photoUrl = fileUrlFromFile(v.idPhoto);
               return (
                 <div key={v.id || i} className="card flex items-center gap-3 p-3">
                   {photoUrl ? (

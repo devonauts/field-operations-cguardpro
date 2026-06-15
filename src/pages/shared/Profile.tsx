@@ -43,6 +43,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { useAsync } from "@/lib/useAsync";
 import { guardService } from "@/lib/services";
+import { useFileUrl } from "@/lib/fileUrl";
 import { loadGuardPerformance, Performance } from "@/lib/performance";
 import { SUPERVISOR_ROLE } from "@/lib/roles";
 import { getErrorLog, clearErrorLog, type LogEntry } from "@/lib/errorLog";
@@ -82,11 +83,16 @@ export default function Profile() {
   const name = guard.fullName || user?.fullName || user?.name || user?.email || "—";
   // Profile picture: the guard's profileImage (CRM), then the clock-in selfie
   // persisted as the user avatar.
-  const avatarSrc =
+  // Profile picture source: the guard's CRM photoUrl (absolute), then the
+  // clock-in selfie persisted as the user/guard avatar. Avatars are resolved
+  // through the file helper so a token-based downloadUrl is preferred and a raw
+  // privateUrl is exchanged for a token (never served raw).
+  const avatarSource =
     (guard as any)?.photoUrl ||
-    (user as any)?.avatars?.[0]?.downloadUrl ||
-    (guard as any)?.avatars?.[0]?.downloadUrl ||
+    (user as any)?.avatars?.[0] ||
+    (guard as any)?.avatars?.[0] ||
     null;
+  const avatarSrc = useFileUrl(avatarSource) || null;
   const email = guard.email || user?.email || "—";
   const phone = guard.phone || "—";
   const isSupervisor = role === SUPERVISOR_ROLE;
