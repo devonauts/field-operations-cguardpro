@@ -114,6 +114,7 @@ function OnDutyHeader({ guardName, sector }: { guardName: string; sector: string
 
 export default function GuardDashboard() {
   const { t } = useTranslation();
+  const history = useHistory();
   const [presentToast] = useIonToast();
   const { data, loading, error, reload } = useAsync(() => guardService.dashboard());
   const perf = useAsync(() => loadGuardPerformance(30));
@@ -209,6 +210,20 @@ export default function GuardDashboard() {
         duration: 6000,
         color: "warning",
         position: "top",
+      });
+      return;
+    }
+    // Shift reminder (2d / 1d / 12h / 1h / 10min before start) — surface it as a
+    // toast when the app is already open (the OS shows the notification when it's
+    // backgrounded). Tapping the toast jumps to the schedule.
+    if (type === "shift.reminder") {
+      fb.tap();
+      presentToast({
+        message: d?.body || t("shift.reminderToast", "Tienes un turno próximo. No olvides marcar tu entrada."),
+        duration: 6000,
+        color: "primary",
+        position: "top",
+        buttons: [{ text: t("nav.schedule", "Horario"), handler: () => history.push("/guard/schedule") }],
       });
       return;
     }
