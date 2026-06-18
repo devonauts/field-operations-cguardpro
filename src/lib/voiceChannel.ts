@@ -105,12 +105,27 @@ export class VoiceChannel {
 
   /** Walkie-talkie chirp, synthesized (no asset). "open" = squelch-open static
    *  burst when a transmission starts; "close" = roger/courtesy beep when it ends. */
-  private playChirp(kind: "open" | "close"): void {
+  private playChirp(kind: "open" | "close" | "ptt"): void {
     const ctx = this.ensureContext();
     try {
       const now = ctx.currentTime;
       const out = ctx.destination;
-      if (kind === "open") {
+      if (kind === "ptt") {
+        // Nextel-style PTT chirp: three quick ascending square blips. Played
+        // locally the instant you take the floor — your cue to start talking.
+        const blip = (freq: number, t0: number, len: number, vol = 0.14) => {
+          const o = ctx.createOscillator(); o.type = "square"; o.frequency.value = freq;
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0.0001, t0);
+          g.gain.exponentialRampToValueAtTime(vol, t0 + 0.006);
+          g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+          o.connect(g); g.connect(out);
+          o.start(t0); o.stop(t0 + len + 0.01);
+        };
+        blip(1568, now, 0.05);
+        blip(2093, now + 0.055, 0.05);
+        blip(2637, now + 0.11, 0.085, 0.16);
+      } else if (kind === "open") {
         const dur = 0.13;
         const buf = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * dur)), ctx.sampleRate);
         const d = buf.getChannelData(0);
@@ -212,6 +227,7 @@ export class VoiceChannel {
       this.socket!.emit("radio:voice:talk-request", {}, (res: any) => resolve(res));
     });
     if (!granted?.ok) return { ok: false, busyWith: granted?.speaker?.name };
+    this.playChirp("ptt"); // Nextel-style press chirp — you've got the floor, go ahead
     try {
       this.ensureContext(); // keep playback context alive
       this.micStream = await this.acquireMic();
