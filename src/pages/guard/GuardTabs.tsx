@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Redirect, Route, useHistory, useLocation } from "react-router-dom";
 import {
   IonTabs,
@@ -8,7 +8,7 @@ import {
   IonLabel,
 } from "@ionic/react";
 import { useTranslation } from "react-i18next";
-import { Home, Radio, MessageSquare, User, UserCheck, GraduationCap, Calendar } from "lucide-react";
+import { Home, MessageSquare, User, UserCheck, GraduationCap, Calendar } from "lucide-react";
 import GuardDashboard from "./GuardDashboard";
 import GuardSchedule from "./GuardSchedule";
 import GuardPatrol from "./GuardPatrol";
@@ -43,7 +43,6 @@ export default function GuardTabs() {
   const userId = user?.id ?? null;
   const history = useHistory();
   const location = useLocation();
-  const radioActive = location.pathname === "/guard/radio";
 
   // Off duty the app is purely informative: hide operational UI (Radio, Patrol).
   const [onDuty, setOnDuty] = useState(getDuty());
@@ -96,37 +95,6 @@ export default function GuardTabs() {
     seedUnread(() => alive);
     return () => { alive = false; };
   }, [location.pathname, seedUnread]);
-
-  // Draggable radio FAB — the guard can place it anywhere; position persists in
-  // localStorage (native app storage). A press that doesn't move opens the radio.
-  const FAB = 58;
-  const [fabPos, setFabPos] = useState<{ x: number; y: number } | null>(() => {
-    try {
-      const s = JSON.parse(localStorage.getItem("radioFabPos") || "null");
-      return s && typeof s.x === "number" && typeof s.y === "number" ? s : null;
-    } catch { return null; }
-  });
-  const dragRef = useRef<{ sx: number; sy: number; ox: number; oy: number; moved: boolean } | null>(null);
-  const onFabDown = (e: React.PointerEvent) => {
-    const el = e.currentTarget as HTMLElement;
-    try { el.setPointerCapture(e.pointerId); } catch { /* ignore */ }
-    const r = el.getBoundingClientRect();
-    dragRef.current = { sx: e.clientX, sy: e.clientY, ox: e.clientX - r.left, oy: e.clientY - r.top, moved: false };
-  };
-  const onFabMove = (e: React.PointerEvent) => {
-    const d = dragRef.current; if (!d) return;
-    if (Math.abs(e.clientX - d.sx) > 4 || Math.abs(e.clientY - d.sy) > 4) d.moved = true;
-    if (!d.moved) return;
-    const x = Math.max(8, Math.min(window.innerWidth - FAB - 8, e.clientX - d.ox));
-    const y = Math.max(8, Math.min(window.innerHeight - FAB - 8, e.clientY - d.oy));
-    setFabPos({ x, y });
-  };
-  const onFabUp = () => {
-    const d = dragRef.current; dragRef.current = null;
-    if (!d) return;
-    if (!d.moved) { history.push("/guard/radio"); return; }      // tap → open radio
-    setFabPos((p) => { try { if (p) localStorage.setItem("radioFabPos", JSON.stringify(p)); } catch { /* ignore */ } return p; });
-  };
 
   return (
     <>
@@ -213,23 +181,6 @@ export default function GuardTabs() {
       </IonTabBar>
     </IonTabs>
 
-    {/* Floating push-to-talk — ON DUTY only; draggable, sits ON TOP of the tab bar. */}
-    {onDuty && (
-      <button
-        type="button"
-        aria-label={t("nav.radio", "Radio")}
-        onPointerDown={onFabDown}
-        onPointerMove={onFabMove}
-        onPointerUp={onFabUp}
-        onPointerCancel={onFabUp}
-        style={fabPos
-          ? { left: fabPos.x, top: fabPos.y, bottom: "auto", transform: "none", touchAction: "none" }
-          : { touchAction: "none" }}
-        className={`radio-fab-float${radioActive ? " is-active" : ""}`}
-      >
-        <Radio size={26} strokeWidth={2.2} />
-      </button>
-    )}
     </>
   );
 }

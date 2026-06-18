@@ -1,40 +1,91 @@
+import { useRef, useState } from "react";
 import { Mic, Loader2, Volume2 } from "lucide-react";
 import { useRadio } from "@/context/RadioContext";
 
+const POS_KEY = "radioMicFabPos";
+const SIZE = 64;
+
 /**
  * App-wide floating push-to-talk button for the live radio (Canal abierto).
- * Visible ONLY while on duty; lets the guard hold-to-talk and keep listening from
- * any screen without opening the radio page. Off duty it renders nothing (the
- * provider is disconnected, so there's no audio either).
+ * Visible ONLY while on duty (and hidden while the full radio screen is open).
+ * Press = transmit immediately; drag (move > threshold) repositions it instead of
+ * talking, and the position persists. Lets the guard talk + keep listening from
+ * any screen without opening the radio page.
  */
 export default function FloatingRadioButton() {
   const { onDuty, screenActive, state, speaker, talking, hint, myId, someoneElseTalking, resume, pressTalk, releaseTalk } = useRadio();
 
-  // Only one button: hide the floating one while the full radio screen is open.
+  const ref = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ sx: number; sy: number; ox: number; oy: number; moved: boolean; talked: boolean } | null>(null);
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem(POS_KEY) || "null");
+      return s && typeof s.x === "number" && typeof s.y === "number" ? s : null;
+    } catch {
+      return null;
+    }
+  });
+
   if (!onDuty || screenActive) return null;
 
   const connecting = state === "connecting";
+  const canTalk = !connecting && !someoneElseTalking;
 
-  const down = (e: React.PointerEvent) => {
+  const onDown = (e: React.PointerEvent) => {
     resume();
-    if (connecting || someoneElseTalking) return;
+    const el = ref.current;
+    if (!el) return;
     try { (e.currentTarget as any).setPointerCapture?.(e.pointerId); } catch { /* ignore */ }
-    pressTalk();
-  };
-  const up = (e: React.PointerEvent) => {
-    try { (e.currentTarget as any).releasePointerCapture?.(e.pointerId); } catch { /* ignore */ }
-    releaseTalk();
+    const r = el.getBoundingClientRect();
+    drag.current = { sx: e.clientX, sy: e.clientY, ox: e.clientX - r.left, oy: e.clientY - r.top, moved: false, talked: false };
+    // Immediate trigger: start transmitting on press (unless busy/connecting).
+    if (canTalk) { drag.current.talked = true; pressTalk(); }
   };
 
-  // Status bubble text above the button.
+  const onMove = (e: React.PointerEvent) => {
+    const d = drag.current;
+    if (!d) return;
+    if (!d.moved && (Math.abs(e.clientX - d.sx) > 8 || Math.abs(e.clientY - d.sy) > 8)) {
+      d.moved = true;
+      // It's a drag, not a talk — cancel any transmission we started on press.
+      if (d.talked) { releaseTalk(); d.talked = false; }
+    }
+    if (!d.moved) return;
+    const w = ref.current?.offsetWidth ?? SIZE;
+    const h = ref.current?.offsetHeight ?? SIZE;
+    const x = Math.max(8, Math.min(window.innerWidth - w - 8, e.clientX - d.ox));
+    const y = Math.max(8, Math.min(window.innerHeight - h - 8, e.clientY - d.oy));
+    setPos({ x, y });
+  };
+
+  const onUp = (e: React.PointerEvent) => {
+    try { (e.currentTarget as any).releasePointerCapture?.(e.pointerId); } catch { /* ignore */ }
+    const d = drag.current;
+    drag.current = null;
+    if (!d) return;
+    if (d.moved) {
+      setPos((p) => { try { if (p) localStorage.setItem(POS_KEY, JSON.stringify(p)); } catch { /* ignore */ } return p; });
+    } else if (d.talked) {
+      releaseTalk(); // hold released → end transmission
+    }
+  };
+
   const status =
     talking ? "Transmitiendo…"
     : speaker ? `${speaker.userId === myId ? "Hablando" : `${speaker.name} hablando`}…`
     : connecting ? "Conectando…"
     : hint || null;
 
+  const style: React.CSSProperties = pos
+    ? { left: pos.x, top: pos.y, right: "auto", bottom: "auto" }
+    : { right: 16, bottom: 96 };
+
   return (
-    <div className="fixed bottom-24 right-4 z-50 flex flex-col items-end gap-2" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+    <div
+      ref={ref}
+      className="fixed z-50 flex flex-col items-end gap-2"
+      style={{ ...style, paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
       {status && (
         <div className={`max-w-[60vw] truncate rounded-full px-3 py-1 text-[11px] font-semibold shadow-lg ${
           talking ? "bg-critical text-white" : speaker ? "bg-gold/90 text-on-accent" : "bg-surface-2 text-muted"
@@ -44,13 +95,13 @@ export default function FloatingRadioButton() {
       )}
 
       <button
-        onPointerDown={down}
-        onPointerUp={up}
-        onPointerCancel={up}
+        onPointerDown={onDown}
+        onPointerMove={onMove}
+        onPointerUp={onUp}
+        onPointerCancel={onUp}
         onContextMenu={(e) => e.preventDefault()}
-        disabled={connecting || someoneElseTalking}
         style={{ touchAction: "none", WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" } as any}
-        className="no-press relative grid h-16 w-16 place-items-center rounded-full disabled:opacity-60"
+        className={`no-press relative grid h-16 w-16 place-items-center rounded-full ${canTalk ? "" : "opacity-70"}`}
         aria-label="Mantén para hablar en el canal"
       >
         <span className={`absolute inset-0 rounded-full ${talking ? "bg-critical/25 animate-ping" : someoneElseTalking ? "bg-gold/25 animate-pulse" : "bg-gold/15"}`} />
