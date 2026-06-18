@@ -3,8 +3,8 @@ import { IonPage, IonContent } from "@ionic/react";
 import { useTranslation } from "react-i18next";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { AuthService } from "@/lib/auth";
 import { fb } from "@/lib/feedback";
+import ForgotPassword from "./ForgotPassword";
 import brandLogo from "../assets/brand-logo.png";
 
 export default function Login() {
@@ -13,23 +13,10 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
-  const [forgotSent, setForgotSent] = useState(false);
+  // Local unauth navigation (no router for unauth screens): the sign-in screen
+  // swaps in the dedicated ForgotPassword flow and swaps back via `onBack`.
+  const [showForgot, setShowForgot] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const onForgot = async () => {
-    fb.tap();
-    if (!email.trim()) {
-      setError(t("auth.forgot.needEmail", "Escribe tu correo arriba y vuelve a tocar aquí."));
-      return;
-    }
-    setError(null);
-    try {
-      await AuthService.sendPasswordResetEmail(email.trim());
-    } catch {
-      /* don't reveal whether the email exists */
-    }
-    setForgotSent(true);
-  };
   const [submitting, setSubmitting] = useState(false);
 
   const onSubmit = async (e: FormEvent) => {
@@ -47,6 +34,15 @@ export default function Login() {
     }
     setSubmitting(false);
   };
+
+  if (showForgot) {
+    return (
+      <ForgotPassword
+        initialEmail={email.trim()}
+        onBack={() => setShowForgot(false)}
+      />
+    );
+  }
 
   return (
     <IonPage>
@@ -129,12 +125,10 @@ export default function Login() {
 
               <button
                 type="button"
-                onClick={onForgot}
+                onClick={() => { fb.tap(); setError(null); setShowForgot(true); }}
                 className="w-full rounded-xl pt-1 text-center text-sm font-medium text-gold-strong"
               >
-                {forgotSent
-                  ? t("auth.forgot.sent", "Si el correo existe, te enviamos un enlace.")
-                  : t("auth.forgot.link", "¿Olvidaste tu contraseña?")}
+                {t("auth.forgot.link", "¿Olvidaste tu contraseña?")}
               </button>
             </form>
 
