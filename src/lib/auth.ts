@@ -22,9 +22,11 @@ export const AuthService = {
   },
 
   sendPasswordResetEmail(email: string): Promise<void> {
+    // `app: "worker"` tells the backend to build a field-user reset link so the
+    // web reset page shows the guard-app variant, not the tenant marketing page.
     return api.post(
       "/auth/send-password-reset-email",
-      { email },
+      { email, app: "worker" },
       { skipAuth: true }
     );
   },
