@@ -10,15 +10,52 @@ export interface ScanResult {
 }
 
 /**
- * Run OCR on an ID image (open-source Tesseract.js, Spanish + English) and
- * best-effort extract the document number and a name. The guard always
- * reviews/edits the result before saving.
+ * Downscale an image (a phone ID photo is multi-megapixel; OCR time scales with
+ * pixel count) to at most `maxDim` on its longest side before OCR. Returns a
+ * JPEG data URL, or the original on any failure. This is the single biggest
+ * speed win for on-device Tesseract.
+ */
+async function downscale(image: string | File, maxDim = 1400): Promise<string | File> {
+  try {
+    const url = typeof image === "string" ? image : URL.createObjectURL(image);
+    const img = await new Promise<HTMLImageElement>((res, rej) => {
+      const i = new Image();
+      i.onload = () => res(i);
+      i.onerror = rej;
+      i.src = url;
+    });
+    const longest = Math.max(img.width, img.height);
+    const scale = longest > maxDim ? maxDim / longest : 1;
+    if (scale >= 1) {
+      if (typeof image !== "string") URL.revokeObjectURL(url);
+      return image; // already small enough
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(img.width * scale);
+    canvas.height = Math.round(img.height * scale);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) { if (typeof image !== "string") URL.revokeObjectURL(url); return image; }
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    if (typeof image !== "string") URL.revokeObjectURL(url);
+    return canvas.toDataURL("image/jpeg", 0.85);
+  } catch {
+    return image;
+  }
+}
+
+/**
+ * Run OCR on an ID image (open-source Tesseract.js, Spanish) and best-effort
+ * extract the document number and a name. The image is downscaled first for
+ * speed; the guard always reviews/edits the result before saving.
  */
 export async function scanId(
   image: string | File,
   onProgress?: (p: number) => void
 ): Promise<ScanResult> {
-  const { data } = await Tesseract.recognize(image, "spa+eng", {
+  const prepared = await downscale(image);
+  // Spanish only: LATAM IDs are Spanish and the MRZ is plain A–Z0–9<, so the
+  // English model just doubled the download + recognition time for no gain.
+  const { data } = await Tesseract.recognize(prepared, "spa", {
     logger: (m) => {
       if (m.status === "recognizing text" && onProgress) onProgress(m.progress);
     },

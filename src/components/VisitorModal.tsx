@@ -66,6 +66,18 @@ const EMPTY: Fields = {
   tagNumber: "",
 };
 
+/** Map a save error to a clear Spanish message (never the raw backend "Extraviado"). */
+function friendlyVisitError(e: any): string {
+  const status = e?.status;
+  const msg: string | undefined = e?.message;
+  if (status === 0) return "Sin conexión. Revisa tu internet e intenta de nuevo.";
+  if (status === 403) return "No tienes permiso para registrar visitas en este puesto.";
+  if (status === 404 || !msg || msg === "Extraviado") {
+    return "No se pudo registrar la visita. Verifica los datos e intenta de nuevo.";
+  }
+  return msg;
+}
+
 async function uploadAll(photos: CapturedImage[]): Promise<any[] | undefined> {
   const out: any[] = [];
   for (const p of photos) {
@@ -503,7 +515,7 @@ function PersonForm({ fields, setFields, photos, addPhoto, removePhoto, station,
         idPhoto,
       });
       onDone();
-    } catch (e: any) { setError(e?.message || "error"); } finally { setBusy(false); }
+    } catch (e: any) { setError(friendlyVisitError(e)); } finally { setBusy(false); }
   };
 
   return (
@@ -614,7 +626,7 @@ function VehicleForm({ photos, addPhoto, removePhoto, station, onDone }: {
         idPhoto,
       });
       onDone();
-    } catch (e: any) { setError(e?.message || "error"); } finally { setBusy(false); }
+    } catch (e: any) { setError(friendlyVisitError(e)); } finally { setBusy(false); }
   };
 
   return (
