@@ -1,6 +1,7 @@
 import UIKit
 import Capacitor
 import FirebaseCore
+import AVFoundation
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -11,7 +12,26 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Initialize Firebase (required for @capacitor-firebase/messaging to issue
         // an FCM token and bridge APNs → FCM on iOS).
         FirebaseApp.configure()
+        configureAudioSession()
         return true
+    }
+
+    /// Configure a play-and-record audio session so the live radio (Canal abierto)
+    /// keeps playing/receiving while the app is backgrounded or the screen is
+    /// locked. Pairs with UIBackgroundModes "audio" in Info.plist. .voiceChat tunes
+    /// the half-duplex PTT path; Bluetooth options let BT headsets/PTT buttons work.
+    private func configureAudioSession() {
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(
+                .playAndRecord,
+                mode: .voiceChat,
+                options: [.defaultToSpeaker, .allowBluetooth, .allowBluetoothA2DP, .mixWithOthers]
+            )
+            try session.setActive(true)
+        } catch {
+            print("[audio] AVAudioSession config failed: \(error)")
+        }
     }
 
     func applicationWillResignActive(_ application: UIApplication) {

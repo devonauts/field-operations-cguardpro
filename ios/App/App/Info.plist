@@ -19,6 +19,7 @@
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
+		<string>audio</string>
 	</array>
 	<key>CFBundleDisplayName</key>
         <string>CGuardPro</string>
