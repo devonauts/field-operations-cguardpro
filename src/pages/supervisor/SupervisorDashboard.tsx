@@ -16,6 +16,7 @@ import {
   Cell,
 } from "recharts";
 import { Screen } from "@/components/Screen";
+import NotificationBell from "@/components/NotificationBell";
 import { Card, StatCard, Loader, SectionTitle, Dot, Avatar } from "@/components/ui";
 import { IncidentRow } from "@/components/IncidentRow";
 import { useAsync } from "@/lib/useAsync";
@@ -71,9 +72,12 @@ export default function SupervisorDashboard() {
       subtitle={t("dashboard.openIncidents", { count: openIncidents })}
       onRefresh={reload}
       right={
-        <div className="flex items-center gap-1.5 rounded-full border border-online/40 bg-online-soft px-2.5 py-1 text-[11px] font-semibold text-online">
-          <Activity size={13} />
-          {t("dashboard.live")}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 rounded-full border border-online/40 bg-online-soft px-2.5 py-1 text-[11px] font-semibold text-online">
+            <Activity size={13} />
+            {t("dashboard.live")}
+          </div>
+          <NotificationBell />
         </div>
       }
     >

@@ -1,4 +1,4 @@
-import { api, tenantPath, asRows, unwrap, getToken } from "./api";
+import { api, tenantPath, asRows, unwrap, getToken, getTenantId } from "./api";
 import { setAppTimeZone } from "./format";
 
 // Adopt the tenant timezone so all time formatting renders in the tenant's
@@ -428,7 +428,7 @@ export const visitorService = {
 };
 
 /* ------------------------------------------------------------------ */
-/* Notifications / announcements (tenant → guard)                      */
+/* Notices / announcements (legacy /notification route → GuardNotices) */
 /* ------------------------------------------------------------------ */
 export const notificationService = {
   list: (params?: Record<string, any>) => {
@@ -437,6 +437,47 @@ export const notificationService = {
       : "";
     return api.get(tenantPath(`/notification${qs}`)).then((r) => asRows(r));
   },
+};
+
+/* ------------------------------------------------------------------ */
+/* Platform events / notification center (tenant → guard)              */
+/* These live at /<tenantId>/events — a DIFFERENT route namespace than  */
+/* tenantPath() (/tenant/<id>/...), so paths are built manually.        */
+/* ------------------------------------------------------------------ */
+export interface PlatformEvent {
+  id: string;
+  eventType: string;
+  title: string;
+  body: string;
+  payload?: Record<string, any> | null;
+  sourceEntityType?: string | null;
+  sourceEntityId?: string | null;
+  deliveryStatus: "pending" | "sent" | "read";
+  createdAt: string;
+}
+
+/** Base path for the events namespace (NOT tenantPath — see header above). */
+const eventsPath = () => `/${getTenantId()}/events`;
+
+export const eventService = {
+  /** Recent events (newest first), capped by `limit`. */
+  list: (limit = 30): Promise<PlatformEvent[]> =>
+    api.get(`${eventsPath()}?limit=${limit}`).then((r) => asRows<PlatformEvent>(r)),
+  /** Number of unread events for the badge. */
+  unreadCount: (): Promise<number> =>
+    api.get(`${eventsPath()}/unread`).then((r) => (r && typeof r.count === "number" ? r.count : 0)),
+  /** Mark a single event as read. */
+  markRead: (id: string): Promise<void> =>
+    api.post(`${eventsPath()}/${id}/read`).then(() => undefined),
+  /** Mark every event as read. */
+  markAllRead: (): Promise<void> =>
+    api.post(`${eventsPath()}/read-all`).then(() => undefined),
+  /** Dismiss (delete) a single event. */
+  remove: (id: string): Promise<void> =>
+    api.delete(`${eventsPath()}/${id}`).then(() => undefined),
+  /** Dismiss (delete) all events. */
+  clearAll: (): Promise<void> =>
+    api.delete(eventsPath()).then(() => undefined),
 };
 
 /* ------------------------------------------------------------------ */

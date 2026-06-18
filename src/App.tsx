@@ -3,6 +3,7 @@ import { IonApp, IonSpinner } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import { App as CapApp } from "@capacitor/app";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { NotificationProvider } from "./context/NotificationContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { registerPush, reportDevice } from "./lib/push";
 import AnimatedSplash from "./components/AnimatedSplash";
@@ -106,13 +107,15 @@ export default function App() {
         <AnimatedSplash />
         <StatusBanner />
         <AuthProvider>
-          <IonReactRouter>
-            {resetToken ? (
-              <ResetPassword token={resetToken} onDone={() => setResetToken(null)} />
-            ) : (
-              <Gate />
-            )}
-          </IonReactRouter>
+          <NotificationProvider>
+            <IonReactRouter>
+              {resetToken ? (
+                <ResetPassword token={resetToken} onDone={() => setResetToken(null)} />
+              ) : (
+                <Gate />
+              )}
+            </IonReactRouter>
+          </NotificationProvider>
         </AuthProvider>
       </IonApp>
     </ThemeProvider>

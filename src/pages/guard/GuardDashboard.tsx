@@ -23,6 +23,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { Screen } from "@/components/Screen";
+import NotificationBell from "@/components/NotificationBell";
 import {
   Card,
   Loader,
@@ -428,9 +429,12 @@ export default function GuardDashboard() {
       compactTitle={guardName || firstName}
       avatar={<Avatar name={guardName} className="h-7 w-7 text-[10px]" />}
       right={
-        <div className="flex items-center gap-1.5 rounded-full border border-line-2 px-2.5 py-1 text-[11px] font-semibold text-muted">
-          <Shield size={13} />
-          {t("guard.offDuty")}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 rounded-full border border-line-2 px-2.5 py-1 text-[11px] font-semibold text-muted">
+            <Shield size={13} />
+            {t("guard.offDuty")}
+          </div>
+          <NotificationBell />
         </div>
       }
       onRefresh={async () => {
