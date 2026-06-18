@@ -22,6 +22,9 @@ interface RadioContextValue {
   hint: string | null;
   myId?: string;
   someoneElseTalking: boolean;
+  /** True while the full radio screen is mounted — the floating button hides then. */
+  screenActive: boolean;
+  setScreenActive: (v: boolean) => void;
   resume: () => void;
   pressTalk: () => void;
   releaseTalk: () => void;
@@ -47,6 +50,7 @@ export function RadioProvider({ children }: { children: ReactNode }) {
   const [speaker, setSpeaker] = useState<VoiceSpeaker>(null);
   const [talking, setTalking] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
+  const [screenActive, setScreenActive] = useState(false);
 
   const vcRef = useRef<VoiceChannel | null>(null);
   const pressedRef = useRef(false);
@@ -135,7 +139,7 @@ export function RadioProvider({ children }: { children: ReactNode }) {
 
   return (
     <RadioContext.Provider
-      value={{ onDuty, state, roster, speaker, talking, hint, myId, someoneElseTalking, resume, pressTalk, releaseTalk }}
+      value={{ onDuty, state, roster, speaker, talking, hint, myId, someoneElseTalking, screenActive, setScreenActive, resume, pressTalk, releaseTalk }}
     >
       {children}
     </RadioContext.Provider>

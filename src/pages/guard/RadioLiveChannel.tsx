@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Mic, Loader2, Users, Volume2 } from "lucide-react";
 import { useRadio } from "@/context/RadioContext";
@@ -10,7 +11,13 @@ import { useRadio } from "@/context/RadioContext";
  */
 export default function RadioLiveChannel() {
   const { t } = useTranslation();
-  const { state, roster, speaker, talking, hint, myId, someoneElseTalking, onDuty, resume, pressTalk, releaseTalk } = useRadio();
+  const { state, roster, speaker, talking, hint, myId, someoneElseTalking, onDuty, setScreenActive, resume, pressTalk, releaseTalk } = useRadio();
+
+  // Hide the app-wide floating button while this full screen is open (one button).
+  useEffect(() => {
+    setScreenActive(true);
+    return () => setScreenActive(false);
+  }, [setScreenActive]);
 
   const connecting = state === "connecting";
 

@@ -227,7 +227,6 @@ export class VoiceChannel {
       this.socket!.emit("radio:voice:talk-request", {}, (res: any) => resolve(res));
     });
     if (!granted?.ok) return { ok: false, busyWith: granted?.speaker?.name };
-    this.playChirp("ptt"); // Nextel-style press chirp — you've got the floor, go ahead
     try {
       this.ensureContext(); // keep playback context alive
       this.micStream = await this.acquireMic();
@@ -254,6 +253,10 @@ export class VoiceChannel {
       this.capSource.connect(this.capProc);
       this.capProc.connect(silent);
       silent.connect(capCtx.destination);
+      // Nextel-style press chirp — played AFTER the mic is up (so it can't disrupt
+      // getUserMedia init on Android) but BEFORE _talking=true (so it isn't
+      // transmitted). You've got the floor: chirp, then talk.
+      this.playChirp("ptt");
       this._talking = true;
       return { ok: true };
     } catch (err: any) {

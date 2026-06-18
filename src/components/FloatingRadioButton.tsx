@@ -8,9 +8,10 @@ import { useRadio } from "@/context/RadioContext";
  * provider is disconnected, so there's no audio either).
  */
 export default function FloatingRadioButton() {
-  const { onDuty, state, speaker, talking, hint, myId, someoneElseTalking, resume, pressTalk, releaseTalk } = useRadio();
+  const { onDuty, screenActive, state, speaker, talking, hint, myId, someoneElseTalking, resume, pressTalk, releaseTalk } = useRadio();
 
-  if (!onDuty) return null;
+  // Only one button: hide the floating one while the full radio screen is open.
+  if (!onDuty || screenActive) return null;
 
   const connecting = state === "connecting";
 
