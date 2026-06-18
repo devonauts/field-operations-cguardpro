@@ -1,98 +1,42 @@
-import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Mic, Loader2, Users, Volume2 } from "lucide-react";
-import { apiOrigin, getToken, getTenantId } from "@/lib/api";
-import { useAuth } from "@/context/AuthContext";
-import { VoiceChannel, type VoiceMember, type VoiceSpeaker, type VoiceState } from "@/lib/voiceChannel";
-import { ensureMicPermission } from "@/lib/micPermission";
+import { useRadio } from "@/context/RadioContext";
 
 /**
- * Open live channel (Canal abierto) — half-duplex PTT. Hold to talk; everyone on
- * the channel hears it live. The floor is server-controlled (one talker at a time).
+ * Open live channel (Canal abierto) screen — half-duplex PTT. The connection +
+ * floor state live in the app-level RadioProvider (so the channel keeps working
+ * from the floating button across screens, and only while on duty); this screen
+ * is a full-size view over that shared state.
  */
 export default function RadioLiveChannel() {
   const { t } = useTranslation();
-  const { user } = useAuth();
-  const myId = user?.id;
-
-  const vcRef = useRef<VoiceChannel | null>(null);
-  const [state, setState] = useState<VoiceState>("connecting");
-  const [roster, setRoster] = useState<VoiceMember[]>([]);
-  const [speaker, setSpeaker] = useState<VoiceSpeaker>(null);
-  const [talking, setTalking] = useState(false);
-  const [hint, setHint] = useState<string | null>(null);
-
-  useEffect(() => {
-    // `user` populates asynchronously (AuthContext fetches the profile after mount).
-    // Wait for a resolved id before connecting so selfId is never captured as
-    // undefined — otherwise the guard would hear a chirp for their own
-    // transmissions and self labels ('tú' / 'Estás hablando') would mis-identify.
-    if (!myId) return;
-    const vc = new VoiceChannel();
-    vcRef.current = vc;
-    vc.connect(
-      { url: apiOrigin, path: "/api/socket.io", token: getToken() || "", tenantId: getTenantId(), selfId: myId },
-      {
-        onState: setState,
-        onPresence: setRoster,
-        onSpeaker: setSpeaker,
-        onError: (m) => setHint(m),
-      },
-    );
-    let alive = true;
-    let id: ReturnType<typeof setInterval> | null = null;
-    const tryJoin = () => {
-      vc.join().then(({ roster, speaker }) => {
-        if (alive) { setRoster(roster); setSpeaker(speaker); }
-        // Joined — stop the retry poll so it doesn't keep waking every 400ms.
-        if (id !== null) { clearInterval(id); id = null; }
-      }).catch(() => {});
-    };
-    // Retry join until connected+joined, then the poll clears itself.
-    id = setInterval(() => { if (vc.connected && !vc.joined) tryJoin(); }, 400);
-    return () => { alive = false; if (id !== null) clearInterval(id); vc.disconnect(); };
-  }, [myId]);
-
-  const someoneElseTalking = !!speaker && speaker.userId !== myId;
-  const pressedRef = useRef(false);
-
-  // Acquiring the floor is async (mic permission + getUserMedia). pressedRef tracks
-  // whether the finger is still down so an early release can't leave the floor held.
-  const beginTalk = async () => {
-    if (!(await ensureMicPermission())) {
-      pressedRef.current = false;
-      setHint(t("radio.micPerm", "Activa el permiso de micrófono en Perfil → Permisos."));
-      return;
-    }
-    if (!pressedRef.current) return; // released during the permission prompt
-    const r = await vcRef.current?.startTalk();
-    if (!pressedRef.current) { vcRef.current?.stopTalk(); return; } // released mid-acquire
-    if (r?.ok) setTalking(true);
-    else if (r?.busyWith) setHint(`${r.busyWith} ${t("radio.isTalking", "está hablando")}`);
-    else setHint(r?.error || t("radio.micDenied", "No se pudo acceder al micrófono."));
-  };
-
-  const onPttDown = (e: React.PointerEvent) => {
-    if (state === "connecting" || someoneElseTalking) {
-      if (someoneElseTalking) setHint(`${speaker?.name} ${t("radio.isTalking", "está hablando")}`);
-      return;
-    }
-    try { (e.currentTarget as any).setPointerCapture?.(e.pointerId); } catch { /* ignore */ }
-    pressedRef.current = true;
-    setHint(null);
-    void beginTalk();
-  };
-  const onPttUp = (e: React.PointerEvent) => {
-    try { (e.currentTarget as any).releasePointerCapture?.(e.pointerId); } catch { /* ignore */ }
-    pressedRef.current = false;
-    vcRef.current?.stopTalk();
-    setTalking(false);
-  };
+  const { state, roster, speaker, talking, hint, myId, someoneElseTalking, onDuty, resume, pressTalk, releaseTalk } = useRadio();
 
   const connecting = state === "connecting";
 
+  const onPttDown = (e: React.PointerEvent) => {
+    resume();
+    if (connecting || someoneElseTalking) return;
+    try { (e.currentTarget as any).setPointerCapture?.(e.pointerId); } catch { /* ignore */ }
+    pressTalk();
+  };
+  const onPttUp = (e: React.PointerEvent) => {
+    try { (e.currentTarget as any).releasePointerCapture?.(e.pointerId); } catch { /* ignore */ }
+    releaseTalk();
+  };
+
+  if (!onDuty) {
+    return (
+      <div className="card-elev flex flex-col items-center gap-2 p-6 text-center">
+        <Volume2 size={26} className="text-muted" />
+        <p className="text-sm font-semibold text-ink">{t("radio.offDutyTitle", "Radio disponible en servicio")}</p>
+        <p className="text-[12px] text-muted">{t("radio.offDutyHint", "Marca tu entrada para conectarte al canal.")}</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4" onPointerDown={() => vcRef.current?.resume()}>
+    <div className="space-y-4" onPointerDown={resume}>
       {/* Status */}
       <div className="card-elev flex items-center gap-3 p-4">
         <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${state === "connected" ? "bg-online/15 text-online" : "bg-surface-2 text-muted"}`}>

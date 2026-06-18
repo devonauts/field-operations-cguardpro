@@ -14,6 +14,8 @@ import ResetPassword from "./pages/ResetPassword";
 import GuardTabs from "./pages/guard/GuardTabs";
 import SupervisorTabs from "./pages/supervisor/SupervisorTabs";
 import { SUPERVISOR_ROLE } from "./lib/roles";
+import { RadioProvider } from "./context/RadioContext";
+import FloatingRadioButton from "./components/FloatingRadioButton";
 
 /**
  * Extract a password-reset token from a deep link. Handles both the custom
@@ -56,7 +58,16 @@ function Gate() {
 
   if (!isAuthenticated) return <Login />;
 
-  return role === SUPERVISOR_ROLE ? <SupervisorTabs /> : <GuardTabs />;
+  if (role === SUPERVISOR_ROLE) return <SupervisorTabs />;
+
+  // Guards: live radio stays connected app-wide while on duty (floating PTT),
+  // so the channel works across screens without opening the radio page.
+  return (
+    <RadioProvider>
+      <GuardTabs />
+      <FloatingRadioButton />
+    </RadioProvider>
+  );
 }
 
 export default function App() {
