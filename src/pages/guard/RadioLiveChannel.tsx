@@ -60,8 +60,8 @@ export default function RadioLiveChannel() {
         </span>
       </div>
 
-      {/* Who's talking */}
-      <div className={`rounded-xl border p-3 text-center text-sm font-semibold ${speaker ? "border-gold/40 bg-gold/10 text-gold" : "border-line bg-surface-2 text-muted"}`}>
+      {/* Who's talking — fixed height so its text never reflows the layout */}
+      <div className={`flex min-h-11 items-center justify-center rounded-xl border p-3 text-center text-sm font-semibold ${speaker ? "border-gold/40 bg-gold/10 text-gold" : "border-line bg-surface-2 text-muted"}`}>
         {speaker
           ? `${speaker.userId === myId ? t("radio.youTalking", "Estás hablando") : `${speaker.name} ${t("radio.isTalking", "está hablando")}`}…`
           : t("radio.channelClear", "Canal libre")}
@@ -85,10 +85,15 @@ export default function RadioLiveChannel() {
             <Mic size={52} strokeWidth={2.2} />
           </span>
         </button>
-        <p className="mt-4 text-sm font-semibold text-ink">
-          {talking ? t("radio.transmitting", "Transmitiendo…") : someoneElseTalking ? t("radio.channelBusy", "Canal ocupado") : t("radio.holdToTalk", "Mantén para hablar")}
-        </p>
-        {hint && <p className="mt-1 text-center text-[11px] text-muted">{hint}</p>}
+        {/* Status + hint live in a fixed-height block so pressing the mic (which
+            flips the label and can surface a hint) never reflows / shifts the
+            button under the user's finger. */}
+        <div className="mt-4 flex h-11 flex-col items-center justify-start">
+          <p className="text-sm font-semibold text-ink">
+            {talking ? t("radio.transmitting", "Transmitiendo…") : someoneElseTalking ? t("radio.channelBusy", "Canal ocupado") : t("radio.holdToTalk", "Mantén para hablar")}
+          </p>
+          {hint && <p className="mt-1 line-clamp-2 text-center text-[11px] text-muted">{hint}</p>}
+        </div>
       </div>
 
       {/* Roster */}
