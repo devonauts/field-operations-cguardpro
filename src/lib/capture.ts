@@ -53,16 +53,22 @@ export function dataUrlToFile(dataUrl: string, name: string): File {
 }
 
 /**
- * Capture an ID photo. On native (iOS/Android) uses the Capacitor Camera with
- * the rear camera; in the browser this is unused (the UI falls back to a
+ * Capture a photo. On native (iOS/Android) uses the Capacitor Camera with the
+ * rear camera; in the browser this is unused (the UI falls back to a
  * <input type="file" capture> element). Result is compressed.
+ *
+ * Pass `hiRes: true` for the ID document image: an ID has small text and OCR
+ * needs the detail, so we grab it at higher native quality and compress it at a
+ * larger max dimension / higher JPEG quality. Face + extra photos stay on the
+ * lighter default compression to keep uploads small.
  */
 export async function takeNativePhoto(
-  source: "camera" | "gallery" = "camera"
+  source: "camera" | "gallery" = "camera",
+  opts: { hiRes?: boolean } = {}
 ): Promise<CapturedImage> {
   const { Camera, CameraResultType, CameraSource } = await import("@capacitor/camera");
   const photo = await Camera.getPhoto({
-    quality: 70,
+    quality: opts.hiRes ? 90 : 70,
     allowEditing: false,
     resultType: CameraResultType.DataUrl,
     source: source === "gallery" ? CameraSource.Photos : CameraSource.Camera,
@@ -70,7 +76,7 @@ export async function takeNativePhoto(
     correctOrientation: true,
   });
   if (!photo.dataUrl) throw new Error("no photo");
-  return compressImage(photo.dataUrl);
+  return opts.hiRes ? compressImage(photo.dataUrl, 1800, 0.85) : compressImage(photo.dataUrl);
 }
 
 export const isNative = () => Capacitor.isNativePlatform();

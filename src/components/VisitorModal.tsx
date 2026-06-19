@@ -91,6 +91,12 @@ async function uploadAll(photos: CapturedImage[]): Promise<any[] | undefined> {
   return out.length ? out : undefined;
 }
 
+/** Upload a single photo (e.g. the face) as a one-element descriptor array. */
+async function uploadOne(photo: CapturedImage | null): Promise<any[] | undefined> {
+  if (!photo) return undefined;
+  return uploadAll([photo]);
+}
+
 export function VisitorModal({
   isOpen,
   onClose,
@@ -111,6 +117,7 @@ export function VisitorFlow({ station, onClose, embedded }: { station: any; onCl
   const { t } = useTranslation();
   const [mode, setMode] = useState<Mode>("list");
   const [photos, setPhotos] = useState<CapturedImage[]>([]);
+  const [facePhoto, setFacePhoto] = useState<CapturedImage | null>(null);
   const [fields, setFields] = useState<Fields>(EMPTY);
   const [scanProgress, setScanProgress] = useState<number | null>(null);
   const [scanFailed, setScanFailed] = useState(false);
@@ -129,19 +136,28 @@ export function VisitorFlow({ station, onClose, embedded }: { station: any; onCl
     station?.id ? v.stationId === station.id || !v.stationId : true
   );
 
-  const capture = (source: "camera" | "gallery"): Promise<CapturedImage | null> => {
-    if (isNative()) return takeNativePhoto(source).catch(() => null);
+  // Track whether the next web <input> pick should be compressed at hi-res (the
+  // ID document) vs the lighter default (face / extra photos).
+  const webHiRes = useRef(false);
+  const capture = (
+    source: "camera" | "gallery",
+    opts: { hiRes?: boolean } = {}
+  ): Promise<CapturedImage | null> => {
+    if (isNative()) return takeNativePhoto(source, opts).catch(() => null);
     return new Promise((resolve) => {
       webResolver.current = resolve;
+      webHiRes.current = !!opts.hiRes;
       (source === "camera" ? cameraInput : galleryInput).current?.click();
     });
   };
   const onWebPick = async (file?: File | null) => {
     const r = webResolver.current;
+    const hiRes = webHiRes.current;
     webResolver.current = null;
+    webHiRes.current = false;
     if (!file) return r?.(null);
     try {
-      r?.(await compressImage(file));
+      r?.(await (hiRes ? compressImage(file, 1800, 0.85) : compressImage(file)));
     } catch {
       r?.(null);
     }
@@ -173,12 +189,17 @@ export function VisitorFlow({ station, onClose, embedded }: { station: any; onCl
     }
   };
 
-  // ID capture (person): photo[0] + OCR.
+  // ID capture (the document): photo[0] + OCR. Captured at hi-res for OCR.
   const pickIdPhoto = async (source: "camera" | "gallery") => {
-    const img = await capture(source);
+    const img = await capture(source, { hiRes: true });
     if (!img) return;
     setPhotos((p) => (p.length ? [img, ...p.slice(1)] : [img]));
     runScan(img);
+  };
+  // Face capture (the person). Normal/light compression — no OCR.
+  const pickFacePhoto = async (source: "camera" | "gallery") => {
+    const img = await capture(source);
+    if (img) setFacePhoto(img);
   };
   // Add an extra visit photo (forms).
   const addPhoto = async (source: "camera" | "gallery") => {
@@ -190,6 +211,7 @@ export function VisitorFlow({ station, onClose, embedded }: { station: any; onCl
   const reset = () => {
     scanGen.current++; // invalidate any in-flight OCR scan
     setPhotos([]);
+    setFacePhoto(null);
     setFields(EMPTY);
     setScanFailed(false);
     setScanProgress(null);
@@ -244,12 +266,15 @@ export function VisitorFlow({ station, onClose, embedded }: { station: any; onCl
       {mode === "capture" && (
         <CaptureView
           photo={photos[0] || null}
+          facePhoto={facePhoto}
           scanProgress={scanProgress}
           scanFailed={scanFailed}
-          onCamera={() => pickIdPhoto("camera")}
-          onGallery={() => pickIdPhoto("gallery")}
+          onIdCamera={() => pickIdPhoto("camera")}
+          onIdGallery={() => pickIdPhoto("gallery")}
+          onFaceCamera={() => pickFacePhoto("camera")}
+          onFaceGallery={() => pickFacePhoto("gallery")}
           onContinue={() => setMode("form")}
-          onSkip={() => { setPhotos([]); setMode("form"); }}
+          onSkip={() => { setPhotos([]); setFacePhoto(null); setMode("form"); }}
         />
       )}
 
@@ -258,6 +283,7 @@ export function VisitorFlow({ station, onClose, embedded }: { station: any; onCl
           fields={fields}
           setFields={setFields}
           photos={photos}
+          facePhoto={facePhoto}
           addPhoto={addPhoto}
           removePhoto={removePhoto}
           station={station}
@@ -268,6 +294,7 @@ export function VisitorFlow({ station, onClose, embedded }: { station: any; onCl
       {mode === "vehicle" && (
         <VehicleForm
           photos={photos}
+          facePhoto={facePhoto}
           addPhoto={addPhoto}
           removePhoto={removePhoto}
           station={station}
@@ -298,7 +325,8 @@ function ListView({ loading, visits, reload, onNew }: { loading: boolean; visits
               const isVehicle = !v.firstName && !v.lastName && !!v.vehiclePlate;
               const out = !!v.exitTime;
               // Prefer the backend's token-based downloadUrl (never a raw privateUrl).
-              const photoUrl = fileUrlFromFile(v.idPhoto);
+              // Prefer the person's face photo as the thumbnail; fall back to the ID photo.
+              const photoUrl = fileUrlFromFile(v.facePhoto) || fileUrlFromFile(v.idPhoto);
               return (
                 <div key={v.id || i} className="card flex items-center gap-3 p-3">
                   {photoUrl ? (
@@ -366,9 +394,15 @@ function ChooseView({ onPerson, onVehicle }: { onPerson: () => void; onVehicle: 
 }
 
 /* ---------------------------- capture --------------------------- */
-function CaptureView({ photo, scanProgress, scanFailed, onCamera, onGallery, onContinue, onSkip }: {
-  photo: CapturedImage | null; scanProgress: number | null; scanFailed: boolean;
-  onCamera: () => void; onGallery: () => void; onContinue: () => void; onSkip: () => void;
+function CaptureView({
+  photo, facePhoto, scanProgress, scanFailed,
+  onIdCamera, onIdGallery, onFaceCamera, onFaceGallery, onContinue, onSkip,
+}: {
+  photo: CapturedImage | null; facePhoto: CapturedImage | null;
+  scanProgress: number | null; scanFailed: boolean;
+  onIdCamera: () => void; onIdGallery: () => void;
+  onFaceCamera: () => void; onFaceGallery: () => void;
+  onContinue: () => void; onSkip: () => void;
 }) {
   const { t } = useTranslation();
   const scanning = scanProgress !== null;
@@ -376,13 +410,16 @@ function CaptureView({ photo, scanProgress, scanFailed, onCamera, onGallery, onC
     <>
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <p className="mb-4 text-center text-sm text-muted">{t("visitor.scanHint")}</p>
+
+        {/* ID document — drives OCR. */}
+        <p className="label-eyebrow mb-1.5">{t("visitor.idPhotoLabel", "Foto de cédula/ID")}</p>
         <div className="relative mx-auto aspect-[1.586/1] w-full max-w-sm overflow-hidden rounded-2xl border-2 border-dashed border-line-2 bg-surface">
           {photo ? (
             <img src={photo.dataUrl} alt="ID" className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full flex-col items-center justify-center text-low">
               <Camera size={40} />
-              <span className="mt-2 text-xs">{t("visitor.idPhotoLabel")}</span>
+              <span className="mt-2 text-xs">{t("visitor.idPhotoLabel", "Foto de cédula/ID")}</span>
             </div>
           )}
           {scanning && (
@@ -399,12 +436,35 @@ function CaptureView({ photo, scanProgress, scanFailed, onCamera, onGallery, onC
         </div>
         {scanFailed && !scanning && <p className="mt-3 text-center text-xs text-high">{t("visitor.scanFailed")}</p>}
 
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          <button onClick={onCamera} disabled={scanning} className="btn-xl border border-gold/40 bg-gold-soft text-gold disabled:opacity-50">
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <button onClick={onIdCamera} disabled={scanning} className="btn-xl border border-gold/40 bg-gold-soft text-gold disabled:opacity-50">
             {photo ? <RotateCcw size={18} /> : <Camera size={18} />}
             {photo ? t("visitor.retake") : t("visitor.takePhoto")}
           </button>
-          <button onClick={onGallery} disabled={scanning} className="btn-xl border border-line text-muted disabled:opacity-50">
+          <button onClick={onIdGallery} disabled={scanning} className="btn-xl border border-line text-muted disabled:opacity-50">
+            <Images size={18} />
+            {t("visitor.choosePhoto")}
+          </button>
+        </div>
+
+        {/* Face photo — the person. No OCR. */}
+        <p className="label-eyebrow mb-1.5 mt-6">{t("visitor.facePhotoLabel", "Foto de la persona")}</p>
+        <div className="relative mx-auto aspect-square w-full max-w-[12rem] overflow-hidden rounded-2xl border-2 border-dashed border-line-2 bg-surface">
+          {facePhoto ? (
+            <img src={facePhoto.dataUrl} alt="Persona" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full flex-col items-center justify-center text-low">
+              <User size={40} />
+              <span className="mt-2 text-xs">{t("visitor.facePhotoLabel", "Foto de la persona")}</span>
+            </div>
+          )}
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <button onClick={onFaceCamera} disabled={scanning} className="btn-xl border border-gold/40 bg-gold-soft text-gold disabled:opacity-50">
+            {facePhoto ? <RotateCcw size={18} /> : <Camera size={18} />}
+            {facePhoto ? t("visitor.retake") : t("visitor.takePhoto")}
+          </button>
+          <button onClick={onFaceGallery} disabled={scanning} className="btn-xl border border-line text-muted disabled:opacity-50">
             <Images size={18} />
             {t("visitor.choosePhoto")}
           </button>
@@ -413,7 +473,7 @@ function CaptureView({ photo, scanProgress, scanFailed, onCamera, onGallery, onC
 
       <div className="flex gap-2 border-t border-line px-4 pt-3" style={footerStyle}>
         <button onClick={onSkip} className="btn-xl flex-1 border border-line text-muted">{t("visitor.skipPhoto")}</button>
-        <button onClick={onContinue} disabled={!photo || scanning} className="btn-xl flex-[2] bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-50">
+        <button onClick={onContinue} disabled={(!photo && !facePhoto) || scanning} className="btn-xl flex-[2] bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-50">
           {scanning ? <Loader2 size={18} className="animate-spin" /> : t("visitor.continue")}
         </button>
       </div>
@@ -481,9 +541,10 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 /* --------------------------- person form ------------------------ */
-function PersonForm({ fields, setFields, photos, addPhoto, removePhoto, station, onDone }: {
+function PersonForm({ fields, setFields, photos, facePhoto, addPhoto, removePhoto, station, onDone }: {
   fields: Fields; setFields: React.Dispatch<React.SetStateAction<Fields>>;
-  photos: CapturedImage[]; addPhoto: (s: "camera" | "gallery") => void; removePhoto: (i: number) => void;
+  photos: CapturedImage[]; facePhoto: CapturedImage | null;
+  addPhoto: (s: "camera" | "gallery") => void; removePhoto: (i: number) => void;
   station: any; onDone: () => void;
 }) {
   const { t } = useTranslation();
@@ -495,7 +556,10 @@ function PersonForm({ fields, setFields, photos, addPhoto, removePhoto, station,
     if (!fields.firstName.trim() || busy) return;
     setBusy(true); setError(null);
     try {
+      // Upload ID/extra photos and the face photo as SEPARATE fields. A failed
+      // upload yields `undefined` but never blocks saving the text data.
       const idPhoto = await uploadAll(photos);
+      const facePhotoUp = await uploadOne(facePhoto);
       await visitorService.create({
         firstName: fields.firstName.trim(),
         lastName: fields.lastName.trim() || undefined,
@@ -513,6 +577,7 @@ function PersonForm({ fields, setFields, photos, addPhoto, removePhoto, station,
         visitDate: new Date().toISOString(),
         stationId: station?.id, stationName: station?.stationName || station?.name, postSiteId: station?.postSiteId,
         idPhoto,
+        facePhoto: facePhotoUp,
       });
       onDone();
     } catch (e: any) { setError(friendlyVisitError(e)); } finally { setBusy(false); }
@@ -521,6 +586,12 @@ function PersonForm({ fields, setFields, photos, addPhoto, removePhoto, station,
   return (
     <>
       <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4 pb-6">
+        {facePhoto && (
+          <Field label={t("visitor.facePhotoLabel", "Foto de la persona")}>
+            <img src={facePhoto.dataUrl} alt="Persona" className="h-24 w-24 rounded-xl border border-line object-cover" />
+          </Field>
+        )}
+
         <Field label={t("visitor.photos")}>
           <PhotoStrip photos={photos} onAdd={addPhoto} onRemove={removePhoto} />
         </Field>
@@ -589,8 +660,9 @@ function PersonForm({ fields, setFields, photos, addPhoto, removePhoto, station,
 }
 
 /* --------------------------- vehicle form ----------------------- */
-function VehicleForm({ photos, addPhoto, removePhoto, station, onDone }: {
-  photos: CapturedImage[]; addPhoto: (s: "camera" | "gallery") => void; removePhoto: (i: number) => void;
+function VehicleForm({ photos, facePhoto, addPhoto, removePhoto, station, onDone }: {
+  photos: CapturedImage[]; facePhoto: CapturedImage | null;
+  addPhoto: (s: "camera" | "gallery") => void; removePhoto: (i: number) => void;
   station: any; onDone: () => void;
 }) {
   const { t } = useTranslation();
@@ -609,6 +681,7 @@ function VehicleForm({ photos, addPhoto, removePhoto, station, onDone }: {
     setBusy(true); setError(null);
     try {
       const idPhoto = await uploadAll(photos);
+      const facePhotoUp = await uploadOne(facePhoto);
       const p = plate.trim().toUpperCase();
       const base = reason.trim() || t("visitor.modeVehicle");
       await visitorService.create({
@@ -624,6 +697,7 @@ function VehicleForm({ photos, addPhoto, removePhoto, station, onDone }: {
         visitDate: new Date().toISOString(),
         stationId: station?.id, stationName: station?.stationName || station?.name, postSiteId: station?.postSiteId,
         idPhoto,
+        facePhoto: facePhotoUp,
       });
       onDone();
     } catch (e: any) { setError(friendlyVisitError(e)); } finally { setBusy(false); }
