@@ -548,6 +548,8 @@
   "selfie": {
     "title": "Foto de entrada",
     "hint": "Centra tu rostro y toma la foto",
+    "starting": "Abriendo cámara…",
+    "waitingLocation": "Obteniendo ubicación…",
     "locating": "Obteniendo ubicación…",
     "noLocation": "Ubicación no disponible",
     "cameraError": "No se pudo acceder a la cámara. Revisa los permisos.",

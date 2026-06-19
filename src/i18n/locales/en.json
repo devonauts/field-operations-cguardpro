@@ -548,6 +548,8 @@
   "selfie": {
     "title": "Clock-in photo",
     "hint": "Center your face and take the photo",
+    "starting": "Opening camera…",
+    "waitingLocation": "Getting location…",
     "locating": "Getting location…",
     "noLocation": "Location unavailable",
     "cameraError": "Couldn't access the camera. Check permissions.",

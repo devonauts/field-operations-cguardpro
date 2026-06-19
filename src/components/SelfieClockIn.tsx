@@ -81,7 +81,11 @@ export function SelfieClockIn({
   const [address, setAddress] = useState<string>("");
   const [locating, setLocating] = useState(true);
   const [camError, setCamError] = useState<string | null>(null);
-  const [starting, setStarting] = useState(true);
+  // `videoReady` is true only once the <video> is actually rendering frames
+  // (videoWidth > 0). play() resolving is NOT enough — there's a window where
+  // the stream is attached but the element is still black. We keep an opaque
+  // placeholder up, and the shutter disabled, until this flips true.
+  const [videoReady, setVideoReady] = useState(false);
   const [stamped, setStamped] = useState<{ file: File; dataUrl: string } | null>(null);
   const [flash, setFlash] = useState(false);
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -107,6 +111,7 @@ export function SelfieClockIn({
   }, [isOpen, phase]);
 
   const stopStream = useCallback(() => {
+    setVideoReady(false);
     streamRef.current?.getTracks().forEach((tr) => tr.stop());
     streamRef.current = null;
     // Release the dead stream from the <video> element immediately so the
@@ -127,7 +132,7 @@ export function SelfieClockIn({
   // (the classic "camera turns on then goes black, no error" bug).
   const startCamera = useCallback(async (alive: () => boolean) => {
     setCamError(null);
-    setStarting(true);
+    setVideoReady(false);
     logInfo("selfie.cam", "request");
     try {
       if (Capacitor.isNativePlatform()) {
@@ -167,8 +172,6 @@ export function SelfieClockIn({
         platform: Capacitor.getPlatform(),
       });
       setCamError(e?.message || e?.name || "camera");
-    } finally {
-      if (alive()) setStarting(false);
     }
   }, []);
 
@@ -218,6 +221,14 @@ export function SelfieClockIn({
       cancelled = true;
     };
   }, [isOpen]);
+
+  // Fired by the <video> element's playback events. Only treat the camera as
+  // ready once real frame dimensions are available — some WebViews fire
+  // loadeddata/canplay before videoWidth is populated.
+  const handleVideoReady = useCallback(() => {
+    const v = videoRef.current;
+    if (v && v.videoWidth > 0) setVideoReady(true);
+  }, []);
 
   const fmtTime = (d: Date) => {
     const opts: Intl.DateTimeFormatOptions = {
@@ -386,16 +397,23 @@ export function SelfieClockIn({
                 autoPlay
                 playsInline
                 muted
+                onLoadedData={handleVideoReady}
+                onCanPlay={handleVideoReady}
+                onPlaying={handleVideoReady}
                 className="h-full w-full bg-black object-contain"
                 style={{ transform: "scaleX(-1)" }}
               />
-              {/* face guide */}
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                <div className="h-[42%] w-[64%] rounded-[50%] border-2 border-white/40" />
-              </div>
-              {starting && !camError && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/80">
-                  <Loader2 size={32} className="animate-spin text-gold" />
+              {/* face guide (only once the live frame is actually showing) */}
+              {videoReady && (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <div className="h-[42%] w-[64%] rounded-[50%] border-2 border-white/40" />
+                </div>
+              )}
+              {/* Opaque placeholder until the camera is fully out (frames flowing). */}
+              {!videoReady && !camError && (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black">
+                  <Camera size={40} className="text-faint" />
+                  <Loader2 size={28} className="animate-spin text-gold" />
                   <p className="text-sm text-muted">{t("selfie.starting", "Abriendo cámara…")}</p>
                 </div>
               )}
@@ -423,8 +441,8 @@ export function SelfieClockIn({
             <img src={stamped?.dataUrl} className="h-full w-full bg-black object-contain" alt="selfie" />
           )}
 
-          {/* live info chips (camera mode) */}
-          {phase === "camera" && !camError && (
+          {/* live info chips (camera mode) — only once the frame is showing */}
+          {phase === "camera" && !camError && videoReady && (
             <div
               className="absolute inset-x-0 bottom-0 z-10 flex flex-col gap-2 bg-gradient-to-t from-black/80 to-transparent px-4 pb-3 pt-10"
             >
@@ -446,13 +464,22 @@ export function SelfieClockIn({
             <div className="flex flex-col items-center gap-3">
               <button
                 onClick={capture}
-                disabled={!!camError || starting}
+                disabled={!!camError || !videoReady || locating}
                 aria-label={t("selfie.hint")}
                 className="shutter-btn flex h-20 w-20 items-center justify-center rounded-full border-4 border-gold bg-gold-soft transition-transform disabled:animate-none disabled:opacity-40"
               >
                 <Camera size={30} className="text-gold" />
               </button>
-              <p className="text-xs text-faint">{t("selfie.hint")}</p>
+              {/* Tell the guard WHY the shutter is still disabled (camera warming
+                  up, or waiting for the GPS fix) so we never capture without a
+                  location and crash downstream. */}
+              <p className="text-xs text-faint">
+                {!videoReady
+                  ? t("selfie.starting", "Abriendo cámara…")
+                  : locating
+                  ? t("selfie.waitingLocation", "Obteniendo ubicación…")
+                  : t("selfie.hint")}
+              </p>
             </div>
           ) : (
             <div className="flex gap-2">
