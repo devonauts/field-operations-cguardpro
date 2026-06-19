@@ -61,6 +61,18 @@ export const guardService = {
   /** Withdraw my pending early-clock-out request (escape a stuck approval). */
   cancelClockOutRequest: () =>
     api.post(tenantPath("/guard/me/clock-out/request/cancel"), { data: {} }).then(unwrap),
+  /** Request supervisor approval for a LATE clock-in (past the grace window). */
+  clockInRequestCreate: (stationId: string, reason?: string) =>
+    api
+      .post(tenantPath("/guard/me/clock-in/request"), { data: { stationId, reason } })
+      .then(unwrap),
+  /** Active late clock-in request status for a station (or { request: null }). */
+  clockInRequestGet: (stationId: string) =>
+    api
+      .get(
+        tenantPath("/guard/me/clock-in/request?stationId=" + encodeURIComponent(stationId)),
+      )
+      .then(unwrap),
   /** Update my own contact details (phone/address) — notifies HR in the CRM. */
   updateProfile: (data: { phone?: string; address?: string }) =>
     api.patch(tenantPath("/guard/me/profile"), { data }).then(unwrap),

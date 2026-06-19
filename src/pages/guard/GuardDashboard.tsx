@@ -138,6 +138,19 @@ export default function GuardDashboard() {
   const nextShift = data?.nextShift;
   const isClockedIn = !!data?.isClockedIn;
   const clockOutStatus: string | undefined = data?.clockOutRequest?.status;
+  const clockInWindow: {
+    scheduledStart: string | null;
+    availableAt: string | null;
+    lateAfter: string | null;
+    state: "open" | "too_early" | "late" | "none";
+  } | null = data?.clockInWindow || null;
+
+  // Live status of a LATE clock-in approval request (mirrors clockOutStatus).
+  // Tracked locally because the request is created from this screen and then
+  // polled/pushed until the supervisor decides; null = no request in flight.
+  const [clockInReqStatus, setClockInReqStatus] = useState<string | null>(null);
+  const [clockInReqStationId, setClockInReqStationId] = useState<string | null>(null);
+  const [clockInReqBusy, setClockInReqBusy] = useState(false);
 
   // Publish duty state to the shell (tab bar hides operational UI when off duty).
   useEffect(() => {
@@ -157,6 +170,76 @@ export default function GuardDashboard() {
       position: "top",
     });
   };
+
+  // Toast announcing a late clock-in decision (mirrors the clock-out toast).
+  const showClockInDecisionToast = (status: "approved" | "rejected") => {
+    presentToast({
+      message:
+        status === "approved"
+          ? t("clockin.approvedToast", "Tu entrada tardía fue aprobada. Ya puedes marcar entrada.")
+          : t("clockin.rejectedToast", "Tu solicitud de entrada tardía fue rechazada."),
+      duration: 3500,
+      color: status === "approved" ? "success" : "danger",
+      position: "top",
+    });
+  };
+
+  // Create a late clock-in approval request for a station and begin tracking it.
+  // Reused by the pre-gated CTA and by submitClockIn's defensive path.
+  const requestLateClockIn = async (stationId: string, reason?: string) => {
+    if (clockInReqBusy) return;
+    setClockInReqBusy(true);
+    try {
+      const r: any = await guardService.clockInRequestCreate(stationId, reason);
+      const s: string | undefined = r?.request?.status;
+      setClockInReqStationId(stationId);
+      setClockInReqStatus(s || "pending");
+      fb.tap();
+    } catch (e: any) {
+      logError("clockIn.requestCreate", e);
+      presentToast({
+        message:
+          e?.data?.message ||
+          t("clockin.requestError", "No se pudo enviar la solicitud. Inténtalo de nuevo."),
+        duration: 3500,
+        color: "danger",
+        position: "top",
+      });
+    } finally {
+      setClockInReqBusy(false);
+    }
+  };
+
+  // Live late clock-in decision: while a request is PENDING, poll the status
+  // endpoint so the UI flips the moment the supervisor decides. Mirrors the
+  // early-clock-out poll below; the push listener is the instant path.
+  useEffect(() => {
+    if (isClockedIn || !clockInReqStationId || clockInReqStatus !== "pending") return;
+    let active = true;
+    const sid = clockInReqStationId;
+    const id = setInterval(async () => {
+      try {
+        const r: any = await guardService.clockInRequestGet(sid);
+        const s: string | undefined = r?.request?.status;
+        if (active && s && s !== "pending") {
+          setClockInReqStatus(s);
+          if (s === "approved") {
+            await reload();
+            showClockInDecisionToast("approved");
+          } else if (s === "rejected") {
+            showClockInDecisionToast("rejected");
+          }
+        }
+      } catch {
+        /* transient — try again next tick */
+      }
+    }, 6000);
+    return () => {
+      active = false;
+      clearInterval(id);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isClockedIn, clockInReqStationId, clockInReqStatus]);
 
   // Live early-clock-out decision: while a request is PENDING, poll the
   // lightweight status endpoint so the UI flips to "approved/rejected" the
@@ -223,6 +306,14 @@ export default function GuardDashboard() {
         position: "top",
         buttons: [{ text: t("nav.schedule", "Horario"), handler: () => history.push("/guard/schedule") }],
       });
+      return;
+    }
+    // Late clock-in decision pushed by the backend — flip the UI instantly.
+    if (type === "attendance.clockin_approved" || type === "attendance.clockin_rejected") {
+      const ciStatus = type === "attendance.clockin_approved" ? "approved" : "rejected";
+      setClockInReqStatus(ciStatus);
+      if (ciStatus === "approved") reload();
+      showClockInDecisionToast(ciStatus);
       return;
     }
     if (type !== "attendance.clockout_approved" && type !== "attendance.clockout_rejected") {
@@ -387,7 +478,34 @@ export default function GuardDashboard() {
         device,
       });
       if (res && res.success === false) {
-        setGpsError(res.message || t("guard.geofenceError"));
+        // Too early: the window hasn't opened yet. Don't treat as an error —
+        // surface the backend hint and return to idle.
+        if (res.error === "too_early") {
+          presentToast({
+            message:
+              res.message ||
+              t("clockin.tooEarlyToast", "Aún no puedes marcar entrada. Espera a que abra tu ventana."),
+            duration: 4000,
+            color: "warning",
+            position: "top",
+          });
+          resetFlow();
+        } else if (res.error === "late_needs_approval") {
+          // Past the grace window: route into the approval flow instead of a
+          // generic failure (create request + poll/push for the decision).
+          presentToast({
+            message:
+              res.message ||
+              t("clockin.lateNeedsApprovalToast", "Llegaste tarde. Solicita aprobación de tu supervisor."),
+            duration: 4000,
+            color: "warning",
+            position: "top",
+          });
+          await requestLateClockIn(flowStation.id);
+          resetFlow();
+        } else {
+          setGpsError(res.message || t("guard.geofenceError"));
+        }
       } else {
         resetFlow();
         await reload();
@@ -490,26 +608,27 @@ export default function GuardDashboard() {
                     </span>
                   </div>
                 )}
-                <button
-                  onClick={() => {
+                <PrimaryClockInCta
+                  primaryTarget={primaryTarget}
+                  busy={busy}
+                  window={clockInWindow}
+                  reqStatus={
+                    primaryTarget && clockInReqStationId === primaryTarget.id
+                      ? clockInReqStatus
+                      : null
+                  }
+                  reqBusy={clockInReqBusy}
+                  onClockIn={() => {
                     if (!primaryTarget) return;
                     fb.press();
                     beginClockIn(primaryTarget);
                   }}
-                  disabled={busy || !primaryTarget}
-                  className="btn-xl glow-gold w-full bg-gradient-to-b from-gold to-gold-strong text-on-accent active:from-gold-hover active:to-gold-hover disabled:opacity-50"
-                >
-                  {busy ? (
-                    <Loader2 size={20} className="animate-spin" />
-                  ) : (
-                    <>
-                      <Power size={20} className="shrink-0" strokeWidth={2.5} />
-                      <span className="text-base font-bold uppercase tracking-wide">
-                        {t("guard.clockInNow", "Marcar entrada")}
-                      </span>
-                    </>
-                  )}
-                </button>
+                  onRequestApproval={() => {
+                    if (!primaryTarget) return;
+                    fb.press();
+                    requestLateClockIn(primaryTarget.id);
+                  }}
+                />
                 {extraTargets.map((st) => (
                   <button
                     key={st.id}
@@ -950,6 +1069,148 @@ function LateWarning({
       </div>
     </div>
   );
+}
+
+/* The hero CLOCK-IN call-to-action, PRE-GATED by the backend's clock-in window
+   so a guard isn't sent through the full checklist→selfie flow only to be
+   blocked at submit:
+   - too_early → disabled, with an "available at HH:MM" hint (no flow start).
+   - late      → an approval gate: request → pending → approved → clock in;
+                 rejected lets them re-request. Mirrors the early-clock-out UX.
+   - open/none → the normal gold "Marcar entrada" button (unchanged behaviour). */
+function PrimaryClockInCta({
+  primaryTarget,
+  busy,
+  window: win,
+  reqStatus,
+  reqBusy,
+  onClockIn,
+  onRequestApproval,
+}: {
+  primaryTarget: any;
+  busy: boolean;
+  window: {
+    scheduledStart: string | null;
+    availableAt: string | null;
+    lateAfter: string | null;
+    state: "open" | "too_early" | "late" | "none";
+  } | null;
+  reqStatus: string | null;
+  reqBusy: boolean;
+  onClockIn: () => void;
+  onRequestApproval: () => void;
+}) {
+  const { t } = useTranslation();
+  const state = win?.state || "open";
+
+  // The standard gold clock-in button — used for open/none and for the
+  // "Aprobado — Marcar entrada" terminal state of the late flow.
+  const normalButton = (label?: string) => (
+    <button
+      onClick={onClockIn}
+      disabled={busy || !primaryTarget}
+      className="btn-xl glow-gold w-full bg-gradient-to-b from-gold to-gold-strong text-on-accent active:from-gold-hover active:to-gold-hover disabled:opacity-50"
+    >
+      {busy ? (
+        <Loader2 size={20} className="animate-spin" />
+      ) : (
+        <>
+          <Power size={20} className="shrink-0" strokeWidth={2.5} />
+          <span className="text-base font-bold uppercase tracking-wide">
+            {label || t("guard.clockInNow", "Marcar entrada")}
+          </span>
+        </>
+      )}
+    </button>
+  );
+
+  // TOO EARLY — the window hasn't opened. Disable and tell them when it will.
+  if (state === "too_early") {
+    const at = win?.availableAt ? fmtTime(win.availableAt) : null;
+    return (
+      <div className="space-y-2">
+        <button
+          disabled
+          className="btn-xl w-full cursor-not-allowed border border-line bg-surface-2 text-muted disabled:opacity-100"
+        >
+          <Clock size={18} className="shrink-0" />
+          <span className="text-sm font-bold uppercase tracking-wide">
+            {at
+              ? t("clockin.availableAt", { time: at, defaultValue: `Disponible a las ${at}` })
+              : t("clockin.notYetAvailable", "Aún no disponible")}
+          </span>
+        </button>
+      </div>
+    );
+  }
+
+  // LATE — supervisor approval is required before the selfie flow.
+  if (state === "late") {
+    // Approved → proceed into the normal selfie flow.
+    if (reqStatus === "approved") {
+      return normalButton(t("clockin.approvedClockIn", "Aprobado — Marcar entrada"));
+    }
+    // Pending → waiting on the supervisor.
+    if (reqStatus === "pending") {
+      return (
+        <button
+          disabled
+          className="btn-xl w-full cursor-not-allowed border border-gold/40 bg-gold/5 text-gold disabled:opacity-100"
+        >
+          <Loader2 size={18} className="shrink-0 animate-spin" />
+          <span className="text-sm font-bold uppercase tracking-wide">
+            {t("clockin.waitingApproval", "Esperando aprobación del supervisor…")}
+          </span>
+        </button>
+      );
+    }
+    // Rejected → show the outcome and allow a re-request.
+    if (reqStatus === "rejected") {
+      return (
+        <div className="space-y-2">
+          <p className="flex items-center justify-center gap-1.5 text-center text-xs font-semibold text-critical">
+            <XCircle size={14} className="shrink-0" />
+            {t("clockin.requestRejected", "Tu solicitud fue rechazada.")}
+          </p>
+          <button
+            onClick={onRequestApproval}
+            disabled={reqBusy || !primaryTarget}
+            className="btn-xl w-full border border-gold/40 bg-gold/5 text-gold active:bg-gold/10 disabled:opacity-50"
+          >
+            {reqBusy ? (
+              <Loader2 size={18} className="shrink-0 animate-spin" />
+            ) : (
+              <span className="text-sm font-bold uppercase tracking-wide">
+                {t("clockin.requestAgain", "Solicitar aprobación de nuevo")}
+              </span>
+            )}
+          </button>
+        </div>
+      );
+    }
+    // No request yet → kick off the approval flow.
+    return (
+      <button
+        onClick={onRequestApproval}
+        disabled={reqBusy || !primaryTarget}
+        className="btn-xl glow-gold w-full bg-gradient-to-b from-gold to-gold-strong text-on-accent active:from-gold-hover active:to-gold-hover disabled:opacity-50"
+      >
+        {reqBusy ? (
+          <Loader2 size={20} className="animate-spin" />
+        ) : (
+          <>
+            <AlertTriangle size={18} className="shrink-0" strokeWidth={2.5} />
+            <span className="text-sm font-bold uppercase tracking-wide">
+              {t("clockin.requestApproval", "Solicitar aprobación de entrada tardía")}
+            </span>
+          </>
+        )}
+      </button>
+    );
+  }
+
+  // OPEN / NONE — unchanged behaviour.
+  return normalButton();
 }
 
 function PerformanceSection({ perf }: { perf: ReturnType<typeof useAsync<any>> }) {
