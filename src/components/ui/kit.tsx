@@ -48,7 +48,7 @@ export function SectionCard({
   inset?: boolean;
 }) {
   return (
-    <div className={`card-elev ${inset ? "p-4" : ""} ${className}`}>{children}</div>
+    <div className={`card-elev ${inset ? "p-5" : ""} ${className}`}>{children}</div>
   );
 }
 
