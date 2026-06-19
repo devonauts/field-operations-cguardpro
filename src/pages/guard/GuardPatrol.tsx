@@ -7,7 +7,6 @@ import {
 } from "lucide-react";
 import { Screen } from "@/components/Screen";
 import { Card, Loader, EmptyState, SectionTitle } from "@/components/ui";
-import { CustomSelect } from "@/components/Select";
 import { RondaQRScanner } from "@/components/RondaQRScanner";
 import { IncidentForm } from "@/components/IncidentForm";
 import { usePhotoCapture, PhotoStrip } from "@/components/photoCapture";
@@ -68,6 +67,7 @@ export default function GuardPatrol() {
   const [pendingCp, setPendingCp] = useState<RondaCheckpoint | null>(null);
   const [issueOpen, setIssueOpen] = useState(false);
   const [pending, setPending] = useState<PendingScan[]>(() => ls.get<PendingScan[]>(PENDING_KEY, []));
+  const [chooserOpen, setChooserOpen] = useState(false);
   const flushingRef = useRef(false);
   const flushPendingRef = useRef<() => void>(() => {});
 
@@ -139,13 +139,19 @@ export default function GuardPatrol() {
 
   const persistScanned = (next: Set<string>) => ls.set(scKey(routeId), Array.from(next));
 
-  const startPatrol = () => {
+  const startPatrol = (rid?: string) => {
+    const id = rid || routeId;
+    if (!id) return;
     fb.press();
+    setChooserOpen(false);
+    if (id !== selectedId) setSelectedId(id);
     const ts = Date.now();
+    // Persist BEFORE the route-restore effect runs so it reconciles to this
+    // session (and to the chosen route's scanned set) rather than overriding it.
+    ls.set(sKey(id), { startedAt: ts });
     setStartedAt(ts);
-    ls.set(sKey(routeId), { startedAt: ts });
     // Stamp startAt + notify tenant/client (best-effort; don't block the UI).
-    if (routeId) rondasService.startPatrol(routeId).catch(() => {});
+    rondasService.startPatrol(id).catch(() => {});
   };
   const finishPatrol = () => {
     fb.success();
@@ -256,10 +262,10 @@ export default function GuardPatrol() {
       right={
         startedAt ? (
           <span className="font-mono text-sm font-bold tabular-nums text-online">{fmtElapsed(now - startedAt)}</span>
-        ) : checkpoints.length > 0 ? (
+        ) : routes.length > 0 ? (
           <button
-            onClick={() => { fb.tap(); startPatrol(); }}
-            aria-label={doneCount > 0 ? t("rondas.resume") : t("rondas.start")}
+            onClick={() => { fb.tap(); setChooserOpen(true); }}
+            aria-label={t("rondas.start")}
             className="grid h-10 w-10 place-items-center rounded-full bg-gold-strong text-on-accent active:bg-gold-hover"
           >
             <Plus size={22} />
@@ -332,25 +338,24 @@ export default function GuardPatrol() {
           ) : (
             /* =================== NOT STARTED — history first =================== */
             <>
-              {/* Pick which route the + button starts (only when several exist). */}
-              {routes.length > 1 && (
-                <CustomSelect
-                  value={route?.id || ""}
-                  options={routes.map((r) => ({ value: r.id, label: r.name }))}
-                  label={t("rondas.selectRoute")}
-                  onChange={(v) => setSelectedId(v)}
-                />
-              )}
-              {checkpoints.length === 0 && (
+              {routes.length === 0 && (
                 <div className="flex items-center gap-2 rounded-xl border border-line bg-surface px-4 py-3 text-xs text-muted">
                   <MapPin size={16} className="shrink-0 text-faint" />
                   <span>{t("rondas.noRoutes")}</span>
                 </div>
               )}
-              <RondaHistory patrols={data?.patrols || []} canStart={checkpoints.length > 0} />
+              <RondaHistory patrols={data?.patrols || []} canStart={routes.length > 0} />
             </>
           )}
         </div>
+      )}
+
+      {chooserOpen && (
+        <RouteChooserSheet
+          routes={routes}
+          onPick={(rid) => startPatrol(rid)}
+          onClose={() => setChooserOpen(false)}
+        />
       )}
 
       {/* action bar */}
@@ -576,6 +581,46 @@ function RondaHistory({ patrols, canStart }: { patrols: any[]; canStart: boolean
           ))}
         </Card>
       )}
+    </div>
+  );
+}
+
+/** Bottom sheet that always opens before starting: pick which ronda to run. */
+function RouteChooserSheet({ routes, onPick, onClose }: { routes: RondaRoute[]; onPick: (id: string) => void; onClose: () => void; }) {
+  const { t } = useTranslation();
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col justify-end" role="dialog">
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <div className="relative max-h-[80vh] overflow-y-auto rounded-t-2xl border-t border-line bg-surface p-4" style={footerStyle}>
+        <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-line-2" />
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-base font-bold text-ink">{t("rondas.chooseRoute", "Elige una ronda")}</h3>
+          <button onClick={onClose} className="rounded-full p-1.5 text-muted active:bg-surface-2" aria-label={t("app.close", "Cerrar")}><X size={20} /></button>
+        </div>
+        {routes.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted">{t("rondas.noRoutes")}</p>
+        ) : (
+          <div className="space-y-2.5">
+            {routes.map((r) => {
+              const count = (r.tags || []).length;
+              return (
+                <button
+                  key={r.id}
+                  onClick={() => { fb.tap(); onPick(r.id); }}
+                  className="flex w-full items-center gap-3.5 rounded-2xl border border-line bg-surface px-4 py-4 text-left active:bg-surface-2"
+                >
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gold/15 text-gold"><Navigation size={22} /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] font-semibold text-ink">{r.name}</span>
+                    <span className="mt-0.5 block text-xs text-muted">{count} {t("rondas.allCheckpoints").toLowerCase()}</span>
+                  </span>
+                  <ChevronRight size={18} className="shrink-0 text-muted" />
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
