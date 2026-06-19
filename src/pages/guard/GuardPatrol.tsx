@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { IonModal, useIonToast } from "@ionic/react";
 import {
   MapPin, CheckCircle2, Circle, ScanLine, Loader2, X, AlertTriangle,
-  PartyPopper, RefreshCw, Navigation, Play, Flag, History, CloudOff, ChevronRight,
+  PartyPopper, RefreshCw, Navigation, Plus, Flag, History, CloudOff, ChevronRight,
 } from "lucide-react";
 import { Screen } from "@/components/Screen";
 import { Card, Loader, EmptyState, SectionTitle } from "@/components/ui";
@@ -68,7 +68,6 @@ export default function GuardPatrol() {
   const [pendingCp, setPendingCp] = useState<RondaCheckpoint | null>(null);
   const [issueOpen, setIssueOpen] = useState(false);
   const [pending, setPending] = useState<PendingScan[]>(() => ls.get<PendingScan[]>(PENDING_KEY, []));
-  const [showHistory, setShowHistory] = useState(false);
   const flushingRef = useRef(false);
   const flushPendingRef = useRef<() => void>(() => {});
 
@@ -257,28 +256,22 @@ export default function GuardPatrol() {
       right={
         startedAt ? (
           <span className="font-mono text-sm font-bold tabular-nums text-online">{fmtElapsed(now - startedAt)}</span>
+        ) : checkpoints.length > 0 ? (
+          <button
+            onClick={() => { fb.tap(); startPatrol(); }}
+            aria-label={doneCount > 0 ? t("rondas.resume") : t("rondas.start")}
+            className="grid h-10 w-10 place-items-center rounded-full bg-gold-strong text-on-accent active:bg-gold-hover"
+          >
+            <Plus size={22} />
+          </button>
         ) : undefined
       }
     >
       {loading ? (
         <Loader />
-      ) : checkpoints.length === 0 ? (
-        <>
-          <EmptyState icon={<MapPin size={28} />} title={t("rondas.noRoutes")} />
-          <HistorySection patrols={data?.patrols || []} open={showHistory} setOpen={setShowHistory} />
-        </>
       ) : (
         <div className="space-y-4">
-          {routes.length > 1 && !startedAt && (
-            <CustomSelect
-              value={route?.id || ""}
-              options={routes.map((r) => ({ value: r.id, label: r.name }))}
-              label={t("rondas.selectRoute")}
-              onChange={(v) => setSelectedId(v)}
-            />
-          )}
-
-          {/* offline / pending banner */}
+          {/* offline / pending banner (shared) */}
           {pending.length > 0 && (
             <div className="flex items-center gap-2 rounded-xl border border-high/40 bg-high/10 px-3 py-2.5 text-xs text-high">
               <CloudOff size={15} className="shrink-0" />
@@ -287,22 +280,8 @@ export default function GuardPatrol() {
             </div>
           )}
 
-          {!startedAt ? (
-            /* ---------- start screen ---------- */
-            <Card className="p-6 text-center">
-              <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl border border-gold/30 bg-gold-soft">
-                <Play className="text-gold" size={30} />
-              </div>
-              <p className="text-base font-semibold text-ink">{route?.name}</p>
-              <p className="mt-1 text-xs text-muted">{t("rondas.startHint")}</p>
-              <p className="mt-1 text-xs text-faint">{checkpoints.length} {t("rondas.allCheckpoints").toLowerCase()}</p>
-              <button onClick={startPatrol} className="btn-xl mt-5 w-full bg-gold-strong text-on-accent active:bg-gold-hover">
-                <Play size={18} />
-                {doneCount > 0 ? t("rondas.resume") : t("rondas.start")}
-              </button>
-            </Card>
-          ) : (
-            /* ---------- in-progress ---------- */
+          {startedAt ? (
+            /* ====================== IN PROGRESS ====================== */
             <>
               <Card className="p-4">
                 <SectionTitle right={<span className="text-xs text-muted">{t("rondas.progress", { done: doneCount, total: checkpoints.length })}</span>}>
@@ -350,9 +329,27 @@ export default function GuardPatrol() {
                 })}
               </div>
             </>
+          ) : (
+            /* =================== NOT STARTED — history first =================== */
+            <>
+              {/* Pick which route the + button starts (only when several exist). */}
+              {routes.length > 1 && (
+                <CustomSelect
+                  value={route?.id || ""}
+                  options={routes.map((r) => ({ value: r.id, label: r.name }))}
+                  label={t("rondas.selectRoute")}
+                  onChange={(v) => setSelectedId(v)}
+                />
+              )}
+              {checkpoints.length === 0 && (
+                <div className="flex items-center gap-2 rounded-xl border border-line bg-surface px-4 py-3 text-xs text-muted">
+                  <MapPin size={16} className="shrink-0 text-faint" />
+                  <span>{t("rondas.noRoutes")}</span>
+                </div>
+              )}
+              <RondaHistory patrols={data?.patrols || []} canStart={checkpoints.length > 0} />
+            </>
           )}
-
-          <HistorySection patrols={data?.patrols || []} open={showHistory} setOpen={setShowHistory} />
         </div>
       )}
 
@@ -545,36 +542,40 @@ function ScanConfirm({ checkpoint, settings, onClose, onSubmit }: {
 }
 
 /* ----------------------------- history ----------------------------- */
-function HistorySection({ patrols, open, setOpen }: { patrols: any[]; open: boolean; setOpen: (b: boolean) => void }) {
+/** Primary content while no patrol is running: the ronda history, newest first. */
+function RondaHistory({ patrols, canStart }: { patrols: any[]; canStart: boolean }) {
   const { t } = useTranslation();
   return (
-    <Card className="p-0">
-      <button onClick={() => { fb.tap(); setOpen(!open); }} className="flex w-full items-center gap-2 rounded-xl px-4 py-3.5 text-sm font-semibold text-ink">
-        <History size={16} className="text-gold" />
-        <span className="flex-1 text-left">{t("rondas.history")}</span>
-        <ChevronRight size={18} className={`text-muted transition-transform ${open ? "rotate-90" : ""}`} />
-      </button>
-      {open && (
-        <div className="border-t border-line px-4 py-2">
-          {patrols.length === 0 ? (
-            <p className="py-3 text-center text-xs text-muted">{t("rondas.noHistory")}</p>
-          ) : (
-            <div className="divide-y divide-line">
-              {patrols.slice(0, 20).map((p, i) => (
-                <div key={p.id || i} className="flex items-center gap-3 py-2.5">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm text-ink">{p.routeName || t("rondas.title")}</p>
-                    <p className="text-[11px] text-faint">{fmtDateTime(p.startAt || p.updatedAt)} · {p.scanCount} {t("rondas.allCheckpoints").toLowerCase()}</p>
-                  </div>
-                  <span className={`shrink-0 rounded-md border px-2 py-0.5 text-[11px] font-medium ${p.status === "completed" ? "border-online/40 bg-online/5 text-online" : "border-line-2 text-muted"}`}>
-                    {p.status === "completed" ? t("rondas.scanStatus.completed") : t("rondas.inProgress")}
-                  </span>
-                </div>
-              ))}
-            </div>
+    <div>
+      <SectionTitle icon={<History size={16} />}>{t("rondas.history")}</SectionTitle>
+      {patrols.length === 0 ? (
+        <Card className="p-8 text-center">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border border-line bg-surface-2">
+            <History className="text-faint" size={26} />
+          </div>
+          <p className="text-sm font-semibold text-ink">{t("rondas.noHistory")}</p>
+          {canStart && (
+            <p className="mt-1 text-xs text-muted">{t("rondas.startWithPlus", "Toca + arriba para iniciar una ronda.")}</p>
           )}
-        </div>
+        </Card>
+      ) : (
+        <Card className="divide-y divide-line p-0">
+          {patrols.slice(0, 30).map((p, i) => (
+            <div key={p.id || i} className="flex items-center gap-3 px-4 py-3">
+              <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${p.status === "completed" ? "bg-online/15 text-online" : "bg-gold/15 text-gold"}`}>
+                {p.status === "completed" ? <CheckCircle2 size={18} /> : <Navigation size={18} />}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-ink">{p.routeName || t("rondas.title")}</p>
+                <p className="text-[11px] text-faint">{fmtDateTime(p.startAt || p.updatedAt)} · {p.scanCount} {t("rondas.allCheckpoints").toLowerCase()}</p>
+              </div>
+              <span className={`shrink-0 rounded-md border px-2 py-0.5 text-[11px] font-medium ${p.status === "completed" ? "border-online/40 bg-online/5 text-online" : "border-line-2 text-muted"}`}>
+                {p.status === "completed" ? t("rondas.scanStatus.completed") : t("rondas.inProgress")}
+              </span>
+            </div>
+          ))}
+        </Card>
       )}
-    </Card>
+    </div>
   );
 }
