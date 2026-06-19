@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useIonViewWillEnter, useIonViewWillLeave } from "@ionic/react";
 import { Mic, Loader2, Users, Volume2 } from "lucide-react";
 import { useRadio } from "@/context/RadioContext";
 
@@ -14,6 +15,11 @@ export default function RadioLiveChannel() {
   const { state, roster, speaker, talking, hint, myId, someoneElseTalking, onDuty, setScreenActive, resume, pressTalk, releaseTalk } = useRadio();
 
   // Hide the app-wide floating button while this full screen is open (one button).
+  // Use Ionic's view lifecycle, NOT mount/unmount: Ionic CACHES tab pages, so
+  // an unmount-based cleanup wouldn't fire when navigating away — which would
+  // leave screenActive=true and the floating button hidden everywhere.
+  useIonViewWillEnter(() => setScreenActive(true));
+  useIonViewWillLeave(() => setScreenActive(false));
   useEffect(() => {
     setScreenActive(true);
     return () => setScreenActive(false);

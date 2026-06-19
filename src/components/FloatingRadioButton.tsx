@@ -20,7 +20,14 @@ export default function FloatingRadioButton() {
   const [pos, setPos] = useState<{ x: number; y: number } | null>(() => {
     try {
       const s = JSON.parse(localStorage.getItem(POS_KEY) || "null");
-      return s && typeof s.x === "number" && typeof s.y === "number" ? s : null;
+      if (s && typeof s.x === "number" && typeof s.y === "number") {
+        // Clamp a previously-saved position back into the viewport so a stale
+        // off-screen value (rotation / smaller screen) can't strand the button.
+        const x = Math.max(8, Math.min(window.innerWidth - SIZE - 8, s.x));
+        const y = Math.max(8, Math.min(window.innerHeight - SIZE - 8, s.y));
+        return { x, y };
+      }
+      return null;
     } catch {
       return null;
     }
@@ -83,11 +90,15 @@ export default function FloatingRadioButton() {
   return (
     <div
       ref={ref}
-      className="fixed z-50 flex flex-col items-end gap-2"
+      className="fixed z-50"
       style={{ ...style, paddingBottom: "env(safe-area-inset-bottom)" }}
     >
+      {/* The button is the only in-flow element so its position never depends on
+          the status label. The label floats ABOVE the button (absolute, out of
+          flow) — showing/hiding it can't shift the button or push it off-screen. */}
+      <div className="relative">
       {status && (
-        <div className={`max-w-[60vw] truncate rounded-full px-3 py-1 text-[11px] font-semibold shadow-lg ${
+        <div className={`pointer-events-none absolute bottom-full right-0 mb-2 max-w-[60vw] truncate rounded-full px-3 py-1 text-[11px] font-semibold shadow-lg ${
           talking ? "bg-critical text-white" : speaker ? "bg-gold/90 text-on-accent" : "bg-surface-2 text-muted"
         }`}>
           {status}
@@ -113,6 +124,7 @@ export default function FloatingRadioButton() {
           {connecting ? <Loader2 size={24} className="animate-spin" /> : someoneElseTalking ? <Volume2 size={24} /> : <Mic size={24} strokeWidth={2.2} />}
         </span>
       </button>
+      </div>
     </div>
   );
 }
