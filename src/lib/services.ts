@@ -496,6 +496,9 @@ export const messageService = {
   },
   send: (id: string, body: string, clientMsgId: string, attachments?: MessageAttachment[]) =>
     api.post(tenantPath(`/guard/me/messages/${id}`), { data: { body, clientMsgId, attachments: attachments && attachments.length ? attachments : undefined } }).then(unwrap),
+  /** Start a new conversation with the office/CRM. Returns { conversationId, message }. */
+  create: (body: string, clientMsgId: string, attachments?: MessageAttachment[]) =>
+    api.post(tenantPath(`/guard/me/messages`), { data: { body, clientMsgId, attachments: attachments && attachments.length ? attachments : undefined } }).then(unwrap),
   markRead: (id: string) =>
     api.post(tenantPath(`/guard/me/messages/${id}/read`), { data: {} }).then(unwrap),
   /** Upload an image/video and return its attachment descriptor. */
