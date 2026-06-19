@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHistory } from "react-router-dom";
-import { ChevronRight, Footprints, ClipboardCheck } from "lucide-react";
+import { ChevronRight, ClipboardCheck } from "lucide-react";
 import { useAsync } from "@/lib/useAsync";
 import { incidentService, guardService } from "@/lib/services";
 import { rondasService } from "@/lib/rondas";
@@ -402,25 +402,21 @@ export default function OnDutyView({ data }: { data: any }) {
       </NavCard>
 
       {/* ===================== QUICK ACTIONS (on duty) ===================== */}
-      <div className="grid grid-cols-2 gap-3">
-        {[
-          { icon: <Footprints size={18} />, label: t("nav.patrol", "Ronda"), to: "/guard/patrol" },
-          { icon: <ClipboardCheck size={18} />, label: t("nav.quiz", "Examen"), to: "/guard/quiz" },
-        ].map((a) => (
-          <button
-            key={a.to}
-            onClick={() => {
-              fb.tap();
-              history.push(a.to);
-            }}
-            className="flex min-h-[54px] items-center gap-2.5 rounded-xl border border-line bg-surface px-4 text-sm font-semibold text-ink active:bg-surface-2"
-          >
-            <span className="shrink-0 text-gold">{a.icon}</span>
-            <span className="flex-1 text-left">{a.label}</span>
-            <ChevronRight size={16} className="shrink-0 text-muted" />
-          </button>
-        ))}
-      </div>
+      {/* Ronda now lives in the bottom tab bar while on duty; Examen stays here
+          as a single, larger action. */}
+      <button
+        onClick={() => {
+          fb.tap();
+          history.push("/guard/quiz");
+        }}
+        className="flex min-h-[68px] w-full items-center gap-3 rounded-2xl border border-line bg-surface px-5 text-[15px] font-semibold text-ink active:bg-surface-2"
+      >
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gold/15 text-gold">
+          <ClipboardCheck size={22} />
+        </span>
+        <span className="flex-1 text-left">{t("nav.quiz", "Examen")}</span>
+        <ChevronRight size={18} className="shrink-0 text-muted" />
+      </button>
     </div>
   );
 }

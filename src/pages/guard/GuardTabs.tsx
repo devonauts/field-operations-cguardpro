@@ -8,7 +8,7 @@ import {
   IonLabel,
 } from "@ionic/react";
 import { useTranslation } from "react-i18next";
-import { Home, MessageSquare, User, UserCheck, GraduationCap, Calendar } from "lucide-react";
+import { Home, MessageSquare, User, UserCheck, GraduationCap, Calendar, Footprints } from "lucide-react";
 import GuardDashboard from "./GuardDashboard";
 import GuardSchedule from "./GuardSchedule";
 import GuardPatrol from "./GuardPatrol";
@@ -139,7 +139,13 @@ export default function GuardTabs() {
           <IonLabel>{t("nav.home", "Inicio")}</IonLabel>
         </IonTabButton>
 
-        {/* ON DUTY (clocked in): Visitantes + Mensajes. */}
+        {/* ON DUTY (clocked in): Ronda + Visitantes + Mensajes. */}
+        {onDuty && (
+          <IonTabButton tab="patrol" href="/guard/patrol">
+            <Footprints size={22} />
+            <IonLabel>{t("nav.patrol", "Ronda")}</IonLabel>
+          </IonTabButton>
+        )}
         {onDuty && (
           <IonTabButton tab="visitors" href="/guard/visitors">
             <UserCheck size={22} />
