@@ -95,10 +95,13 @@ function OnDutyHeader({ guardName, sector }: { guardName: string; sector: string
             <p className="label-eyebrow">{t("brand.tagline", "Security Operations")}</p>
           </div>
         </div>
-        <span className="relative">
-          <Avatar name={guardName} className="h-11 w-11 text-sm ring-2 ring-gold/40" />
-          <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background bg-online" />
-        </span>
+        <div className="flex items-center gap-3">
+          <NotificationBell />
+          <span className="relative">
+            <Avatar name={guardName} className="h-11 w-11 text-sm ring-2 ring-gold/40" />
+            <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background bg-online" />
+          </span>
+        </div>
       </div>
 
       <div className="mt-3 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide">
