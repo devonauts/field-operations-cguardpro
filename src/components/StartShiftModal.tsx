@@ -151,27 +151,40 @@ export function StartShiftModal({
 
           {/* checklist */}
           <div>
-            <p className="label-eyebrow mb-2">{t("startShift.checklist")}</p>
-            <div className="space-y-2">
-              {items.map((it) => (
-                <button
-                  key={it.key}
-                  onClick={() => toggle(it.key)}
-                  className={`flex w-full items-start gap-3 rounded-card border p-3.5 text-left transition-colors ${
-                    it.done ? "border-online/40 bg-online-soft" : "border-line bg-surface active:bg-surface-2"
-                  }`}
-                >
-                  {it.done ? (
-                    <CheckCircle2 size={22} className="mt-0.5 shrink-0 text-online" />
-                  ) : (
-                    <Circle size={22} className="mt-0.5 shrink-0 text-faint" />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className={`text-sm font-semibold ${it.done ? "text-ink" : "text-ink"}`}>{it.label}</p>
-                    {it.desc && <p className="mt-0.5 text-xs text-muted">{it.desc}</p>}
-                  </div>
-                </button>
-              ))}
+            <p className="label-eyebrow mb-2.5">{t("startShift.checklist")}</p>
+            <div className="space-y-2.5">
+              {items.map((it) => {
+                const Icon = it.icon;
+                return (
+                  <button
+                    key={it.key}
+                    onClick={() => toggle(it.key)}
+                    aria-pressed={it.done}
+                    className={`flex w-full items-center gap-3.5 rounded-card border p-4 text-left transition-colors ${
+                      it.done ? "border-online/50 bg-online-soft" : "border-line bg-surface active:bg-surface-2"
+                    }`}
+                  >
+                    {/* leading icon tile */}
+                    <div
+                      className={`grid h-12 w-12 shrink-0 place-items-center rounded-xl ${
+                        it.done ? "bg-online/15" : "bg-surface-2"
+                      }`}
+                    >
+                      <Icon size={22} className={it.done ? "text-online" : "text-muted"} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[15px] font-semibold leading-tight text-ink">{it.label}</p>
+                      {it.desc && <p className="mt-1 text-[13px] leading-snug text-muted">{it.desc}</p>}
+                    </div>
+                    {/* trailing check state */}
+                    {it.done ? (
+                      <CheckCircle2 size={26} className="shrink-0 text-online" />
+                    ) : (
+                      <Circle size={26} className="shrink-0 text-faint" />
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
