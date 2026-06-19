@@ -1243,7 +1243,7 @@ function PerformanceSection({ perf }: { perf: ReturnType<typeof useAsync<any>> }
   // only backup/volunteer.
   const quickActions = [
     {
-      icon: <LifeBuoy size={18} />,
+      icon: <LifeBuoy size={24} />,
       label: t("nav.backup"),
       sub: t("backup.cardSub", "Cubre turnos sin asignar y gana puntos extra"),
       to: "/guard/backup",
@@ -1339,16 +1339,16 @@ function PerformanceSection({ perf }: { perf: ReturnType<typeof useAsync<any>> }
               fb.tap();
               history.push(a.to);
             }}
-            className="flex min-h-[54px] items-center gap-3 rounded-xl border border-line bg-surface px-4 py-2.5 text-left active:bg-surface-2"
+            className="flex min-h-[84px] w-full items-center gap-3.5 rounded-2xl border border-line bg-surface px-5 py-4 text-left active:bg-surface-2"
           >
-            <span className="shrink-0 text-gold">{a.icon}</span>
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-gold/15 text-gold">{a.icon}</span>
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold text-ink">{a.label}</span>
+              <span className="block text-[15px] font-semibold text-ink">{a.label}</span>
               {a.sub && (
-                <span className="mt-0.5 block text-xs leading-snug text-muted">{a.sub}</span>
+                <span className="mt-0.5 block text-[13px] leading-snug text-muted">{a.sub}</span>
               )}
             </span>
-            <ChevronRight size={16} className="shrink-0 text-muted" />
+            <ChevronRight size={20} className="shrink-0 text-muted" />
           </button>
         ))}
       </div>
