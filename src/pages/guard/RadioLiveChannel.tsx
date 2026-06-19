@@ -76,13 +76,13 @@ export default function RadioLiveChannel() {
           onContextMenu={(e) => e.preventDefault()}
           disabled={connecting || someoneElseTalking}
           style={{ touchAction: "none", WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" } as any}
-          className="no-press relative grid h-40 w-40 place-items-center rounded-full disabled:opacity-50"
+          className="no-press relative grid h-48 w-48 place-items-center rounded-full disabled:opacity-50"
           aria-label={t("radio.holdToTalk", "Mantén para hablar")}
         >
           <span className={`absolute inset-0 rounded-full ${talking ? "bg-critical/20 animate-ping" : "bg-gold/15"}`} />
           <span className="absolute inset-4 rounded-full border border-gold/30" />
-          <span className={`relative grid h-28 w-28 place-items-center rounded-full text-on-accent shadow-[0_8px_40px_-8px_rgba(212,160,23,0.7)] ${talking ? "bg-critical text-white scale-105" : "bg-gold"} transition-transform`}>
-            <Mic size={44} strokeWidth={2.2} />
+          <span className={`relative grid h-36 w-36 place-items-center rounded-full text-on-accent shadow-[0_8px_40px_-8px_rgba(212,160,23,0.7)] ${talking ? "bg-critical text-white scale-105" : "bg-gold"} transition-transform`}>
+            <Mic size={52} strokeWidth={2.2} />
           </span>
         </button>
         <p className="mt-4 text-sm font-semibold text-ink">
