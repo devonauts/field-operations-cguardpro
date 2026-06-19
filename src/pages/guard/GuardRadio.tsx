@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useIonToast } from "@ionic/react";
 import { CheckCircle2, Loader2, Mic } from "lucide-react";
@@ -25,6 +25,7 @@ export default function GuardRadio() {
   const [present] = useIonToast();
   const [entry, setEntry] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
+  const lastSpokenEntry = useRef<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -36,6 +37,16 @@ export default function GuardRadio() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Play the AI dispatcher's spoken call ("Puesto X, adelante con su pase…")
+  // once per entry, so the guard HEARS central instead of just reading text.
+  useEffect(() => {
+    const url = entry?.promptAudioUrl;
+    const id = entry?.id;
+    if (!url || !id || lastSpokenEntry.current === id) return;
+    lastSpokenEntry.current = id;
+    try { const a = new Audio(url); a.play().catch(() => {}); } catch { /* ignore */ }
+  }, [entry?.id, entry?.promptAudioUrl]);
 
   // Wake on push + poll while open. A new pase de novedades buzzes the device.
   useEffect(() => {
