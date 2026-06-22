@@ -95,6 +95,11 @@ export class VoiceChannel {
   private _talking = false;
   private selfId = "";
   joined = false;
+  /** Intent to be in the channel. Stays true across reconnects so we auto re-join
+      on every (re)connect — the server drops us from the room on disconnect, so
+      without this a reconnected socket is connected-but-not-joined and PTT fails
+      with NOT_JOINED. Cleared only by an explicit leave()/disconnect(). */
+  private wantJoined = false;
 
   get talking() { return this._talking; }
   get connected() { return !!this.socket?.connected; }
@@ -176,7 +181,24 @@ export class VoiceChannel {
       auth: { token: opts.token, tenantId: opts.tenantId },
       reconnection: true,
     });
-    this.socket.on("connect", () => this.cb.onState?.("connected"));
+    this.socket.on("connect", () => {
+      this.cb.onState?.("connected");
+      // Self-heal on every (re)connect: socket.io auto-reconnects after a network
+      // blip / app foreground / backend reload, and the server removes us from the
+      // voice room on disconnect. If we still intend to be in the channel, re-join
+      // immediately — otherwise PTT returns NOT_JOINED and we hear nothing, with no
+      // recovery. (First-time join is still driven by the explicit join() call,
+      // which is what sets wantJoined.)
+      if (this.wantJoined && this.socket) {
+        this.socket.emit("radio:voice:join", {}, (res: any) => {
+          if (res?.ok) {
+            this.joined = true;
+            this.cb.onPresence?.(res.roster || []);
+            this.cb.onSpeaker?.(res.speaker ? { userId: res.speaker.userId, name: res.speaker.name } : null);
+          }
+        });
+      }
+    });
     this.socket.on("disconnect", () => { this.joined = false; this.cb.onState?.("idle"); });
     this.socket.on("connect_error", (e: any) => { this.cb.onState?.("error"); this.cb.onError?.(e?.message || "connect_error"); });
     this.socket.on("radio:voice:presence", (p: any) => this.cb.onPresence?.(p?.roster || []));
@@ -200,6 +222,7 @@ export class VoiceChannel {
 
   async join(): Promise<{ roster: VoiceMember[]; speaker: VoiceSpeaker }> {
     this.ensureContext(); // call from a user gesture (button tap) for autoplay policy
+    this.wantJoined = true; // intend to stay in the channel across reconnects
     return new Promise((resolve, reject) => {
       if (!this.socket) return reject(new Error("no socket"));
       this.socket.emit("radio:voice:join", {}, (res: any) => {
@@ -213,6 +236,7 @@ export class VoiceChannel {
 
   leave(): void {
     this.stopTalk();
+    this.wantJoined = false; // explicit leave — do not auto re-join on reconnect
     this.socket?.emit("radio:voice:leave", {}, () => {});
     this.joined = false;
   }
