@@ -8,7 +8,7 @@ import {
   IonLabel,
 } from "@ionic/react";
 import { useTranslation } from "react-i18next";
-import { Home, MessageSquare, User, UserCheck, GraduationCap, Calendar, Footprints } from "lucide-react";
+import { Home, MessageSquare, User, GraduationCap, Calendar, Footprints } from "lucide-react";
 import GuardDashboard from "./GuardDashboard";
 import GuardSchedule from "./GuardSchedule";
 import GuardPatrol from "./GuardPatrol";
@@ -43,6 +43,17 @@ export default function GuardTabs() {
   const userId = user?.id ?? null;
   const history = useHistory();
   const location = useLocation();
+
+  // Deep-link on notification TAP: a pase de novedades push guides the guard to
+  // open the app — tapping it should land them on the radio screen to report.
+  useEffect(() => {
+    return onPush((d: any) => {
+      if (!d || d._tapped !== "1") return;
+      const route = d.route || (d.type === "radio.check_request" ? "/guard/radio" : null);
+      if (route) { try { fb.tap(); } catch { /* ignore */ } history.push(route); }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Off duty the app is purely informative: hide operational UI (Radio, Patrol).
   const [onDuty, setOnDuty] = useState(getDuty());
@@ -133,52 +144,50 @@ export default function GuardTabs() {
         </Route>
       </IonRouterOutlet>
 
+      {/* NAV STABILITY (fix #6): previously the WHOLE operational/info set swapped
+          on duty change, so Horario and Mensajes silently vanished and became
+          unreachable. Choice: keep a STABLE primary set — Inicio, Horario,
+          Mensajes, Perfil are ALWAYS present (no destination disappears). Only a
+          single slot is duty-variant: Ronda while on duty (operational),
+          Entrenamiento while off duty. Visitantes (on-duty only) stays reachable
+          from the on-duty home, so nothing is lost. Least invasive, no coachmark. */}
       <IonTabBar slot="bottom">
         <IonTabButton tab="dashboard" href="/guard/dashboard">
           <Home size={22} />
           <IonLabel>{t("nav.home", "Inicio")}</IonLabel>
         </IonTabButton>
 
-        {/* ON DUTY (clocked in): Ronda + Visitantes + Mensajes. */}
-        {onDuty && (
+        {/* Duty-variant slot: operational Ronda on duty, Entrenamiento off duty. */}
+        {onDuty ? (
           <IonTabButton tab="patrol" href="/guard/patrol">
             <Footprints size={22} />
             <IonLabel>{t("nav.patrol", "Ronda")}</IonLabel>
           </IonTabButton>
-        )}
-        {onDuty && (
-          <IonTabButton tab="visitors" href="/guard/visitors">
-            <UserCheck size={22} />
-            <IonLabel>{t("nav.visitors", "Visitantes")}</IonLabel>
-          </IonTabButton>
-        )}
-        {onDuty && (
-          <IonTabButton tab="messages" href="/guard/messages">
-            <span style={{ position: "relative", display: "inline-flex" }}>
-              <MessageSquare size={22} />
-              {unread > 0 && (
-                <span style={{ position: "absolute", top: -5, right: -8, minWidth: 16, height: 16, padding: "0 4px", borderRadius: 9999, background: "var(--critical)", color: "#fff", fontSize: 9, fontWeight: 700, display: "grid", placeItems: "center" }}>
-                  {unread > 99 ? "99+" : unread}
-                </span>
-              )}
-            </span>
-            <IonLabel>{t("nav.messages", "Mensajes")}</IonLabel>
-          </IonTabButton>
-        )}
-
-        {/* OFF DUTY (not clocked in): Entrenamiento + Horario. */}
-        {!onDuty && (
+        ) : (
           <IonTabButton tab="training" href="/guard/training">
             <GraduationCap size={22} />
             <IonLabel>{t("nav.training", "Entrenamiento")}</IonLabel>
           </IonTabButton>
         )}
-        {!onDuty && (
-          <IonTabButton tab="schedule" href="/guard/schedule">
-            <Calendar size={22} />
-            <IonLabel>{t("nav.schedule", "Horario")}</IonLabel>
-          </IonTabButton>
-        )}
+
+        {/* Always present — never vanishes on duty change. */}
+        <IonTabButton tab="schedule" href="/guard/schedule">
+          <Calendar size={22} />
+          <IonLabel>{t("nav.schedule", "Horario")}</IonLabel>
+        </IonTabButton>
+
+        {/* Always present — never vanishes on duty change. */}
+        <IonTabButton tab="messages" href="/guard/messages">
+          <span style={{ position: "relative", display: "inline-flex" }}>
+            <MessageSquare size={22} />
+            {unread > 0 && (
+              <span style={{ position: "absolute", top: -5, right: -8, minWidth: 16, height: 16, padding: "0 4px", borderRadius: 9999, background: "var(--critical)", color: "#fff", fontSize: 9, fontWeight: 700, display: "grid", placeItems: "center" }}>
+                {unread > 99 ? "99+" : unread}
+              </span>
+            )}
+          </span>
+          <IonLabel>{t("nav.messages", "Mensajes")}</IonLabel>
+        </IonTabButton>
 
         <IonTabButton tab="profile" href="/guard/profile">
           <User size={22} />

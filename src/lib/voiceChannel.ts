@@ -81,6 +81,9 @@ export class VoiceChannel {
   private socket: Socket | null = null;
   private cb: VoiceCallbacks = {};
   private ctx: AudioContext | null = null;
+  // Near-silent looping source that holds the iOS audio session active so the
+  // channel keeps playing while the app is backgrounded (dies with ctx.close()).
+  private keepAlive: AudioBufferSourceNode | null = null;
 
   // capture (its own AudioContext so the mic doesn't fight playback, and is fully
   // released on stop — Android throws "Could not start audio source" otherwise)
@@ -217,6 +220,21 @@ export class VoiceChannel {
     const ctx: AudioContext = (this.ctx || new AC()) as AudioContext;
     if (!this.ctx) this.ctx = ctx;
     if (ctx.state === "suspended") ctx.resume().catch(() => {});
+    // Keep a near-silent looping source running so iOS keeps the audio session
+    // ALIVE in the background — Info.plist declares the 'audio' background mode,
+    // but without an active source the WebView audio is suspended and the radio
+    // goes silent when backgrounded. Started once per context.
+    if (!this.keepAlive) {
+      try {
+        const buf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate); // 1s silence
+        const src = ctx.createBufferSource();
+        src.buffer = buf; src.loop = true;
+        const g = ctx.createGain(); g.gain.value = 0.0001; // inaudible, keeps session active
+        src.connect(g); g.connect(ctx.destination);
+        src.start();
+        this.keepAlive = src;
+      } catch { /* ignore */ }
+    }
     return ctx;
   }
 
@@ -371,6 +389,8 @@ export class VoiceChannel {
     this.leave();
     this.teardownCapture();
     this.nextPlayTime = 0;
+    try { this.keepAlive?.stop(); } catch { /* ignore */ }
+    this.keepAlive = null;
     try { this.ctx?.close(); } catch { /* ignore */ }
     this.ctx = null;
     try { this.socket?.removeAllListeners(); } catch { /* ignore */ }

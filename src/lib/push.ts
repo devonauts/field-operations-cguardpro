@@ -51,8 +51,10 @@ export async function registerPush(): Promise<void> {
     FirebaseMessaging.addListener("tokenReceived", (e: any) => register(e?.token));
     // Foreground arrival → fan the payload out so screens can react immediately.
     FirebaseMessaging.addListener("notificationReceived", (e: any) => emitPush(e?.notification?.data));
-    // User tapped a notification (app backgrounded/killed) → surface the payload.
-    FirebaseMessaging.addListener("notificationActionPerformed", (e: any) => emitPush(e?.notification?.data));
+    // User tapped a notification (app backgrounded/killed) → surface the payload
+    // flagged as a tap so a listener can deep-link (e.g. open the radio screen).
+    FirebaseMessaging.addListener("notificationActionPerformed", (e: any) =>
+      emitPush({ ...(e?.notification?.data || {}), _tapped: "1" }));
 
     // getToken() registers for remote notifications and returns the FCM token
     // (on iOS after the APNs token is bridged). The listener above covers refreshes.
