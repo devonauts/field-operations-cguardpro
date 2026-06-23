@@ -27,15 +27,15 @@
     "passwordPlaceholder": "Tu contraseña",
     "signOut": "Cerrar sesión",
     "welcome": "Bienvenido de nuevo",
-    "subtitle": "Operaciones de campo para guardias y supervisores",
+    "subtitle": "Operaciones de campo para vigilantes y supervisores",
     "forgotPassword": "¿Olvidaste tu contraseña?",
     "errorGeneric": "No se pudo iniciar sesión. Revisa tus credenciales.",
-    "errorNotAllowed": "Esta app es solo para guardias de seguridad y supervisores.",
-    "errorNoRole": "Tu cuenta no tiene un rol de guardia o supervisor asignado.",
+    "errorNotAllowed": "Esta app es solo para vigilantes de seguridad y supervisores.",
+    "errorNoRole": "Tu cuenta no tiene un rol de vigilante o supervisor asignado.",
     "rateLimited": "Demasiados intentos. Intenta de nuevo en unos segundos."
   },
   "roles": {
-    "securityGuard": "Guardia de Seguridad",
+    "securityGuard": "Vigilante de Seguridad",
     "securitySupervisor": "Supervisor"
   },
   "nav": {
@@ -127,7 +127,7 @@
     "live": "En vivo",
     "critical": "{{count}} crítico",
     "openIncidents": "{{count}} incidentes abiertos",
-    "guardsOnSite": "Guardias en sitio",
+    "guardsOnSite": "Vigilantes en sitio",
     "ofScheduled": "de {{count}} programados",
     "openIncidentsKpi": "Incidentes abiertos",
     "requireAction": "{{count}} requieren acción",
@@ -137,22 +137,24 @@
     "target": "objetivo: < {{value}} min",
     "incidentPatrolActivity": "Actividad de incidentes y rondas — hoy",
     "incidentsThisWeek": "Incidentes esta semana",
-    "activeGuards": "Guardias activos",
+    "activeGuards": "Vigilantes activos",
     "onShift": "{{on}} / {{total}} en turno",
     "recentIncidents": "Incidentes recientes",
     "onPatrol": "En ronda",
     "stationary": "Estacionario",
-    "onBreak": "En descanso"
+    "onBreak": "En descanso",
+    "activeServices": "Servicios activos",
+    "presentCount": "{{n}} en turno"
   },
   "checkin": {
-    "title": "Asistencia de Guardias",
+    "title": "Asistencia de Vigilantes",
     "subtitle": "Controla la asistencia y el estado de turnos en tiempo real",
     "checkedIn": "Presentes",
     "checkedOut": "Salieron",
     "notInYet": "Sin llegar",
     "late": "Tarde",
     "searchPlaceholder": "Buscar por nombre, ID o gafete…",
-    "guard": "Guardia",
+    "guard": "Vigilante",
     "site": "Sitio",
     "shift": "Turno",
     "status": "Estado",
@@ -217,7 +219,16 @@
       "inProgress": "En proceso",
       "resolved": "Resuelto",
       "closed": "Cerrado"
-    }
+    },
+    "statusUpdated": "Estado actualizado",
+    "statusUpdateFailed": "No se pudo actualizar",
+    "actionAcknowledge": "Marcar en proceso",
+    "actionResolve": "Resolver",
+    "noteOptional": "Nota (opcional)",
+    "viewOnMap": "Ver en mapa",
+    "quickReport": "Reporte rápido",
+    "gpsLocating": "Ubicando…",
+    "gpsRetry": "GPS — reintentar"
   },
   "patrol": {
     "title": "Seguimiento de Rondas",
@@ -231,7 +242,8 @@
     "allCheckpoints": "Todos los puntos",
     "clearedDot": "Registrado",
     "pending": "Pendiente",
-    "notOnRoute": "Fuera de ruta"
+    "notOnRoute": "Fuera de ruta",
+    "recentScans": "Actividad de rondas"
   },
   "schedule": {
     "title": "Horario de Turnos",
@@ -240,8 +252,8 @@
     "weekOf": "Semana del {{range}}",
     "addShift": "Agregar turno",
     "shiftTimeline": "Línea de turnos",
-    "guardsScheduled": "{{count}} guardias programados",
-    "roster": "Lista de guardias",
+    "guardsScheduled": "{{count}} vigilantes programados",
+    "roster": "Lista de vigilantes",
     "on": "ACT",
     "off": "INA",
     "daySummary": "Resumen del día",
@@ -256,7 +268,7 @@
     "totalIncidents": "Incidentes totales (año)",
     "resolutionRate": "Tasa de resolución",
     "avgResponseTime": "Tiempo de respuesta prom.",
-    "guardsCertified": "Guardias certificados",
+    "guardsCertified": "Vigilantes certificados",
     "vsPrev": "vs periodo anterior",
     "monthlyTrend": "Tendencia mensual de incidentes",
     "reported": "Reportados",
@@ -509,7 +521,7 @@
       "quiz": "El examen toma el promedio de tus pruebas de seguridad del puesto y pesa un 12% del puntaje base.",
       "training": "La capacitación mide las formaciones asignadas que completaste y pesa un 10% del puntaje base.",
       "penalty": "Las faltas y atrasos aplican una penalización sobre tu puntaje base: mientras más faltas y atrasos, mayor el descuento.",
-      "bonus": "El respaldo suma un bono cuando te ofreces o cubres turnos de otros guardias, hasta un límite máximo."
+      "bonus": "El respaldo suma un bono cuando te ofreces o cubres turnos de otros vigilantes, hasta un límite máximo."
     }
   },
   "profile": {
@@ -689,8 +701,8 @@
   "uniform": {
     "title": "Inspección de uniforme",
     "subtitle": "Califica la presentación del personal",
-    "noGuards": "No hay guardias para inspeccionar.",
-    "searchGuard": "Buscar guardia…",
+    "noGuards": "No hay vigilantes para inspeccionar.",
+    "searchGuard": "Buscar vigilante…",
     "rate": "Calificar a {{name}}",
     "rating": "Calificación",
     "notes": "Notas (opcional)",
@@ -706,5 +718,37 @@
     "speakNow": "Habla ahora…",
     "required": "El resumen es obligatorio.",
     "submit": "Enviar y marcar salida"
+  },
+  "radio": {
+    "allClear": "Sin novedad",
+    "channelBusy": "Canal ocupado",
+    "channelClear": "Canal libre",
+    "checkRequest": "Pase de novedades",
+    "connecting": "Conectando…",
+    "defaultPrompt": "¿Alguna novedad o incidente en el puesto?",
+    "generalChannel": "Canal general",
+    "haveNews": "Con novedad",
+    "holdToTalk": "Mantén para hablar",
+    "holdToTalkChannel": "Mantén para hablar en el canal",
+    "isTalking": "está hablando",
+    "live": "En vivo",
+    "liveChannel": "Canal abierto",
+    "offDutyHint": "Marca tu entrada para conectarte al canal.",
+    "offDutyTitle": "Radio disponible en servicio",
+    "offline": "Sin conexión",
+    "onChannel": "En el canal",
+    "reportedByVoice": "Novedad reportada por voz en el canal.",
+    "respondOnChannel": "Mantén el botón del canal para reportar por voz, o marca aquí:",
+    "sendFailed": "No se pudo enviar. Reintenta.",
+    "sent": "Reporte enviado",
+    "talking": "Hablando",
+    "transmitting": "Transmitiendo…",
+    "you": "tú",
+    "youTalking": "Estás hablando"
+  },
+  "map": {
+    "openInMaps": "Ver en mapa",
+    "lastSeen": "visto {{ago}}",
+    "locate": "Mapa"
   }
 }

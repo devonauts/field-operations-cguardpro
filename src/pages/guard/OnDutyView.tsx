@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHistory } from "react-router-dom";
-import { ChevronRight, ClipboardCheck } from "lucide-react";
+import { ChevronRight, ClipboardCheck, LogOut, Siren, Timer, UserCheck } from "lucide-react";
 import { useAsync } from "@/lib/useAsync";
 import { incidentService, guardService } from "@/lib/services";
 import { rondasService } from "@/lib/rondas";
+import { getCurrentPosition } from "@/lib/geo";
+import { Button, MetricTile } from "@/components/ui/kit";
+import { Sheet, ResultSheet, SlideToConfirm } from "@/components/ui";
 import fb from "@/lib/feedback";
 
 /* ----------------------------------------------------------------- helpers */
@@ -105,6 +108,11 @@ export default function OnDutyView({ data }: { data: any }) {
   const { t } = useTranslation();
   const history = useHistory();
 
+  // ---- Panic / SOS (P0) ----
+  const [sosOpen, setSosOpen] = useState(false);
+  const [sosBusy, setSosBusy] = useState(false);
+  const [sosResult, setSosResult] = useState<null | "success" | "error">(null);
+
   const stations: any[] = data?.stations || [];
   const station = stations[0] || {};
   const punchInTime = data?.activeClockIn?.punchInTime || data?.activeClockIn?.createdAt;
@@ -198,6 +206,50 @@ export default function OnDutyView({ data }: { data: any }) {
   const initialLoading = incLoading && patrolsLoading && scansLoading && teamLoading;
   const sector = station.stationName || station.name || "—";
 
+  // Fire a panic/SOS incident: grab a quick GPS fix (same helper the rest of the
+  // app uses — getCurrentPosition is hard-bounded so this never hangs), then post
+  // a critical guard-scoped incident. Built to complete in under ~3s.
+  const sendPanic = async () => {
+    if (sosBusy) return;
+    setSosBusy(true);
+    setSosResult(null);
+    try {
+      let latitude: number | undefined;
+      let longitude: number | undefined;
+      try {
+        const pos = await getCurrentPosition();
+        latitude = pos.latitude;
+        longitude = pos.longitude;
+      } catch {
+        /* GPS optional — send the alert regardless of a fix */
+      }
+      await incidentService.createAsGuard({
+        incidentType: "panic",
+        type: "panic",
+        isPanic: true,
+        severity: "critical",
+        priority: "critical",
+        status: "abierto",
+        title: t("sos.title", "SOS / Pánico"),
+        subject: t("sos.title", "SOS / Pánico"),
+        description: t("sos.desc", "Alerta de pánico enviada por el vigilante."),
+        content: t("sos.desc", "Alerta de pánico enviada por el vigilante."),
+        location: sector,
+        stationId: station?.id,
+        postSiteId: station?.postSiteId,
+        latitude,
+        longitude,
+        incidentAt: new Date().toISOString(),
+      });
+      setSosResult("success");
+      setSosOpen(false);
+    } catch {
+      setSosResult("error");
+    } finally {
+      setSosBusy(false);
+    }
+  };
+
   if (initialLoading) {
     return (
       <div className="space-y-4">
@@ -234,9 +286,6 @@ export default function OnDutyView({ data }: { data: any }) {
             {schedStart && schedEnd ? (
               <>
                 {t("onduty.shiftWord", "Turno")} {fmtClock(schedStart)} – {fmtClock(schedEnd)}
-                {remainingLabel && (
-                  <> · {t("onduty.remainingShort", "{{r}} restante", { r: remainingLabel })}</>
-                )}
               </>
             ) : (
               <>
@@ -244,6 +293,25 @@ export default function OnDutyView({ data }: { data: any }) {
               </>
             )}
           </p>
+
+          {/* Glanceable remaining time (P1): time-remaining + ends-at promoted to a
+              prominent stat co-equal with elapsed, instead of a tiny sub-line. */}
+          {remainingLabel && (
+            <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-gold/15 bg-gold/5 p-3">
+              <MetricTile
+                tone="gold"
+                icon={<Timer size={20} />}
+                value={remainingLabel}
+                label={t("onduty.remaining", "Restante")}
+              />
+              <MetricTile
+                tone="neutral"
+                icon={<ClipboardCheck size={20} />}
+                value={schedEnd ? fmtClock(schedEnd) : "—"}
+                label={t("onduty.endsAt", "Finaliza")}
+              />
+            </div>
+          )}
 
           <div className="mt-4 grid grid-cols-3 divide-x divide-gold/15 border-t border-gold/15 pt-3">
             <ElapsedStat since={punchInTime} label={t("onduty.elapsed", "Transcurrido")} />
@@ -417,6 +485,117 @@ export default function OnDutyView({ data }: { data: any }) {
         <span className="flex-1 text-left">{t("nav.quiz", "Examen")}</span>
         <ChevronRight size={18} className="shrink-0 text-muted" />
       </button>
+
+      {/* Visitantes — kept reachable from the on-duty home now that it's no longer
+          a bottom tab (see GuardTabs nav-stability note). */}
+      <button
+        onClick={() => {
+          fb.tap();
+          history.push("/guard/visitors");
+        }}
+        className="flex min-h-[68px] w-full items-center gap-3 rounded-2xl border border-line bg-surface px-5 text-[15px] font-semibold text-ink active:bg-surface-2"
+      >
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gold/15 text-gold">
+          <UserCheck size={22} />
+        </span>
+        <span className="flex-1 text-left">{t("nav.visitors", "Visitantes")}</span>
+        <ChevronRight size={18} className="shrink-0 text-muted" />
+      </button>
+
+      {/* ===================== MARCAR SALIDA (P1) ===================== */}
+      {/* A clearly-LABELED clock-out affordance so the guard doesn't have to tap
+          the (unlabeled) status card to find it. Smallest change: route to the
+          shift-detail screen which already hosts the full clock-out flow. */}
+      <Button
+        variant="danger"
+        full
+        onClick={() => {
+          fb.press();
+          history.push("/guard/shift");
+        }}
+      >
+        <LogOut size={18} />
+        {t("onduty.clockOut", "Marcar salida")}
+      </Button>
+
+      {/* ============================ SOS / PÁNICO (P0) ============================ */}
+      {/* Always-available emergency control. Requires a deliberate slide (no
+          accidental single-tap). Opens a focused sheet with SlideToConfirm. */}
+      <div className="rounded-2xl border border-critical/40 bg-critical/10 p-4">
+        <div className="flex items-center gap-2.5">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-critical/40 bg-critical/15 text-critical">
+            <Siren size={18} strokeWidth={2.5} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-extrabold tracking-tight text-critical">
+              {t("sos.heading", "Emergencia")}
+            </p>
+            <p className="text-xs text-muted">
+              {t("sos.sub", "Envía una alerta de pánico a tu central")}
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            fb.press();
+            setSosOpen(true);
+          }}
+          className="btn-xl mt-3 w-full bg-critical text-white active:opacity-80"
+        >
+          <Siren size={18} strokeWidth={2.5} />
+          {t("sos.button", "SOS / Pánico")}
+        </button>
+      </div>
+
+      {/* SOS confirmation sheet — slide to fire. */}
+      <Sheet open={sosOpen} onClose={() => !sosBusy && setSosOpen(false)} title={t("sos.title", "SOS / Pánico")}>
+        <p className="mb-4 text-sm text-muted">
+          {t(
+            "sos.confirmHint",
+            "Esto enviará una alerta crítica con tu ubicación a la central. Úsalo solo en una emergencia real.",
+          )}
+        </p>
+        {sosBusy ? (
+          <div className="flex items-center justify-center gap-2 py-4 text-sm font-semibold text-critical">
+            <Siren size={18} className="animate-pulse" />
+            {t("sos.sending", "Enviando alerta…")}
+          </div>
+        ) : (
+          <SlideToConfirm
+            tone="critical"
+            label={t("sos.slide", "Deslizar para SOS")}
+            onConfirm={sendPanic}
+          />
+        )}
+      </Sheet>
+
+      {/* SOS result — success or error (with retry). */}
+      <ResultSheet
+        open={!!sosResult}
+        onClose={() => setSosResult(null)}
+        variant={sosResult === "error" ? "error" : "success"}
+        title={
+          sosResult === "error"
+            ? t("sos.failedTitle", "No se pudo enviar")
+            : t("sos.sentTitle", "Alerta enviada")
+        }
+        lines={
+          sosResult === "error"
+            ? [t("sos.failedHint", "Revisa tu conexión e inténtalo de nuevo.")]
+            : [t("sos.sentHint", "Tu central fue notificada con tu ubicación.")]
+        }
+        primaryLabel={
+          sosResult === "error" ? t("app.retry", "Reintentar") : t("app.ok", "OK")
+        }
+        onPrimary={() => {
+          if (sosResult === "error") {
+            setSosResult(null);
+            setSosOpen(true);
+          } else {
+            setSosResult(null);
+          }
+        }}
+      />
     </div>
   );
 }

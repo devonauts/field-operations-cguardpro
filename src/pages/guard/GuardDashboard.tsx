@@ -32,6 +32,7 @@ import {
   ScoreRing,
   MeterBar,
   Avatar,
+  ResultSheet,
 } from "@/components/ui";
 import { useAsync } from "@/lib/useAsync";
 import { guardService } from "@/lib/services";
@@ -104,7 +105,7 @@ function OnDutyHeader({ guardName, sector }: { guardName: string; sector: string
         {sector && <span className="text-gold">· {sector}</span>}
       </div>
       <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-ink">
-        {guardName || t("guard.guard", "Guardia")}
+        {guardName || t("guard.guard", "Vigilante")}
       </h1>
     </div>
   );
@@ -118,6 +119,8 @@ export default function GuardDashboard() {
   const perf = useAsync(() => loadGuardPerformance(30));
   const [busy, setBusy] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
+  // Clock-IN confirmation (P0): echoes time + post after a successful punch.
+  const [clockInDone, setClockInDone] = useState<{ time: string; post: string } | null>(null);
   // Clock-in flow: pick station → start-shift checklist → geo-stamped selfie → submit
   const [flowStep, setFlowStep] = useState<"idle" | "checklist" | "selfie">("idle");
   const [flowStation, setFlowStation] = useState<any | null>(null);
@@ -474,6 +477,9 @@ export default function GuardDashboard() {
         selfiePhoto,
         address: selfie.address,
         battery: checklist?.battery ?? null,
+        // The checklist now carries each item's `done` state, so the backend has
+        // the full record of what was/wasn't verified — clock-in is no longer
+        // hard-gated on completing the items (see StartShiftModal, fix #4).
         checklist: checklist?.items,
         device,
       });
@@ -507,6 +513,17 @@ export default function GuardDashboard() {
           setGpsError(res.message || t("guard.geofenceError"));
         }
       } else {
+        // Confirmed clock-in: echo time + post before reload flips to on-duty.
+        const postName =
+          flowStation.stationName || flowStation.name || t("guard.guard", "Vigilante");
+        setClockInDone({
+          time: new Date().toLocaleTimeString(undefined, {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          }),
+          post: postName,
+        });
         resetFlow();
         await reload();
       }
@@ -773,6 +790,25 @@ export default function GuardDashboard() {
         }}
         onCapture={submitClockIn}
       />
+
+      {/* Clock-IN confirmation (P0): echoes the outcome so the punch is never
+          silent. Shared ResultSheet (auto success haptic). */}
+      <ResultSheet
+        open={!!clockInDone}
+        onClose={() => setClockInDone(null)}
+        variant="success"
+        title={t("guard.clockInDone", "Entrada registrada")}
+        lines={
+          clockInDone
+            ? [
+                `${t("onduty.started", "Inició")} ${clockInDone.time}`,
+                clockInDone.post,
+              ]
+            : []
+        }
+        primaryLabel={t("app.ok", "OK")}
+        onPrimary={() => setClockInDone(null)}
+      />
     </Screen>
   );
 }
@@ -825,7 +861,7 @@ function clockInErrorMessage(e: any, t: any): string {
     "guard.stationRequired": t("guard.errStation", "Selecciona un puesto válido."),
     "guard.profileNotFound": t(
       "guard.errProfile",
-      "No encontramos tu perfil de guardia. Contacta a tu supervisor.",
+      "No encontramos tu perfil de vigilante. Contacta a tu supervisor.",
     ),
   };
   const generic = t(

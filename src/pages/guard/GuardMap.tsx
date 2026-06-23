@@ -1,10 +1,13 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Users, MapPin, ShieldCheck } from "lucide-react";
+import { Users, MapPin, ShieldCheck, ExternalLink } from "lucide-react";
 import { Screen } from "@/components/Screen";
 import { Loader } from "@/components/ui";
 import { useAsync } from "@/lib/useAsync";
-import { guardService, incidentService } from "@/lib/services";
+import { guardService, guardsService, incidentService } from "@/lib/services";
+import { staticMapUrl } from "@/lib/station";
+import { relativeTime } from "@/lib/format";
+import { pick } from "@/lib/normalize";
 
 const isOpenIncident = (i: any) => {
   const s = String(i?.status || "").toLowerCase();
@@ -17,6 +20,15 @@ const isCritical = (i: any) => {
 
 type Zone = { name: string; status: "clear" | "patrol" | "alert" };
 
+/** Numeric coordinate pair from a loose object, or null if absent/zeroed. */
+function coordsOf(o: any): { lat: number; lng: number } | null {
+  const lat = Number(pick(o, "latitude", "lat"));
+  const lng = Number(pick(o, "longitude", "lng", "lon"));
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0))
+    return null;
+  return { lat, lng };
+}
+
 export default function GuardMap() {
   const { t } = useTranslation();
   const { data, loading, reload } = useAsync(() => guardService.dashboard());
@@ -28,14 +40,64 @@ export default function GuardMap() {
     () => guardService.team().catch(() => null),
     [],
   );
+  // Real GPS-backed positions (punch-in coordinates) for guards currently on
+  // duty — the only coordinate source the API exposes. Best-effort; merged into
+  // the roster by securityGuard id so each row can show coords + a map link.
+  const { data: locs, reload: reloadLocs } = useAsync<any[]>(
+    () => guardsService.activeLocations().catch(() => []),
+    [],
+  );
 
   const stations: any[] = data?.stations || [];
   const incidents = incRes?.rows || [];
   const members: any[] = team?.members || [];
 
+  // Index live coordinates by guard id for an O(1) merge onto roster rows.
+  const locById = useMemo(() => {
+    const m = new Map<string, any>();
+    for (const l of locs || []) {
+      const id = l.securityGuardId || l.id || l.guardId;
+      if (id) m.set(String(id), l);
+    }
+    return m;
+  }, [locs]);
+
+  // Roster rows enriched with real coordinates + last-seen time where known.
+  const roster = useMemo(() => {
+    const base = members.length
+      ? members.map((g) => {
+          const loc = locById.get(String(g.securityGuardId));
+          return {
+            id: g.securityGuardId,
+            fullName: g.fullName,
+            stationName: g.stationName,
+            isMe: g.isMe,
+            punchInTime: g.punchInTime || loc?.punchInTime,
+            coords: coordsOf(loc),
+          };
+        })
+      : (locs || []).map((l) => ({
+          id: l.securityGuardId || l.id,
+          fullName: l.fullName,
+          stationName: l.stationName,
+          isMe: false,
+          punchInTime: l.punchInTime,
+          coords: coordsOf(l),
+        }));
+    return base;
+  }, [members, locs, locById]);
+
+  // Site backdrop: a real (static) Google map of the first station with coords.
+  const siteCoords = useMemo(() => {
+    for (const st of stations) {
+      const c = coordsOf(st) || coordsOf(st.postSite) || coordsOf(st.station);
+      if (c) return c;
+    }
+    return null;
+  }, [stations]);
+  const heroMap = siteCoords ? staticMapUrl(siteCoords.lat, siteCoords.lng, 640, 300) : null;
+
   const zones: Zone[] = useMemo(() => {
-    // Precompute, in a single O(incidents) pass, which stations have an open /
-    // critical incident — avoids the O(stations * incidents) nested some() scans.
     const openStations = new Set<string>();
     const critStations = new Set<string>();
     for (const i of incidents) {
@@ -50,7 +112,7 @@ export default function GuardMap() {
       status: critStations.has(st.id) ? "alert" : openStations.has(st.id) ? "patrol" : "clear",
     }));
   }, [stations, incidents]);
-  const activeCount = team?.count ?? zones.length ?? 1;
+  const activeCount = team?.count ?? roster.length ?? 1;
 
   const STATUS = useMemo(() => ({
     clear: { color: "var(--online)", label: t("onduty.zoneClear", "despejado") },
@@ -68,19 +130,31 @@ export default function GuardMap() {
           : t("onduty.activeCount", "{{n}} activos", { n: activeCount })
       }
       onRefresh={async () => {
-        await Promise.all([reload(), reloadTeam()]);
+        await Promise.all([reload(), reloadTeam(), reloadLocs()]);
       }}
     >
       {loading ? (
         <Loader />
       ) : (
         <div className="space-y-4">
-          {/* Radar */}
-          <div className="card-elev grid place-items-center p-5">
-            <BigRadar zones={zones} />
-          </div>
+          {/* Real site map (static Google map) when the site has coordinates;
+              a "Ver en mapa" deep-link opens the device's interactive map. */}
+          {heroMap && siteCoords && (
+            <div className="card-elev overflow-hidden">
+              <img src={heroMap} alt="" className="h-40 w-full object-cover" />
+              <a
+                href={`https://maps.google.com/?q=${siteCoords.lat},${siteCoords.lng}`}
+                target="_blank"
+                rel="noreferrer"
+                className="pressable flex items-center justify-center gap-1.5 py-3 text-sm font-semibold text-gold"
+              >
+                <ExternalLink size={15} />
+                {t("map.openInMaps", "Ver en mapa")}
+              </a>
+            </div>
+          )}
 
-          {/* Zones */}
+          {/* Zones (real station status from open incidents) */}
           <div>
             <p className="label-eyebrow mb-2">{t("map.zones", "Zonas")}</p>
             <div className="card-elev divide-y divide-line overflow-hidden">
@@ -106,36 +180,58 @@ export default function GuardMap() {
             </div>
           </div>
 
-          {/* Team roster — guards on duty across this sitio's stations */}
+          {/* Team roster — guards on duty, with real coords + last-seen time */}
           <div>
             <p className="label-eyebrow mb-2">{t("map.team", "Compañeros en servicio")}</p>
             <div className="card-elev divide-y divide-line overflow-hidden">
-              {members.length > 0 ? (
-                members.map((g: any, i: number) => (
-                  <div key={g.securityGuardId || i} className="flex items-center gap-3 px-4 py-3">
+              {roster.length > 0 ? (
+                roster.map((g: any, i: number) => (
+                  <div key={g.id || i} className="flex items-center gap-3 px-4 py-3">
                     <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-online/10 text-online">
                       <ShieldCheck size={16} />
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[15px] font-semibold text-ink">
-                        {g.fullName || t("guard.guard", "Guardia")}
+                        {g.fullName || t("guard.guard", "Vigilante")}
                         {g.isMe && (
                           <span className="ml-1.5 text-xs font-medium text-gold">
                             ({t("map.you", "tú")})
                           </span>
                         )}
                       </p>
-                      {g.stationName && <p className="truncate text-xs text-muted">{g.stationName}</p>}
+                      <p className="truncate text-xs text-muted">
+                        {[
+                          g.stationName,
+                          g.punchInTime
+                            ? t("map.lastSeen", "visto {{ago}}", { ago: relativeTime(g.punchInTime) })
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
                     </div>
-                    <span className="shrink-0 text-[11px] font-bold uppercase tracking-wide text-online">
-                      {t("guard.onDuty", "En servicio")}
-                    </span>
+                    {g.coords ? (
+                      <a
+                        href={`https://maps.google.com/?q=${g.coords.lat},${g.coords.lng}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="pressable flex shrink-0 items-center gap-1 text-[11px] font-semibold text-gold"
+                      >
+                        <MapPin size={13} />
+                        {t("map.locate", "Mapa")}
+                      </a>
+                    ) : (
+                      <span className="shrink-0 text-[11px] font-bold uppercase tracking-wide text-online">
+                        {t("guard.onDuty", "En servicio")}
+                      </span>
+                    )}
                   </div>
                 ))
               ) : (
                 <div className="flex items-center gap-3 px-4 py-4 text-muted">
                   <Users size={16} className="shrink-0" />
-                  <p className="text-sm">{t("map.noTeam", "No hay otros guardias en servicio en este sitio.")}</p>
+                  <p className="text-sm">{t("map.noTeam", "No hay otros vigilantes en servicio en este sitio.")}</p>
                 </div>
               )}
             </div>
@@ -143,37 +239,5 @@ export default function GuardMap() {
         </div>
       )}
     </Screen>
-  );
-}
-
-function BigRadar({ zones }: { zones: Zone[] }) {
-  const pts = [
-    [62, 50],
-    [150, 64],
-    [50, 130],
-    [156, 150],
-    [104, 96],
-  ];
-  return (
-    <svg width="210" height="210" viewBox="0 0 210 210" aria-hidden>
-      <rect x="1" y="1" width="208" height="208" rx="18" fill="var(--surface-2)" stroke="var(--line)" />
-      {[88, 64, 40, 18].map((r) => (
-        <circle key={r} cx="105" cy="105" r={r} fill="none" stroke="var(--gold)" strokeOpacity="0.16" />
-      ))}
-      <line x1="105" y1="17" x2="105" y2="193" stroke="var(--gold)" strokeOpacity="0.1" />
-      <line x1="17" y1="105" x2="193" y2="105" stroke="var(--gold)" strokeOpacity="0.1" />
-      {zones.slice(0, 5).map((z, i) => {
-        const [x, y] = pts[i] || pts[0];
-        const fill = z.status === "alert" ? "var(--critical)" : z.status === "patrol" ? "var(--gold)" : "var(--online)";
-        return (
-          <g key={i}>
-            <circle cx={x} cy={y} r="9" fill={fill} fillOpacity="0.18" />
-            <circle cx={x} cy={y} r="4.5" fill={fill} />
-          </g>
-        );
-      })}
-      <circle cx="105" cy="105" r="6" fill="var(--gold)" />
-      <circle cx="105" cy="105" r="11" fill="none" stroke="var(--gold)" strokeOpacity="0.5" />
-    </svg>
   );
 }
