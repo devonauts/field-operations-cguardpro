@@ -25,7 +25,22 @@ export default function GuardRadio() {
   const [present] = useIonToast();
   const [entry, setEntry] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [nowMs, setNowMs] = useState(Date.now());
   const lastSpokenEntry = useRef<string | null>(null);
+
+  // 1-second tick to drive the report countdown while a pase is active.
+  useEffect(() => {
+    if (!entry?.timeoutAt) return;
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [entry?.timeoutAt]);
+
+  const remainingSec = entry?.timeoutAt
+    ? Math.max(0, Math.ceil((new Date(entry.timeoutAt).getTime() - nowMs) / 1000))
+    : null;
+  const countdown = remainingSec != null
+    ? `${String(Math.floor(remainingSec / 60)).padStart(2, "0")}:${String(remainingSec % 60).padStart(2, "0")}`
+    : null;
 
   const load = useCallback(async () => {
     try {
@@ -79,14 +94,25 @@ export default function GuardRadio() {
         {/* Active pase de novedades — answered ON the open channel itself. */}
         {entry && (
           <div className="card-elev space-y-3 border border-gold/40 bg-gold/[0.06] p-4">
-            <div className="flex items-center gap-2 text-gold">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-gold/60" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-gold" />
-              </span>
-              <p className="text-[13px] font-bold uppercase tracking-wide">
-                {t("radio.checkRequest", "Pase de novedades")}
-              </p>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-gold">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-gold/60" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-gold" />
+                </span>
+                <p className="text-[13px] font-bold uppercase tracking-wide">
+                  {t("radio.checkRequest", "Pase de novedades")}
+                </p>
+              </div>
+              {countdown && (
+                <span
+                  className={`rounded-lg px-2.5 py-1 font-mono text-[15px] font-bold tabular-nums ${
+                    (remainingSec ?? 0) > 0 ? "bg-gold/15 text-gold" : "bg-critical/15 text-critical"
+                  }`}
+                >
+                  {(remainingSec ?? 0) > 0 ? countdown : t("radio.timeUp", "Tiempo agotado")}
+                </span>
+              )}
             </div>
             <p className="text-[15px] text-ink">
               {entry.promptText || t("radio.defaultPrompt", "¿Alguna novedad o incidente en el puesto?")}
