@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertTriangle, Plus, Search } from "lucide-react";
 import { Screen } from "@/components/Screen";
-import { Loader, EmptyState } from "@/components/ui";
-import { IncidentRow } from "@/components/IncidentRow";
+import { EmptyState, ErrorState, SkeletonList } from "@/components/ui";
+import { IncidentRow, IncidentDetailSheet } from "@/components/IncidentRow";
 import { IncidentForm } from "@/components/IncidentForm";
 import { useAsync } from "@/lib/useAsync";
 import { incidentService } from "@/lib/services";
@@ -16,12 +16,14 @@ const STATUS_FILTERS = ["all", "open", "inProgress", "resolved", "closed"] as co
 export default function SupervisorIncidents() {
   const { t } = useTranslation();
   const [formOpen, setFormOpen] = useState(false);
+  const [selected, setSelected] = useState<any | null>(null);
   const [query, setQuery] = useState("");
   const [sev, setSev] = useState<(typeof SEVERITY_FILTERS)[number]>("all");
   const [status, setStatus] = useState<(typeof STATUS_FILTERS)[number]>("all");
 
-  const { data, loading, reload } = useAsync(() =>
-    incidentService.list({ limit: 100 }).catch(() => ({ rows: [], count: 0 }))
+  // Surface real fetch failures (don't swallow into an empty list).
+  const { data, loading, error, reload } = useAsync(() =>
+    incidentService.list({ limit: 100 })
   );
 
   const rows = data?.rows || [];
@@ -62,7 +64,9 @@ export default function SupervisorIncidents() {
       }
     >
       {loading ? (
-        <Loader />
+        <SkeletonList />
+      ) : error ? (
+        <ErrorState onRetry={reload} />
       ) : (
         <div className="space-y-3">
           {/* Search */}
@@ -103,12 +107,25 @@ export default function SupervisorIncidents() {
           ) : (
             <div className="space-y-3">
               {filtered.map((inc: any, i: number) => (
-                <IncidentRow key={inc.id || i} incident={inc} />
+                <IncidentRow
+                  key={inc.id || i}
+                  incident={inc}
+                  onClick={setSelected}
+                />
               ))}
             </div>
           )}
         </div>
       )}
+
+      {/* Supervisor detail with status workflow actions. */}
+      <IncidentDetailSheet
+        incident={selected}
+        open={selected != null}
+        onClose={() => setSelected(null)}
+        canManage
+        onUpdated={reload}
+      />
 
       <IncidentForm isOpen={formOpen} onClose={() => setFormOpen(false)} onCreated={reload} />
     </Screen>

@@ -112,8 +112,10 @@ export default function SupervisorDashboard() {
               accent="online"
               icon={<CheckCircle2 size={16} />}
             />
+            {/* `kpiVal("stations")` is the active-services count, NOT a response
+                time — label it honestly rather than mislabel it "Avg response". */}
             <StatCard
-              label={t("dashboard.avgResponse")}
+              label={t("dashboard.activeServices", "Servicios activos")}
               value={kpiVal("stations")}
               accent="info"
               icon={<MapPin size={16} />}
@@ -146,8 +148,12 @@ export default function SupervisorDashboard() {
           <Card className="p-4">
             <SectionTitle
               right={
+                // activeLocations() returns only guards currently on duty, so we
+                // know the PRESENT count but not the scheduled total — showing
+                // `present/present` (the old bug) always read "N of N". Report the
+                // honest present count instead of a fabricated ratio.
                 <span className="text-xs text-muted">
-                  {t("dashboard.onShift", { on: guards.length, total: guards.length })}
+                  {t("dashboard.presentCount", "{{n}} en turno", { n: guards.length })}
                 </span>
               }
             >

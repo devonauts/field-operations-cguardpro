@@ -142,7 +142,9 @@
     "recentIncidents": "Recent incidents",
     "onPatrol": "On patrol",
     "stationary": "Stationary",
-    "onBreak": "On break"
+    "onBreak": "On break",
+    "activeServices": "Active services",
+    "presentCount": "{{n}} on shift"
   },
   "checkin": {
     "title": "Guard Check-In / Check-Out",
@@ -217,7 +219,16 @@
       "inProgress": "In progress",
       "resolved": "Resolved",
       "closed": "Closed"
-    }
+    },
+    "statusUpdated": "Status updated",
+    "statusUpdateFailed": "Could not update",
+    "actionAcknowledge": "Mark in progress",
+    "actionResolve": "Resolve",
+    "noteOptional": "Note (optional)",
+    "viewOnMap": "View on map",
+    "quickReport": "Quick report",
+    "gpsLocating": "Locating…",
+    "gpsRetry": "GPS — retry"
   },
   "patrol": {
     "title": "Patrol Tracking",
@@ -231,7 +242,8 @@
     "allCheckpoints": "All checkpoints",
     "clearedDot": "Cleared",
     "pending": "Pending",
-    "notOnRoute": "Not on route"
+    "notOnRoute": "Not on route",
+    "recentScans": "Patrol activity"
   },
   "schedule": {
     "title": "Shift Schedule",
@@ -706,5 +718,37 @@
     "speakNow": "Speak now…",
     "required": "The summary is required.",
     "submit": "Submit & clock out"
+  },
+  "radio": {
+    "allClear": "All clear",
+    "channelBusy": "Channel busy",
+    "channelClear": "Channel clear",
+    "checkRequest": "Status check",
+    "connecting": "Connecting…",
+    "defaultPrompt": "Any news or incidents at the post?",
+    "generalChannel": "General channel",
+    "haveNews": "Has news",
+    "holdToTalk": "Hold to talk",
+    "holdToTalkChannel": "Hold to talk on the channel",
+    "isTalking": "is talking",
+    "live": "Live",
+    "liveChannel": "Open channel",
+    "offDutyHint": "Clock in to connect to the channel.",
+    "offDutyTitle": "Radio available on duty",
+    "offline": "Offline",
+    "onChannel": "On the channel",
+    "reportedByVoice": "News reported by voice on the channel.",
+    "respondOnChannel": "Hold the channel button to report by voice, or tap here:",
+    "sendFailed": "Couldn't send. Try again.",
+    "sent": "Report sent",
+    "talking": "Talking",
+    "transmitting": "Transmitting…",
+    "you": "you",
+    "youTalking": "You're talking"
+  },
+  "map": {
+    "openInMaps": "View on map",
+    "lastSeen": "seen {{ago}}",
+    "locate": "Map"
   }
 }

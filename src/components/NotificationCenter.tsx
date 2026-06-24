@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { IonModal, IonSpinner, IonItemSliding, IonItem, IonItemOptions, IonItemOption, IonAlert } from "@ionic/react";
+import { IonModal, IonItemSliding, IonItem, IonItemOptions, IonItemOption, IonAlert } from "@ionic/react";
 import { useHistory } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { isToday, isYesterday } from "date-fns";
@@ -15,10 +15,10 @@ import {
   Radio,
   CalendarDays,
   AlertTriangle,
-  RotateCcw,
 } from "lucide-react";
 import { useNotifications, AppNotification } from "@/context/NotificationContext";
 import { useAuth } from "@/context/AuthContext";
+import { SkeletonList, ErrorState, EmptyState } from "@/components/ui";
 import { SUPERVISOR_ROLE } from "@/lib/roles";
 import type { WorkerRole } from "@/lib/roles";
 import { relativeTime } from "@/lib/format";
@@ -114,35 +114,23 @@ export default function NotificationCenter({
         {/* ------------------------------------------------------------ Body */}
         <div className="flex-1 overflow-y-auto">
           {loading ? (
-            <div className="grid place-items-center py-20">
-              <IonSpinner name="crescent" />
+            <div className="px-4 py-4">
+              <SkeletonList rows={6} />
             </div>
           ) : error ? (
-            <div className="flex flex-col items-center gap-3 py-20 text-center">
-              <p className="text-sm text-muted">
-                {t("notifications.error", "No se pudieron cargar las notificaciones")}
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  fb.tap();
-                  void refresh();
-                }}
-                className="pressable inline-flex items-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-semibold text-ink active:bg-surface-2"
-              >
-                <RotateCcw size={16} />
-                {t("notifications.retry", "Reintentar")}
-              </button>
-            </div>
+            <ErrorState
+              title={t("notifications.error", "No se pudieron cargar las notificaciones")}
+              onRetry={() => {
+                fb.tap();
+                void refresh();
+              }}
+              retryLabel={t("notifications.retry", "Reintentar")}
+            />
           ) : !hasItems ? (
-            <div className="flex flex-col items-center gap-3 py-24 text-center">
-              <span className="grid h-14 w-14 place-items-center rounded-2xl bg-surface-2 text-muted">
-                <BellOff size={26} />
-              </span>
-              <p className="text-sm text-muted">
-                {t("notifications.empty", "No tienes notificaciones")}
-              </p>
-            </div>
+            <EmptyState
+              icon={<BellOff size={26} />}
+              title={t("notifications.empty", "No tienes notificaciones")}
+            />
           ) : (
             <div className="pb-6">
               {groups.map((g) => (

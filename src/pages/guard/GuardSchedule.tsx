@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, ChevronRight, Clock, MapPin, CalendarDays } from "lucide-react";
 import { Screen } from "@/components/Screen";
-import { Card, Loader } from "@/components/ui";
+import { Card, ErrorState, Skeleton } from "@/components/ui";
 import { guardService } from "@/lib/services";
 import { asRows } from "@/lib/api";
 import { pick } from "@/lib/normalize";
@@ -28,6 +28,8 @@ export default function GuardSchedule() {
   const [shifts, setShifts] = useState<any[]>([]);
   const [freeDays, setFreeDays] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const today = startOfDay(new Date());
 
   // Fetch a generous window around the focused month; refetch when month changes.
@@ -35,6 +37,7 @@ export default function GuardSchedule() {
   useEffect(() => {
     let alive = true;
     setLoading(true);
+    setLoadError(null);
     const from = addDays(startOfMonth(anchor), -7);
     const to = addDays(endOfMonth(anchor), 7);
     guardService
@@ -44,11 +47,11 @@ export default function GuardSchedule() {
         setShifts(asRows(d?.shifts || []));
         setFreeDays(new Set<string>(d?.freeDays || []));
       })
-      .catch(() => { if (alive) { setShifts([]); setFreeDays(new Set()); } })
+      .catch((e: any) => { if (alive) { setShifts([]); setFreeDays(new Set()); setLoadError(e?.message || "error"); } })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [monthKey]);
+  }, [monthKey, reloadKey]);
 
   const byDay = useMemo(() => {
     const m = new Map<string, any[]>();
@@ -140,7 +143,9 @@ export default function GuardSchedule() {
       </div>
 
       {loading ? (
-        <Loader />
+        <Skeleton className="h-80 w-full rounded-card" />
+      ) : loadError ? (
+        <ErrorState onRetry={() => setReloadKey((k) => k + 1)} />
       ) : (
         <>
           {view === "month" && (
@@ -180,7 +185,7 @@ function MonthGrid({ anchor, today, weekdayLabels, byDay, freeDays, onPick }: an
     <Card className="p-2">
       <div className="grid grid-cols-7">
         {weekdayLabels.map((w: string, i: number) => (
-          <div key={i} className="pb-1 text-center text-[10px] font-semibold uppercase text-muted">{w}</div>
+          <div key={i} className="pb-1 text-center text-xs font-semibold uppercase text-muted">{w}</div>
         ))}
         {cells.map((d, i) => {
           const inMonth = d.getMonth() === month;
@@ -199,7 +204,7 @@ function MonthGrid({ anchor, today, weekdayLabels, byDay, freeDays, onPick }: an
               {count > 0 ? (
                 <span className={`absolute bottom-1 h-1.5 w-1.5 rounded-full ${isSel ? "bg-on-accent/70" : "bg-gold"}`} />
               ) : free ? (
-                <span className={`absolute bottom-0.5 text-[9px] font-bold leading-none ${isSel ? "text-on-accent" : "text-online"}`}>L</span>
+                <span className={`absolute bottom-0.5 text-[11px] font-bold leading-none ${isSel ? "text-on-accent" : "text-online"}`}>L</span>
               ) : null}
             </button>
           );
@@ -252,12 +257,12 @@ function WeekTimeline({ anchor, today, weekdayLabels, byDay, freeDays, onPick }:
             const free = freeDays.has(ymd(d));
             return (
               <button key={i} onClick={() => onPick(d)} className={`flex flex-col items-center rounded-lg py-1 ${isSel ? "bg-gold text-on-accent" : "active:bg-surface-2"}`}>
-                <span className={`text-[9px] font-semibold uppercase ${isSel ? "text-on-accent/70" : "text-muted"}`}>{weekdayLabels[i]}</span>
+                <span className={`text-[11px] font-semibold uppercase ${isSel ? "text-on-accent/70" : "text-muted"}`}>{weekdayLabels[i]}</span>
                 <span className={`text-[14px] font-bold leading-tight ${isSel ? "text-on-accent" : isToday ? "text-gold" : "text-ink"}`}>{d.getDate()}</span>
                 {count > 0 ? (
                   <span className={`mt-0.5 h-1 w-1 rounded-full ${isSel ? "bg-on-accent/70" : "bg-gold"}`} />
                 ) : free ? (
-                  <span className={`mt-0.5 text-[9px] font-bold leading-none ${isSel ? "text-on-accent" : "text-online"}`}>L</span>
+                  <span className={`mt-0.5 text-[11px] font-bold leading-none ${isSel ? "text-on-accent" : "text-online"}`}>L</span>
                 ) : (
                   <span className="mt-0.5 h-1 w-1" />
                 )}
@@ -377,7 +382,7 @@ function DayTimeline({ shifts, freeDay, anchor, today, t }: any) {
           {/* Hour gridlines + labels */}
           {Array.from({ length: 24 }, (_, h) => (
             <div key={h} className="absolute inset-x-0 flex items-start" style={{ top: h * HOUR_H }}>
-              <span className="-translate-y-1.5 pr-2 text-right text-[10px] tabular-nums text-faint" style={{ width: GUTTER }}>
+              <span className="-translate-y-1.5 pr-2 text-right text-xs tabular-nums text-faint" style={{ width: GUTTER }}>
                 {String(h).padStart(2, "0")}:00
               </span>
               <span className="h-px flex-1 bg-line/50" />

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Loader2, ArrowLeft, CheckCircle2, Mail } from "lucide-react";
 import { AuthService } from "@/lib/auth";
 import { ApiError, isNetworkError, CONFIG_ERROR_STATUS } from "@/lib/api";
+import { Button } from "@/components/ui/kit";
 import { fb } from "@/lib/feedback";
 import brandLogo from "../assets/brand-logo.png";
 
@@ -142,11 +143,7 @@ export default function ForgotPassword({
                 </p>
               )}
 
-              <button
-                type="submit"
-                disabled={submitting}
-                className="flex min-h-[54px] w-full items-center justify-center gap-2 rounded-xl bg-gold-strong px-4 py-4 text-base font-semibold leading-none text-on-accent transition active:bg-gold-hover disabled:opacity-60"
-              >
+              <Button type="submit" variant="primary" full disabled={submitting}>
                 {submitting ? (
                   <>
                     <Loader2 size={18} className="animate-spin" />
@@ -158,7 +155,7 @@ export default function ForgotPassword({
                     {t("auth.forgot.send", "Enviar enlace")}
                   </>
                 )}
-              </button>
+              </Button>
             </form>
           </div>
         </div>
@@ -208,13 +205,9 @@ function Confirmation({ onContinue }: { onContinue: () => void }) {
                 )}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => { fb.tap(); finish(); }}
-              className="flex min-h-[54px] w-full items-center justify-center rounded-xl bg-gold-strong px-4 py-4 text-base font-semibold text-on-accent transition active:bg-gold-hover"
-            >
+            <Button variant="primary" full onClick={finish}>
               {t("auth.forgot.continue", "Continuar")}
-            </button>
+            </Button>
           </div>
         </div>
       </IonContent>

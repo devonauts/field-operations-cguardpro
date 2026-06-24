@@ -2,17 +2,42 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Search, UserCheck } from "lucide-react";
 import { Screen } from "@/components/Screen";
-import { Card, Loader, Avatar, EmptyState } from "@/components/ui";
+import { Card, Avatar, EmptyState, ErrorState, SkeletonList } from "@/components/ui";
 import { useAsync } from "@/lib/useAsync";
 import { guardsService } from "@/lib/services";
+import { pick } from "@/lib/normalize";
 import { fmtTime } from "@/lib/format";
 
 type Status = "checkedIn" | "checkedOut" | "notInYet" | "late";
 
-function statusOf(g: any): Status {
+// Grace window (minutes) past the scheduled start before a no-show counts late.
+const LATE_GRACE_MIN = 10;
+
+/** Scheduled shift start for a guard row, across the loose payload shapes. */
+function scheduledStartOf(g: any): number | null {
+  const raw = pick(
+    g,
+    "scheduledStart",
+    "shiftStart",
+    "scheduledStartTime",
+    "startTime",
+  ) ||
+    g.currentShift?.startTime ||
+    g.nextShift?.startTime ||
+    g.shift?.startTime;
+  if (!raw) return null;
+  const ts = new Date(raw).getTime();
+  return Number.isNaN(ts) ? null : ts;
+}
+
+function statusOf(g: any, now = Date.now()): Status {
   if (g.isOnDuty || g.onDuty || g.activeClockIn || g.checkedInAt) return "checkedIn";
   if (g.checkedOutAt || g.punchOutTime) return "checkedOut";
+  // Trust an explicit backend flag, but fall back to a client-side computation:
+  // scheduled to start (past the grace window) yet not checked in = late.
   if (g.late) return "late";
+  const sched = scheduledStartOf(g);
+  if (sched != null && now > sched + LATE_GRACE_MIN * 60000) return "late";
   return "notInYet";
 }
 
@@ -26,8 +51,9 @@ const STATUS_STYLE: Record<Status, string> = {
 export default function CheckInOut() {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
-  const { data, loading, reload } = useAsync(() =>
-    guardsService.list({ limit: 200 }).catch(() => ({ rows: [], count: 0 }))
+  // Surface real failures instead of rendering them as an empty roster.
+  const { data, loading, error, reload } = useAsync(() =>
+    guardsService.list({ limit: 200 })
   );
 
   const guards = data?.rows || [];
@@ -61,7 +87,9 @@ export default function CheckInOut() {
       onRefresh={reload}
     >
       {loading ? (
-        <Loader />
+        <SkeletonList />
+      ) : error ? (
+        <ErrorState onRetry={reload} />
       ) : (
         <div className="space-y-4">
           {/* Stat tiles */}

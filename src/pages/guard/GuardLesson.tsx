@@ -9,7 +9,8 @@ import {
   Film,
 } from "lucide-react";
 import { Screen } from "@/components/Screen";
-import { Card, Loader, EmptyState } from "@/components/ui";
+import { EmptyState, ErrorState, SkeletonList } from "@/components/ui";
+import { Button } from "@/components/ui/kit";
 import { useAsync } from "@/lib/useAsync";
 import fb from "@/lib/feedback";
 import {
@@ -48,7 +49,7 @@ export default function GuardLesson() {
     lessonId: string;
   }>();
   const startedAt = useRef(Date.now());
-  const { data, loading } = useAsync(
+  const { data, loading, error, reload } = useAsync(
     () => trainingService.enrollmentDetail(enrollmentId),
     [enrollmentId],
   );
@@ -74,7 +75,6 @@ export default function GuardLesson() {
 
   const complete = async () => {
     if (!lesson || busy || alreadyComplete) return;
-    fb.press();
     setBusy(true);
     try {
       await trainingService.completeLesson(lesson.id, {
@@ -92,7 +92,6 @@ export default function GuardLesson() {
   };
 
   const goNext = () => {
-    fb.tap();
     if (next) {
       history.replace(`/guard/training/${enrollmentId}/lesson/${next.id}`);
     } else {
@@ -103,7 +102,14 @@ export default function GuardLesson() {
   if (loading) {
     return (
       <Screen back title={t("training.title")}>
-        <Loader />
+        <SkeletonList />
+      </Screen>
+    );
+  }
+  if (error && !data) {
+    return (
+      <Screen back title={t("training.title")}>
+        <ErrorState onRetry={reload} />
       </Screen>
     );
   }
@@ -171,30 +177,23 @@ export default function GuardLesson() {
 
         {alreadyComplete ? (
           <div className="space-y-3">
-            <div className="flex items-center justify-center gap-2 rounded-2xl border border-online/40 bg-online/10 py-3 text-sm font-semibold text-online">
+            <div className="flex items-center justify-center gap-2 rounded-card border border-online/40 bg-online/10 py-3 text-sm font-semibold text-online">
               <CheckCircle2 size={18} /> {t("training.lesson.completed")}
             </div>
-            <button
-              onClick={goNext}
-              className="btn-xl w-full bg-gold-strong text-on-accent active:bg-gold-hover"
-            >
+            <Button variant="primary" full onClick={goNext}>
               {next ? t("training.lesson.next") : t("training.course.lessons")}
-            </button>
+            </Button>
           </div>
         ) : (
-          <button
-            onClick={complete}
-            disabled={busy}
-            className="btn-xl flex w-full items-center justify-center gap-2 bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-50"
-          >
+          <Button variant="primary" full disabled={busy} onClick={complete}>
             {busy ? (
               <Loader2 size={18} className="animate-spin" />
             ) : (
-              <>
+              <span className="flex items-center justify-center gap-2">
                 <CheckCircle2 size={18} /> {t("training.lesson.markComplete")}
-              </>
+              </span>
             )}
-          </button>
+          </Button>
         )}
       </div>
     </Screen>
@@ -207,7 +206,7 @@ function VideoBlock({ url }: { url: string }) {
 
   if (embed) {
     return (
-      <div className="overflow-hidden rounded-2xl bg-black" style={{ aspectRatio: "16 / 9" }}>
+      <div className="overflow-hidden rounded-card bg-black" style={{ aspectRatio: "16 / 9" }}>
         <iframe
           src={embed}
           title="video"
@@ -224,7 +223,7 @@ function VideoBlock({ url }: { url: string }) {
         src={url}
         controls
         playsInline
-        className="w-full rounded-2xl bg-black"
+        className="w-full rounded-card bg-black"
         style={{ aspectRatio: "16 / 9" }}
       />
     );
@@ -235,7 +234,7 @@ function VideoBlock({ url }: { url: string }) {
       target="_blank"
       rel="noopener noreferrer"
       onClick={() => fb.tap()}
-      className="flex items-center gap-3 rounded-2xl border border-line bg-surface-2 p-4 active:opacity-80"
+      className="flex items-center gap-3 rounded-card border border-line bg-surface-2 p-4 active:opacity-80"
     >
       <Film size={20} className="shrink-0 text-gold" />
       <span className="flex-1 text-sm font-medium text-ink">

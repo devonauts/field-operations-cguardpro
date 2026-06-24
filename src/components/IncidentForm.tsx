@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { IonModal } from "@ionic/react";
 import { useTranslation } from "react-i18next";
-import { X, Loader2, Check, AlertTriangle } from "lucide-react";
+import { X, Loader2, Check, AlertTriangle, MapPin, Zap } from "lucide-react";
 import { incidentService, incidentTypeService } from "@/lib/services";
 import { useAsync } from "@/lib/useAsync";
 import { Severity } from "@/lib/normalize";
+import { getCurrentPosition, Coords } from "@/lib/geo";
 import { usePhotoCapture, PhotoStrip } from "./photoCapture";
 import { CustomSelect } from "./Select";
 
@@ -120,6 +121,41 @@ function IncidentBody({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // "Reporte rápido": type + photo + auto-GPS is enough to file — everything
+  // else (description, people, actions, occurred-at) becomes optional.
+  const [quickMode, setQuickMode] = useState(false);
+
+  // Auto-capture GPS on open (same lib/geo helper GuardPatrol uses) so the
+  // incident is geo-tagged without the guard doing anything. Best-effort: a
+  // denied/timed-out fix just leaves the chip in its failed state.
+  const [coords, setCoords] = useState<Coords | null>(null);
+  const [geoState, setGeoState] = useState<"loading" | "ok" | "failed">("loading");
+  useEffect(() => {
+    let alive = true;
+    getCurrentPosition()
+      .then((c) => {
+        if (!alive) return;
+        setCoords(c);
+        setGeoState("ok");
+      })
+      .catch(() => {
+        if (alive) setGeoState("failed");
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const captureGps = () => {
+    setGeoState("loading");
+    getCurrentPosition()
+      .then((c) => {
+        setCoords(c);
+        setGeoState("ok");
+      })
+      .catch(() => setGeoState("failed"));
+  };
+
   const submit = async () => {
     if (!subject.trim() || submitting) return;
     setSubmitting(true);
@@ -145,6 +181,9 @@ function IncidentBody({
         priority: severity,
         status: "abierto",
         location: location.trim() || undefined,
+        // Geo-tag the report when a fix was captured.
+        latitude: coords?.latitude,
+        longitude: coords?.longitude,
         incidentAt: occurredAt ? new Date(occurredAt).toISOString() : new Date().toISOString(),
         incidentTypeId: resolveTypeId(),
         actionsTaken: actionsTaken.trim() || undefined,
@@ -180,6 +219,47 @@ function IncidentBody({
       </div>
 
       <div className="flex-1 space-y-5 overflow-y-auto px-4 py-4 pb-6">
+        {/* --- GPS chip + quick-report toggle --- */}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={captureGps}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold ${
+              geoState === "ok"
+                ? "border-online/40 bg-online/10 text-online"
+                : geoState === "failed"
+                  ? "border-critical/40 bg-critical/10 text-critical"
+                  : "border-line text-muted"
+            }`}
+          >
+            {geoState === "loading" ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <MapPin size={13} />
+            )}
+            {geoState === "ok" && coords
+              ? `${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`
+              : geoState === "failed"
+                ? t("incidents.gpsRetry", "GPS — reintentar")
+                : t("incidents.gpsLocating", "Ubicando…")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setQuickMode((q) => !q)}
+            className={`ml-auto inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold ${
+              quickMode ? "border-gold bg-gold/10 text-gold" : "border-line text-muted"
+            }`}
+          >
+            <Zap size={13} />
+            {t("incidents.quickReport", "Reporte rápido")}
+          </button>
+        </div>
+
+        {/* --- Evidence (moved near the top) --- */}
+        <Field label={t("incidents.evidence")}>
+          <PhotoStrip photos={photos} onAdd={addPhoto} onRemove={removePhoto} />
+        </Field>
+
         {/* --- Details --- */}
         <p className="label-eyebrow">{t("incidents.detailsSection")}</p>
 
@@ -211,32 +291,32 @@ function IncidentBody({
           <input className={inputCls} value={subject} onChange={(e) => setSubject(e.target.value)} />
         </Field>
 
-        <Field label={t("incidents.description")}>
-          <textarea rows={4} className={`${inputCls} resize-none`} value={description} onChange={(e) => setDescription(e.target.value)} />
-        </Field>
+        {/* The rest is optional and hidden in quick-report mode. */}
+        {!quickMode && (
+          <>
+            <Field label={t("incidents.description")}>
+              <textarea rows={4} className={`${inputCls} resize-none`} value={description} onChange={(e) => setDescription(e.target.value)} />
+            </Field>
 
-        <div className="grid grid-cols-1 gap-3">
-          <Field label={t("incidents.location")}>
-            <input className={inputCls} value={location} onChange={(e) => setLocation(e.target.value)} />
-          </Field>
-          <Field label={t("incidents.occurredAt")}>
-            <input type="datetime-local" className={inputCls} value={occurredAt} onChange={(e) => setOccurredAt(e.target.value)} />
-          </Field>
-        </div>
+            <div className="grid grid-cols-1 gap-3">
+              <Field label={t("incidents.location")}>
+                <input className={inputCls} value={location} onChange={(e) => setLocation(e.target.value)} />
+              </Field>
+              <Field label={t("incidents.occurredAt")}>
+                <input type="datetime-local" className={inputCls} value={occurredAt} onChange={(e) => setOccurredAt(e.target.value)} />
+              </Field>
+            </div>
 
-        {/* --- Response --- */}
-        <p className="label-eyebrow pt-1">{t("incidents.responseSection")}</p>
-        <Field label={t("incidents.peopleInvolved")}>
-          <textarea rows={2} className={`${inputCls} resize-none`} value={peopleInvolved} onChange={(e) => setPeopleInvolved(e.target.value)} />
-        </Field>
-        <Field label={t("incidents.actionsTaken")}>
-          <textarea rows={2} className={`${inputCls} resize-none`} value={actionsTaken} onChange={(e) => setActionsTaken(e.target.value)} />
-        </Field>
-
-        {/* --- Evidence --- */}
-        <Field label={t("incidents.evidence")}>
-          <PhotoStrip photos={photos} onAdd={addPhoto} onRemove={removePhoto} />
-        </Field>
+            {/* --- Response --- */}
+            <p className="label-eyebrow pt-1">{t("incidents.responseSection")}</p>
+            <Field label={t("incidents.peopleInvolved")}>
+              <textarea rows={2} className={`${inputCls} resize-none`} value={peopleInvolved} onChange={(e) => setPeopleInvolved(e.target.value)} />
+            </Field>
+            <Field label={t("incidents.actionsTaken")}>
+              <textarea rows={2} className={`${inputCls} resize-none`} value={actionsTaken} onChange={(e) => setActionsTaken(e.target.value)} />
+            </Field>
+          </>
+        )}
 
         {error && <p className="text-sm text-critical">{error}</p>}
       </div>

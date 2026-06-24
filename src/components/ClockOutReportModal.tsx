@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { IonModal } from "@ionic/react";
 import { X, FileText, Send, Loader2, Mic, Square } from "lucide-react";
 import { useSpeechToText } from "@/lib/useSpeechToText";
+import { ErrorState } from "@/components/ui";
 
 const footerStyle = { paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" };
 
@@ -15,11 +16,15 @@ const footerStyle = { paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" 
 export function ClockOutReportModal({
   isOpen,
   busy,
+  error,
   onCancel,
   onSubmit,
 }: {
   isOpen: boolean;
   busy: boolean;
+  /** A failed clock-out surfaces here so the error shows INSIDE the modal
+   *  (instead of behind it) and the guard can retry without re-typing. */
+  error?: string | null;
   onCancel: () => void;
   onSubmit: (summary: string) => void;
 }) {
@@ -28,17 +33,19 @@ export function ClockOutReportModal({
   const close = () => onCancel();
   return (
     <IonModal isOpen={isOpen} onDidDismiss={close}>
-      {isOpen && <ReportBody busy={busy} onCancel={onCancel} onSubmit={onSubmit} />}
+      {isOpen && <ReportBody busy={busy} error={error} onCancel={onCancel} onSubmit={onSubmit} />}
     </IonModal>
   );
 }
 
 function ReportBody({
   busy,
+  error,
   onCancel,
   onSubmit,
 }: {
   busy: boolean;
+  error?: string | null;
   onCancel: () => void;
   onSubmit: (summary: string) => void;
 }) {
@@ -145,6 +152,17 @@ function ReportBody({
               </p>
             )}
           </div>
+
+          {/* A failed clock-out is shown HERE (inside the open modal) with a
+              working retry — the modal stays open so the report isn't lost. */}
+          {error && !busy && (
+            <ErrorState
+              title={t("clockOutReport.failedTitle", "No se pudo marcar salida")}
+              hint={error}
+              onRetry={submit}
+              retryLabel={t("app.retry", "Reintentar")}
+            />
+          )}
         </div>
 
         <div className="border-t border-line px-4 pt-3" style={footerStyle}>

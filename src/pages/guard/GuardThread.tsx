@@ -2,12 +2,15 @@ import { useEffect, useRef, useState, useCallback, type ReactNode } from "react"
 import { useTranslation } from "react-i18next";
 import { useParams, useLocation } from "react-router-dom";
 import { App as CapacitorApp } from "@capacitor/app";
-import { Send, Loader2, Paperclip, Play, X } from "lucide-react";
+import { Send, Loader2, Paperclip, Play, X, Mic } from "lucide-react";
 import { Screen } from "@/components/Screen";
 import { messageService, type MessageAttachment } from "@/lib/services";
 import { onPush } from "@/lib/pushEvents";
 import { fb } from "@/lib/feedback";
 import { useFileUrl } from "@/lib/fileUrl";
+import { useAuth } from "@/context/AuthContext";
+import { startRecording, stopRecording, cancelRecording, isRecordingSupported } from "@/lib/audioRecorder";
+import { ensureMicPermission } from "@/lib/micPermission";
 
 /**
  * Message attachments are stored as raw private paths (no token downloadUrl on
@@ -27,6 +30,10 @@ function AttachmentVideo({ src, className }: { src?: string | null; className?: 
   const url = useFileUrl(src);
   return <video src={url} controls preload="metadata" className={className} />;
 }
+function AttachmentAudio({ src }: { src?: string | null }) {
+  const url = useFileUrl(src);
+  return <audio src={url} controls preload="metadata" className="w-52 max-w-full" />;
+}
 
 const fmt = (d?: string | null) => {
   if (!d) return "";
@@ -39,6 +46,8 @@ const newId = () =>
 
 export default function GuardThread() {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const myUserId = user?.id ? String(user.id) : null;
   const { conversationId: paramId } = useParams<{ conversationId: string }>();
   const location = useLocation();
   // Ionic keeps this page mounted through transitions and its tab outlet
@@ -61,6 +70,10 @@ export default function GuardThread() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [pending, setPending] = useState<MessageAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [recElapsed, setRecElapsed] = useState(0);
+  const recStartedAt = useRef(0);
+  const recTick = useRef<ReturnType<typeof setInterval> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const scrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -145,7 +158,7 @@ export default function GuardThread() {
     setSendError(null);
     try {
       for (const file of Array.from(files).slice(0, 10)) {
-        if (!/^image\/|^video\//.test(file.type)) { setSendError(t("messages.onlyMedia", "Solo imágenes o videos.")); continue; }
+        if (!/^image\/|^video\/|^audio\//.test(file.type)) { setSendError(t("messages.onlyMedia", "Solo imágenes, videos o audio.")); continue; }
         if (file.size > 100 * 1024 * 1024) { setSendError(t("messages.tooBig", "Máximo 100 MB.")); continue; }
         const att = await messageService.uploadAttachment(file);
         setPending((p) => [...p, att]);
@@ -157,6 +170,48 @@ export default function GuardThread() {
       if (fileRef.current) fileRef.current.value = "";
     }
   };
+
+  // ── Voice notes (WhatsApp-style hold-to-record) ──────────────────────────
+  const startRec = async () => {
+    if (!validId || recording || conversation?.isOneWay) return;
+    setSendError(null);
+    try {
+      await ensureMicPermission();
+      await startRecording();
+      recStartedAt.current = Date.now();
+      setRecElapsed(0);
+      setRecording(true);
+      fb.tap();
+      recTick.current = setInterval(() => setRecElapsed(Date.now() - recStartedAt.current), 200);
+    } catch (e: any) {
+      setSendError(e?.message || t("messages.micFailed", "No se pudo acceder al micrófono."));
+    }
+  };
+  const stopRecAndSend = async () => {
+    if (!recording) return;
+    if (recTick.current) { clearInterval(recTick.current); recTick.current = null; }
+    setRecording(false);
+    try {
+      const rec = await stopRecording();
+      setUploading(true);
+      const att = await messageService.uploadAttachment(rec.file);
+      fb.press();
+      await messageService.send(conversationId, "", newId(), [att]);
+      await load();
+    } catch (e: any) {
+      fb.error();
+      setSendError(e?.message || t("messages.sendFailed", "No se pudo enviar. Reintenta."));
+    } finally { setUploading(false); }
+  };
+  const cancelRec = () => {
+    if (recTick.current) { clearInterval(recTick.current); recTick.current = null; }
+    cancelRecording();
+    setRecording(false);
+    setRecElapsed(0);
+    fb.tap();
+  };
+  // Stop the mic + timer if the screen unmounts mid-recording.
+  useEffect(() => () => { if (recTick.current) clearInterval(recTick.current); cancelRecording(); }, []);
 
   return (
     <Screen
@@ -180,7 +235,9 @@ export default function GuardThread() {
           </div>
         ) : (
           messages.map((m) => {
-            const mine = m.senderType === "guard";
+            // Align by sender identity (a group has many guards); fall back to
+            // senderType for optimistic temp rows that have no senderUserId yet.
+            const mine = m._pending || (m.senderUserId ? String(m.senderUserId) === myUserId : m.senderType === "guard");
             return (
               <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                 <div className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-sm ${mine ? "bg-gold text-on-accent" : "bg-surface-2 text-ink"} ${m._pending ? "opacity-60" : ""}`}>
@@ -190,6 +247,8 @@ export default function GuardThread() {
                       {m.attachments.map((a: any, i: number) => (
                         a.type === "video" ? (
                           <AttachmentVideo key={a.id || a.url || i} src={a.url} className="max-h-64 w-full rounded-lg bg-surface-2" />
+                        ) : a.type === "audio" ? (
+                          <AttachmentAudio key={a.id || a.url || i} src={a.url} />
                         ) : (
                           <AttachmentLink key={a.id || a.url || i} src={a.url}>
                             <AttachmentImage src={a.url} alt={a.name || "imagen"} className="max-h-64 w-full rounded-lg object-cover" />
@@ -227,6 +286,8 @@ export default function GuardThread() {
                 <div key={(a as any).id || a.url || i} className="relative h-16 w-16 overflow-hidden rounded-lg border border-line-2">
                   {a.type === "video" ? (
                     <div className="flex h-full w-full items-center justify-center bg-surface-2 text-muted"><Play size={18} /></div>
+                  ) : a.type === "audio" ? (
+                    <div className="flex h-full w-full items-center justify-center bg-gold/15 text-gold"><Mic size={18} /></div>
                   ) : (
                     <AttachmentImage src={a.url} alt="" className="h-full w-full object-cover" />
                   )}
@@ -236,29 +297,49 @@ export default function GuardThread() {
             </div>
           )}
           <div className="flex items-end gap-2">
-            <input ref={fileRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={(e) => onPickFiles(e.target.files)} />
+            <input ref={fileRef} type="file" accept="image/*,video/*,audio/*" multiple className="hidden" onChange={(e) => onPickFiles(e.target.files)} />
             <button
               onClick={() => { fb.tap(); fileRef.current?.click(); }}
-              disabled={uploading}
+              disabled={uploading || recording}
               aria-label={t("messages.attach", "Adjuntar")}
               className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-line-2 text-muted active:bg-surface-2 disabled:opacity-50"
             >
               {uploading ? <Loader2 size={18} className="animate-spin" /> : <Paperclip size={18} />}
             </button>
-            <textarea
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder={t("messages.compose", "Escribe un mensaje…")}
-              rows={1}
-              className="max-h-32 min-h-[42px] flex-1 resize-none rounded-xl border border-line-2 bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-faint focus:border-gold focus:outline-none"
-            />
-            <button
-              onClick={send}
-              disabled={sending || uploading || (!draft.trim() && pending.length === 0)}
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-50"
-            >
-              {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-            </button>
+            {recording ? (
+              <div className="flex flex-1 items-center gap-2 rounded-xl border border-gold/40 bg-gold/10 px-3.5 py-2.5 text-sm">
+                <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-critical" />
+                <span className="font-mono text-ink">{String(Math.floor(recElapsed / 60000)).padStart(2, "0")}:{String(Math.floor((recElapsed % 60000) / 1000)).padStart(2, "0")}</span>
+                <span className="text-muted">{t("messages.recording", "Grabando…")}</span>
+                <button onClick={cancelRec} aria-label={t("app.cancel", "Cancelar")} className="ml-auto text-muted active:text-critical"><X size={18} /></button>
+              </div>
+            ) : (
+              <textarea
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder={t("messages.compose", "Escribe un mensaje…")}
+                rows={1}
+                className="max-h-32 min-h-[42px] flex-1 resize-none rounded-xl border border-line-2 bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-faint focus:border-gold focus:outline-none"
+              />
+            )}
+            {isRecordingSupported() && !draft.trim() && pending.length === 0 ? (
+              <button
+                onClick={recording ? stopRecAndSend : startRec}
+                disabled={uploading}
+                aria-label={recording ? t("messages.stopSend", "Detener y enviar") : t("messages.record", "Grabar nota de voz")}
+                className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl text-on-accent disabled:opacity-50 ${recording ? "bg-critical active:opacity-80" : "bg-gold-strong active:bg-gold-hover"}`}
+              >
+                {recording ? <Send size={18} /> : <Mic size={18} />}
+              </button>
+            ) : (
+              <button
+                onClick={send}
+                disabled={sending || uploading || recording || (!draft.trim() && pending.length === 0)}
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-50"
+              >
+                {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+              </button>
+            )}
           </div>
         </div>
       )}

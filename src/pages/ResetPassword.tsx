@@ -3,6 +3,7 @@ import { IonPage, IonContent } from "@ionic/react";
 import { useTranslation } from "react-i18next";
 import { Loader2, Eye, EyeOff, CheckCircle2, ShieldCheck } from "lucide-react";
 import { AuthService } from "@/lib/auth";
+import { Button } from "@/components/ui/kit";
 import { fb } from "@/lib/feedback";
 import brandLogo from "../assets/brand-logo.png";
 
@@ -71,12 +72,9 @@ export default function ResetPassword({ token, onDone }: { token: string; onDone
                 <p className="text-base text-ink">
                   {t("auth.reset.success", "Tu contraseña se actualizó. Ya puedes iniciar sesión.")}
                 </p>
-                <button
-                  onClick={() => { fb.tap(); onDone(); }}
-                  className="flex min-h-[54px] w-full items-center justify-center rounded-xl bg-gold-strong px-4 py-4 text-base font-semibold text-on-accent active:bg-gold-hover"
-                >
+                <Button variant="primary" full onClick={onDone}>
                   {t("auth.reset.goLogin", "Ir a iniciar sesión")}
-                </button>
+                </Button>
               </div>
             ) : (
               <form onSubmit={onSubmit} className="space-y-4">
@@ -113,15 +111,11 @@ export default function ResetPassword({ token, onDone }: { token: string; onDone
                   <p className="rounded-lg border border-critical/40 bg-critical/10 px-3 py-2 text-sm text-critical">{error}</p>
                 )}
 
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="flex min-h-[54px] w-full items-center justify-center gap-2 rounded-xl bg-gold-strong px-4 py-4 text-base font-semibold leading-none text-on-accent active:bg-gold-hover disabled:opacity-60"
-                >
+                <Button type="submit" variant="primary" full disabled={submitting}>
                   {submitting ? <><Loader2 size={18} className="animate-spin" />{t("auth.reset.saving", "Guardando…")}</> : (
                     <><ShieldCheck size={18} />{t("auth.reset.submit", "Guardar contraseña")}</>
                   )}
-                </button>
+                </Button>
 
                 <button type="button" onClick={() => { fb.tap(); onDone(); }} className="w-full rounded-xl pt-1 text-center text-sm text-muted">
                   {t("auth.reset.cancel", "Cancelar")}

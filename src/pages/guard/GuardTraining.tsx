@@ -11,7 +11,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { Screen } from "@/components/Screen";
-import { Card, Loader, EmptyState } from "@/components/ui";
+import { Card, EmptyState, ErrorState, SkeletonList, StatCard } from "@/components/ui";
 import { useAsync } from "@/lib/useAsync";
 import { fmtDate } from "@/lib/format";
 import fb from "@/lib/feedback";
@@ -36,7 +36,7 @@ export default function GuardTraining() {
 
   return (
     <Screen root title={t("training.title")} subtitle={t("training.subtitle")}>
-      <div className="mb-4 flex rounded-2xl bg-surface-2 p-1">
+      <div className="mb-4 flex rounded-card bg-surface-2 p-1">
         <SegBtn
           active={tab === "courses"}
           onClick={() => {
@@ -90,12 +90,13 @@ function SegBtn({
 function CoursesTab() {
   const { t } = useTranslation();
   const history = useHistory();
-  const { data, loading, reload } = useAsync(() =>
-    trainingService.myCourses().catch(() => ({ rows: [], count: 0 })),
+  const { data, loading, error, reload } = useAsync(() =>
+    trainingService.myCourses(),
   );
   const rows = data?.rows || [];
 
-  if (loading) return <Loader />;
+  if (loading) return <SkeletonList />;
+  if (error && !data) return <ErrorState onRetry={reload} />;
   if (!rows.length) {
     return (
       <EmptyState
@@ -202,8 +203,8 @@ function CourseCard({
 function AchievementsTab() {
   const { t } = useTranslation();
   const history = useHistory();
-  const { data, loading } = useAsync(() =>
-    trainingService.certificates().catch(() => ({ rows: [], count: 0 })),
+  const { data, loading, error, reload } = useAsync(() =>
+    trainingService.certificates(),
   );
   const rows = data?.rows || [];
   const totalPoints = useMemo(
@@ -211,23 +212,24 @@ function AchievementsTab() {
     [rows],
   );
 
-  if (loading) return <Loader />;
+  if (loading) return <SkeletonList />;
+  if (error && !data) return <ErrorState onRetry={reload} />;
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-3">
-        <MiniStat
+        <StatCard
           icon={<Trophy size={16} />}
           value={totalPoints}
           label={t("training.achievements.totalPoints")}
-          accent
+          accent="gold"
         />
-        <MiniStat
+        <StatCard
           icon={<Award size={16} />}
           value={rows.length}
           label={t("training.achievements.certificatesEarned")}
         />
-        <MiniStat
+        <StatCard
           icon={<CheckCircle2 size={16} />}
           value={rows.length}
           label={t("training.achievements.coursesDone")}
@@ -255,28 +257,6 @@ function AchievementsTab() {
         </div>
       )}
     </div>
-  );
-}
-
-function MiniStat({
-  icon,
-  value,
-  label,
-  accent,
-}: {
-  icon: React.ReactNode;
-  value: number;
-  label: string;
-  accent?: boolean;
-}) {
-  return (
-    <Card className="flex flex-col items-center p-3 text-center">
-      <span className={accent ? "text-gold" : "text-muted"}>{icon}</span>
-      <span className={`mt-1 text-2xl font-bold ${accent ? "text-gold" : "text-ink"}`}>
-        {value}
-      </span>
-      <span className="mt-0.5 text-[10px] leading-tight text-muted">{label}</span>
-    </Card>
   );
 }
 

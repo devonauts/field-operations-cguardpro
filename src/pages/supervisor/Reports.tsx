@@ -10,7 +10,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Screen } from "@/components/Screen";
-import { Card, StatCard, Loader, SectionTitle } from "@/components/ui";
+import { Card, StatCard, SkeletonList, ErrorState, SectionTitle } from "@/components/ui";
 import { useAsync } from "@/lib/useAsync";
 import { incidentService } from "@/lib/services";
 import { normalizeStatus, pick } from "@/lib/normalize";
@@ -27,8 +27,8 @@ const PIE_COLORS = [
 
 export default function Reports() {
   const { t } = useTranslation();
-  const { data, loading, reload } = useAsync(() =>
-    incidentService.list({ limit: 500 }).catch(() => ({ rows: [], count: 0 }))
+  const { data, loading, error, reload } = useAsync(() =>
+    incidentService.list({ limit: 500 })
   );
 
   const rows = data?.rows || [];
@@ -79,7 +79,9 @@ export default function Reports() {
   return (
     <Screen title={t("reports.title")} subtitle={t("reports.subtitle")} onRefresh={reload}>
       {loading ? (
-        <Loader />
+        <SkeletonList rows={5} />
+      ) : error ? (
+        <ErrorState onRetry={reload} />
       ) : (
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">

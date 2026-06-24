@@ -12,6 +12,8 @@ import { useAuth } from "@/context/AuthContext";
 import { VoiceChannel, type VoiceMember, type VoiceSpeaker, type VoiceState } from "@/lib/voiceChannel";
 import { ensureMicPermission } from "@/lib/micPermission";
 import { getDuty, subscribeDuty } from "@/lib/dutyState";
+import { startBackgroundAudio, stopBackgroundAudio } from "@/lib/backgroundAudio";
+import { App as CapApp } from "@capacitor/app";
 
 interface RadioContextValue {
   onDuty: boolean;
@@ -70,6 +72,9 @@ export function RadioProvider({ children }: { children: ReactNode }) {
         try { vcRef.current.disconnect(); } catch { /* ignore */ }
         vcRef.current = null;
       }
+      // Off duty: release the native keep-alive (no reason to drain battery /
+      // hold the mic when there's no channel to keep alive).
+      stopBackgroundAudio();
       setState("idle");
       setRoster([]);
       setSpeaker(null);
@@ -83,6 +88,11 @@ export function RadioProvider({ children }: { children: ReactNode }) {
       { url: apiOrigin, path: "/api/socket.io", token: getToken() || "", tenantId: getTenantId(), selfId: myId },
       { onState: setState, onPresence: setRoster, onSpeaker: setSpeaker, onError: (m) => setHint(m) },
     );
+    // Keep the app alive in the background (iOS suspends a backgrounded WebView,
+    // which would freeze the socket + Web Audio). The native silent loop holds the
+    // process running so the radio keeps receiving when the guard is in another
+    // app or the screen is locked. Runs only while connected (on duty).
+    startBackgroundAudio();
 
     let alive = true;
     let id: ReturnType<typeof setInterval> | null = null;
@@ -100,9 +110,25 @@ export function RadioProvider({ children }: { children: ReactNode }) {
       alive = false;
       if (id !== null) clearInterval(id);
       try { vc.disconnect(); } catch { /* ignore */ }
+      stopBackgroundAudio();
       vcRef.current = null;
     };
   }, [myId, onDuty]);
+
+  // Returning to the foreground after iOS throttled the WebView: the AudioContext
+  // is often left "suspended" (silence) and socket.io may be mid-reconnect. Resume
+  // the context so playback flows again the instant the guard re-opens the app.
+  useEffect(() => {
+    let sub: { remove: () => void } | undefined;
+    (async () => {
+      try {
+        sub = await CapApp.addListener("appStateChange", ({ isActive }) => {
+          if (isActive) { try { vcRef.current?.resume(); } catch { /* ignore */ } }
+        });
+      } catch { /* not native / no listener */ }
+    })();
+    return () => { try { sub?.remove(); } catch { /* ignore */ } };
+  }, []);
 
   const resume = useCallback(() => { vcRef.current?.resume(); }, []);
 

@@ -12,7 +12,9 @@ const footerStyle = { paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" 
 
 export interface ChecklistResult {
   battery: number | null;
-  items: { key: string; label: string }[];
+  items: { key: string; label: string; done: boolean }[];
+  /** Keys the guard left unchecked — advisory metadata, not a hard gate. */
+  uncheckedKeys: string[];
 }
 
 type Item = { key: string; label: string; desc?: string; done: boolean; icon: any };
@@ -71,7 +73,7 @@ export function StartShiftModal({
   const toggle = (key: string) =>
     setItems((prev) => prev.map((it) => (it.key === key ? { ...it, done: !it.done } : it)));
 
-  const allDone = items.length > 0 && items.every((it) => it.done);
+  const uncheckedCount = items.filter((it) => !it.done).length;
 
   const batteryIcon = !battery?.supported
     ? BatteryFull
@@ -91,7 +93,10 @@ export function StartShiftModal({
   const start = () =>
     onStart({
       battery: battery?.supported ? battery.level : null,
-      items: items.map(({ key, label }) => ({ key, label })),
+      // Pass the full checklist with each item's done state so the backend keeps
+      // a record of what was/wasn't verified at clock-in.
+      items: items.map(({ key, label, done }) => ({ key, label, done })),
+      uncheckedKeys: items.filter((it) => !it.done).map((it) => it.key),
     });
 
   return (
@@ -191,16 +196,23 @@ export function StartShiftModal({
 
         {/* footer */}
         <div className="border-t border-line px-4 pt-3" style={footerStyle}>
+          {/* Advisory, not a gate: "Iniciar turno" is always enabled. Unchecked
+              items are recorded as metadata (see start()) rather than blocking
+              clock-in — saves ~3 mandatory taps per shift. */}
           <button
             onClick={start}
-            disabled={!allDone}
-            className="btn-xl w-full bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-40"
+            className="btn-xl w-full bg-gold-strong text-on-accent active:bg-gold-hover"
           >
             {t("startShift.startBtn")}
             <ArrowRight size={18} />
           </button>
-          {!allDone && (
-            <p className="mt-2 text-center text-xs text-faint">{t("startShift.completeAll")}</p>
+          {uncheckedCount > 0 && (
+            <p className="mt-2 text-center text-xs text-faint">
+              {t("startShift.advisoryRemaining", {
+                count: uncheckedCount,
+                defaultValue: "{{count}} elemento(s) sin marcar — opcional",
+              })}
+            </p>
           )}
         </div>
       </div>

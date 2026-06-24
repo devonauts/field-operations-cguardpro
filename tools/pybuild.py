@@ -502,7 +502,7 @@ def ensure_altool_key(key_path: str, key_id: str) -> str:
 def export_options_plist(d: str, team_id: str) -> str:
     path = os.path.join(d, "ios", "ExportOptions.plist")
     data = {
-        "method": "app-store",
+        "method": "app-store-connect",
         "teamID": team_id,
         "uploadSymbols": True,
         "signingStyle": "automatic",
@@ -548,18 +548,26 @@ def cmd_ios(cfg: dict, app_name: str | None, bump: bool = True):
     archive = os.path.join(out, f"{name}.xcarchive")
     env = utf8_env()
 
+    # Hand the App Store Connect API key to xcodebuild so `-allowProvisioningUpdates`
+    # can create/download the iOS Distribution cert + provisioning profile via Apple's
+    # cloud (no Xcode account or local cert needed). Without this xcodebuild fails with
+    # "No Accounts" / "No signing certificate iOS Distribution found".
+    auth = ["-authenticationKeyPath", key_path,
+            "-authenticationKeyID", key_id,
+            "-authenticationKeyIssuerID", issuer_id]
+
     info("Archiving (xcodebuild archive, automatic signing)…")
     run(["xcodebuild", "-workspace", ws, "-scheme", "App",
          "-configuration", "Release", "-archivePath", archive,
-         "-allowProvisioningUpdates",
+         "-allowProvisioningUpdates", *auth,
          f"DEVELOPMENT_TEAM={team_id}", "archive"], cwd=ios, env=env)
     ok("archive created")
 
-    info("Exporting .ipa (app-store)…")
+    info("Exporting .ipa (app-store-connect)…")
     opts = export_options_plist(d, team_id)
     run(["xcodebuild", "-exportArchive", "-archivePath", archive,
          "-exportPath", out, "-exportOptionsPlist", opts,
-         "-allowProvisioningUpdates"], cwd=ios, env=env)
+         "-allowProvisioningUpdates", *auth], cwd=ios, env=env)
     ipas = glob.glob(os.path.join(out, "*.ipa"))
     if not ipas:
         die("no .ipa exported.")
@@ -732,19 +740,23 @@ def push_metadata(d: str, bundle_id: str, key_id: str, issuer_id: str, key_path:
     existing = {loc["attributes"]["locale"]: loc["id"] for loc in r.json().get("data", [])}
 
     for locale, fields in meta.get("locales", {}).items():
+        # `whatsNew` (release notes) is locked until the build for this version has
+        # finished processing and is attached — pushing it too early returns a 409
+        # STATE_ERROR that would otherwise sink the whole localization. So push the
+        # always-editable fields first, then try whatsNew on its own.
         attrs = {
             "description": fields.get("description"),
             "keywords": fields.get("keywords"),
             "promotionalText": fields.get("promotionalText"),
             "supportUrl": meta.get("supportUrl"),
             "marketingUrl": meta.get("marketingUrl"),
-            "whatsNew": fields.get("releaseNotes"),
         }
         attrs = {k: v for k, v in attrs.items() if v}
         if locale in existing:
+            loc_id = existing[locale]
             body = {"data": {"type": "appStoreVersionLocalizations",
-                             "id": existing[locale], "attributes": attrs}}
-            rr = requests.patch(f"{ASC_BASE}/appStoreVersionLocalizations/{existing[locale]}",
+                             "id": loc_id, "attributes": attrs}}
+            rr = requests.patch(f"{ASC_BASE}/appStoreVersionLocalizations/{loc_id}",
                                 headers=H, data=json.dumps(body))
         else:
             body = {"data": {"type": "appStoreVersionLocalizations",
@@ -753,10 +765,28 @@ def push_metadata(d: str, bundle_id: str, key_id: str, issuer_id: str, key_path:
                                  "data": {"type": "appStoreVersions", "id": version_id}}}}}
             rr = requests.post(f"{ASC_BASE}/appStoreVersionLocalizations",
                                headers=H, data=json.dumps(body))
+            if rr.status_code in (200, 201):
+                loc_id = rr.json()["data"]["id"]
         if rr.status_code in (200, 201):
             ok(f"metadata: {locale}")
         else:
             warn(f"metadata {locale} failed ({rr.status_code}): {rr.text[:200]}")
+            continue
+
+        whats_new = fields.get("releaseNotes")
+        if not whats_new:
+            continue
+        wn = {"data": {"type": "appStoreVersionLocalizations",
+                       "id": loc_id, "attributes": {"whatsNew": whats_new}}}
+        wr = requests.patch(f"{ASC_BASE}/appStoreVersionLocalizations/{loc_id}",
+                            headers=H, data=json.dumps(wn))
+        if wr.status_code == 200:
+            ok(f"release notes: {locale}")
+        elif wr.status_code == 409 and "STATE_ERROR" in wr.text:
+            warn(f"release notes {locale} deferred — the build is still processing. "
+                 f"Re-run once it's attached, or set 'What's New' manually.")
+        else:
+            warn(f"release notes {locale} failed ({wr.status_code}): {wr.text[:200]}")
 
 
 # ============================================================================= entry

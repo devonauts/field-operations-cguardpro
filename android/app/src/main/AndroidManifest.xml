@@ -28,6 +28,13 @@
             </intent-filter>
         </activity>
 
+        <!-- Route FCM pushes that omit a channel to our HIGH-importance channel
+             (created in MainActivity) so they pop as heads-up with sound. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="default"
+        />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -35,6 +42,15 @@
             android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Keeps the app process (radio socket + Web Audio) alive in the
+             background while the live channel is connected. See
+             RadioKeepAliveService / BackgroundAudioPlugin. -->
+        <service
+            android:name=".RadioKeepAliveService"
+            android:exported="false"
+            android:foregroundServiceType="microphone|mediaPlayback"
+        />
     </application>
 
     <!-- Permissions -->
@@ -47,6 +63,14 @@
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <!-- Background radio keep-alive (foreground service). MICROPHONE keeps PTT
+         transmit working in the background; MEDIA_PLAYBACK keeps the receive
+         audio alive. WAKE_LOCK keeps the socket from sleeping under Doze. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 

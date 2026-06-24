@@ -1,10 +1,10 @@
 import { useTranslation } from "react-i18next";
 import { useHistory } from "react-router-dom";
-import { CalendarDays, FileBarChart, User, ChevronRight, LogOut, Shirt, LifeBuoy } from "lucide-react";
+import { CalendarDays, FileBarChart, User, LogOut, Shirt, LifeBuoy } from "lucide-react";
 import { Screen } from "@/components/Screen";
 import { Card } from "@/components/ui";
+import { Button, MenuRow, MenuList } from "@/components/ui/kit";
 import { useAuth } from "@/context/AuthContext";
-import { fb } from "@/lib/feedback";
 
 export default function More() {
   const { t } = useTranslation();
@@ -21,34 +21,23 @@ export default function More() {
 
   return (
     <Screen root title={t("nav.more")} onRefresh={refreshUser}>
-      <Card className="divide-y divide-line p-0">
+      <MenuList>
         {items.map((it) => (
-          <button
+          <MenuRow
             key={it.to}
-            onClick={() => {
-              fb.tap();
-              history.push(it.to);
-            }}
-            className="flex w-full items-center gap-3 px-4 py-4 text-sm font-medium text-ink active:bg-surface-2"
-          >
-            <span className="text-gold">{it.icon}</span>
-            <span className="flex-1 text-left">{it.label}</span>
-            <ChevronRight size={18} className="text-muted" />
-          </button>
+            icon={it.icon}
+            tone="amber"
+            title={it.label}
+            onClick={() => history.push(it.to)}
+          />
         ))}
-      </Card>
+      </MenuList>
 
       <Card className="mt-4 p-2">
-        <button
-          onClick={() => {
-            fb.press();
-            signOut();
-          }}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-critical active:bg-surface-2"
-        >
+        <Button variant="danger" full onClick={signOut} className="flex items-center justify-center gap-3">
           <LogOut size={18} />
           {t("auth.signOut")}
-        </button>
+        </Button>
       </Card>
     </Screen>
   );

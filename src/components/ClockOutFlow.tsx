@@ -4,8 +4,17 @@ import { Loader2 } from "lucide-react";
 import { guardService } from "@/lib/services";
 import { getCurrentPosition } from "@/lib/geo";
 import { Button } from "@/components/ui/kit";
+import { ResultSheet } from "@/components/ui";
 import { EarlyClockOutModal } from "@/components/EarlyClockOutModal";
 import { ClockOutReportModal } from "@/components/ClockOutReportModal";
+
+/** "8h 02m" between two timestamps. */
+function fmtDuration(fromMs: number, toMs: number): string {
+  const mins = Math.max(0, Math.round((toMs - fromMs) / 60000));
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${h}h ${String(m).padStart(2, "0")}m`;
+}
 
 /**
  * Self-contained clock-out flow: the clock-out button (with the early-out
@@ -24,11 +33,20 @@ export function ClockOutFlow({
   const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
+  // A failed clock-out is shown INSIDE the report modal (not behind it) and is
+  // retryable — the modal only closes on a confirmed successful punch.
+  const [reportError, setReportError] = useState<string | null>(null);
   const [earlyOutOpen, setEarlyOutOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  // Success confirmation: echoes the salida time + total shift duration.
+  const [doneSheet, setDoneSheet] = useState<{ time: string; duration: string } | null>(null);
+
+  const punchInTime =
+    data?.activeClockIn?.punchInTime || data?.activeClockIn?.createdAt || null;
 
   const handleClockOut = async (summary?: string) => {
     setBusy(true);
+    setReportError(null);
     try {
       let coords: { latitude?: number; longitude?: number } = {};
       try {
@@ -47,10 +65,25 @@ export function ClockOutFlow({
         setEarlyOutOpen(true);
         return;
       }
+      // A backend-signalled failure (success:false, any other reason) must stay
+      // visible in the modal and be retryable — never silently close.
+      if (res && res.success === false) {
+        setReportError(res.message || t("onduty.clockOutFailed", "No se pudo marcar salida."));
+        return;
+      }
+      // Confirmed success: capture salida time + duration BEFORE reload flips
+      // off-duty and unmounts the source data, then show the confirmation.
+      const now = Date.now();
+      const inMs = punchInTime ? new Date(punchInTime).getTime() : NaN;
+      setDoneSheet({
+        time: new Date(now).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false }),
+        duration: Number.isNaN(inMs) ? "—" : fmtDuration(inMs, now),
+      });
       setReportOpen(false);
       await reload();
     } catch (e: any) {
-      setGpsError(e?.message || "error");
+      // Keep the modal open and show the error there with a working retry.
+      setReportError(e?.message || t("onduty.clockOutFailed", "No se pudo marcar salida."));
     } finally {
       setBusy(false);
     }
@@ -103,6 +136,7 @@ export function ClockOutFlow({
         busy={busy}
         onClockOut={() => {
           setGpsError(null);
+          setReportError(null);
           setReportOpen(true);
         }}
         onRequestClockOut={() => {
@@ -123,8 +157,31 @@ export function ClockOutFlow({
       <ClockOutReportModal
         isOpen={reportOpen}
         busy={busy}
-        onCancel={() => setReportOpen(false)}
+        error={reportError}
+        onCancel={() => {
+          setReportError(null);
+          setReportOpen(false);
+        }}
         onSubmit={(summary) => handleClockOut(summary)}
+      />
+
+      {/* Clock-OUT confirmation (P0): echoes the outcome so the punch is never
+          silent. Built on the shared ResultSheet (auto success haptic). */}
+      <ResultSheet
+        open={!!doneSheet}
+        onClose={() => setDoneSheet(null)}
+        variant="success"
+        title={t("onduty.clockOutDone", "Salida registrada")}
+        lines={
+          doneSheet
+            ? [
+                `${t("onduty.salidaWord", "Salida")} ${doneSheet.time}`,
+                `${t("onduty.shiftWord", "Turno")}: ${doneSheet.duration}`,
+              ]
+            : []
+        }
+        primaryLabel={t("app.ok", "OK")}
+        onPrimary={() => setDoneSheet(null)}
       />
     </>
   );

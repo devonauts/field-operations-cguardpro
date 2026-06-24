@@ -3,15 +3,16 @@ import { IonModal } from "@ionic/react";
 import { useTranslation } from "react-i18next";
 import { Shirt, Star, X, Loader2, Search } from "lucide-react";
 import { Screen } from "@/components/Screen";
-import { Card, Loader, EmptyState, Avatar } from "@/components/ui";
+import { SkeletonList, EmptyState, ErrorState, Avatar } from "@/components/ui";
+import { Button } from "@/components/ui/kit";
 import { useAsync } from "@/lib/useAsync";
 import { guardsService, performanceService } from "@/lib/services";
 import { fb } from "@/lib/feedback";
 
 export default function UniformInspection() {
   const { t } = useTranslation();
-  const { data, loading } = useAsync(() =>
-    guardsService.list({ limit: "200" }).catch(() => ({ rows: [], count: 0 })),
+  const { data, loading, error, reload } = useAsync(() =>
+    guardsService.list({ limit: "200" }),
   );
   const guards = (data?.rows as any[]) || [];
   const [query, setQuery] = useState("");
@@ -28,7 +29,9 @@ export default function UniformInspection() {
   return (
     <Screen title={t("uniform.title")} subtitle={t("uniform.subtitle")}>
       {loading ? (
-        <Loader />
+        <SkeletonList />
+      ) : error ? (
+        <ErrorState onRetry={reload} />
       ) : guards.length === 0 ? (
         <EmptyState icon={<Shirt size={28} />} title={t("uniform.noGuards")} />
       ) : (
@@ -98,7 +101,6 @@ function RateModal({
     if (!guard || stars < 1 || busy) return;
     setBusy(true);
     setError(null);
-    fb.press();
     try {
       await performanceService.createInspection({
         securityGuardId: guard.id,
@@ -182,17 +184,13 @@ function RateModal({
           {error && <p className="text-sm text-critical">{error}</p>}
         </div>
         <div className="border-t border-line px-4 py-3">
-          <button
-            onClick={submit}
-            disabled={busy || stars < 1}
-            className="btn-xl w-full bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-50"
-          >
+          <Button variant="primary" full onClick={submit} disabled={busy || stars < 1}>
             {busy ? (
               <Loader2 size={18} className="animate-spin" />
             ) : (
               t("uniform.save")
             )}
-          </button>
+          </Button>
         </div>
       </div>
     </IonModal>

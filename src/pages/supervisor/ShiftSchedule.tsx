@@ -8,7 +8,7 @@ import {
   format,
 } from "date-fns";
 import { Screen } from "@/components/Screen";
-import { Card, Loader, EmptyState } from "@/components/ui";
+import { Card, SkeletonList, EmptyState, ErrorState } from "@/components/ui";
 import { useAsync } from "@/lib/useAsync";
 import { shiftService } from "@/lib/services";
 import { fmtTime } from "@/lib/format";
@@ -22,8 +22,8 @@ export default function ShiftSchedule() {
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
-  const { data, loading, reload } = useAsync(() =>
-    shiftService.list({ limit: 300 }).catch(() => [])
+  const { data, loading, error, reload } = useAsync(() =>
+    shiftService.list({ limit: 300 })
   );
   const shifts: any[] = data || [];
 
@@ -61,7 +61,7 @@ export default function ShiftSchedule() {
                   : "border-line text-muted"
               }`}
             >
-              <span className="text-[10px] uppercase">{format(d, dshort)}</span>
+              <span className="text-xs uppercase">{format(d, dshort)}</span>
               <span className="text-base font-bold">{format(d, "d")}</span>
             </button>
           );
@@ -69,7 +69,9 @@ export default function ShiftSchedule() {
       </div>
 
       {loading ? (
-        <Loader />
+        <SkeletonList />
+      ) : error ? (
+        <ErrorState onRetry={reload} />
       ) : dayShifts.length === 0 ? (
         <EmptyState icon={<CalendarDays size={28} />} title={t("guard.noShifts")} />
       ) : (

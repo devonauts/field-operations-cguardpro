@@ -11,7 +11,8 @@ import {
   Clock,
 } from "lucide-react";
 import { Screen } from "@/components/Screen";
-import { Card, Loader, EmptyState } from "@/components/ui";
+import { Card, EmptyState, ErrorState, SkeletonList } from "@/components/ui";
+import { Button } from "@/components/ui/kit";
 import { useAsync } from "@/lib/useAsync";
 import fb from "@/lib/feedback";
 import {
@@ -24,7 +25,7 @@ export default function GuardCourseDetail() {
   const { t } = useTranslation();
   const history = useHistory();
   const { enrollmentId } = useParams<{ enrollmentId: string }>();
-  const { data, loading } = useAsync(
+  const { data, loading, error, reload } = useAsync(
     () => trainingService.enrollmentDetail(enrollmentId),
     [enrollmentId],
   );
@@ -32,7 +33,14 @@ export default function GuardCourseDetail() {
   if (loading) {
     return (
       <Screen back title={t("training.title")}>
-        <Loader />
+        <SkeletonList />
+      </Screen>
+    );
+  }
+  if (error && !data) {
+    return (
+      <Screen back title={t("training.title")}>
+        <ErrorState onRetry={reload} />
       </Screen>
     );
   }
@@ -134,28 +142,28 @@ function CourseDetailView({
       {enrollment.hasQuiz ? (
         <div className="mt-5">
           {enrollment.quizPassed ? (
-            <div className="flex items-center justify-center gap-2 rounded-2xl border border-online/40 bg-online/10 py-3 text-sm font-semibold text-online">
+            <div className="flex items-center justify-center gap-2 rounded-card border border-online/40 bg-online/10 py-3 text-sm font-semibold text-online">
               <Award size={18} /> {t("training.course.courseDone")}
             </div>
           ) : !allLessonsDone ? (
-            <div className="flex items-center justify-center gap-2 rounded-2xl border border-line bg-surface-2 py-3 text-xs text-muted">
+            <div className="flex items-center justify-center gap-2 rounded-card border border-line bg-surface-2 py-3 text-xs text-muted">
               <Lock size={15} /> {t("training.course.quizLocked")}
             </div>
           ) : (
-            <button
-              onClick={() => {
-                fb.press();
-                history.push(`/guard/training/${enrollmentId}/quiz`);
-              }}
-              className="btn-xl flex w-full items-center justify-center gap-2 bg-gold-strong text-on-accent active:bg-gold-hover"
+            <Button
+              variant="primary"
+              full
+              onClick={() => history.push(`/guard/training/${enrollmentId}/quiz`)}
             >
-              <ClipboardCheck size={18} /> {t("training.course.takeQuiz")}
-            </button>
+              <span className="flex items-center justify-center gap-2">
+                <ClipboardCheck size={18} /> {t("training.course.takeQuiz")}
+              </span>
+            </Button>
           )}
         </div>
       ) : (
         allLessonsDone && (
-          <div className="mt-5 flex items-center justify-center gap-2 rounded-2xl border border-online/40 bg-online/10 py-3 text-sm font-semibold text-online">
+          <div className="mt-5 flex items-center justify-center gap-2 rounded-card border border-online/40 bg-online/10 py-3 text-sm font-semibold text-online">
             <Award size={18} /> {t("training.course.courseDone")}
           </div>
         )

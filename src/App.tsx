@@ -16,6 +16,7 @@ import SupervisorTabs from "./pages/supervisor/SupervisorTabs";
 import { SUPERVISOR_ROLE } from "./lib/roles";
 import { RadioProvider } from "./context/RadioContext";
 import FloatingRadioButton from "./components/FloatingRadioButton";
+import RadioCheckAlert from "./components/RadioCheckAlert";
 
 /**
  * Extract a password-reset token from a deep link. Handles both the custom
@@ -66,6 +67,8 @@ function Gate() {
     <RadioProvider>
       <GuardTabs />
       <FloatingRadioButton />
+      {/* Global pase-de-novedades popup (push + poll fallback) — see RadioCheckAlert. */}
+      <RadioCheckAlert />
     </RadioProvider>
   );
 }

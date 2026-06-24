@@ -24,7 +24,8 @@ import { visitorService, VisitorPhoto } from "@/lib/services";
 import { fileUrlFromFile } from "@/lib/fileUrl";
 import { useAsync } from "@/lib/useAsync";
 import { fmtTime } from "@/lib/format";
-import { Loader } from "./ui";
+import { SkeletonList, EmptyState } from "./ui";
+import { Button } from "./ui/kit";
 import { compressImage, takeNativePhoto, isNative, CapturedImage } from "@/lib/capture";
 import { scanId } from "@/lib/ocr";
 
@@ -312,12 +313,9 @@ function ListView({ loading, visits, reload, onNew }: { loading: boolean; visits
     <>
       <div className="flex-1 overflow-y-auto px-4 py-4">
         {loading ? (
-          <Loader />
+          <SkeletonList rows={5} />
         ) : visits.length === 0 ? (
-          <div className="py-16 text-center">
-            <Users size={32} className="mx-auto mb-3 text-low" />
-            <p className="text-sm text-muted">{t("visitor.empty")}</p>
-          </div>
+          <EmptyState icon={<Users size={32} />} title={t("visitor.empty")} />
         ) : (
           <div className="space-y-2 pb-2">
             {visits.map((v: any, i: number) => {
@@ -339,7 +337,7 @@ function ListView({ loading, visits, reload, onNew }: { loading: boolean; visits
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-ink">
                       {isVehicle && <Car size={13} className="mr-1 inline align-[-2px]" />}{name}
-                      {v.tagNumber ? <span className="ml-2 rounded bg-gold/15 px-1.5 py-0.5 text-[10px] font-bold text-gold">#{v.tagNumber}</span> : null}
+                      {v.tagNumber ? <span className="ml-2 rounded bg-gold/15 px-1.5 py-0.5 text-xs font-bold text-gold">#{v.tagNumber}</span> : null}
                     </p>
                     <p className="truncate text-xs text-muted">{[v.idNumber, v.reason].filter(Boolean).join(" · ") || "—"}</p>
                     <p className="mt-0.5 text-[11px] text-faint">{fmtTime(v.visitDate)}{out ? <><ArrowRight size={11} className="mx-0.5 inline align-[-1px]" />{fmtTime(v.exitTime)}</> : null}</p>
@@ -356,10 +354,10 @@ function ListView({ loading, visits, reload, onNew }: { loading: boolean; visits
         )}
       </div>
       <div className="border-t border-line px-4 pt-3" style={footerStyle}>
-        <button onClick={onNew} className="btn-xl w-full bg-gold-strong text-on-accent active:bg-gold-hover">
+        <Button variant="primary" full onClick={onNew}>
           <UserPlus size={18} />
           {t("visitor.register")}
-        </button>
+        </Button>
       </div>
     </>
   );
@@ -472,10 +470,10 @@ function CaptureView({
       </div>
 
       <div className="flex gap-2 border-t border-line px-4 pt-3" style={footerStyle}>
-        <button onClick={onSkip} className="btn-xl flex-1 border border-line text-muted">{t("visitor.skipPhoto")}</button>
-        <button onClick={onContinue} disabled={(!photo && !facePhoto) || scanning} className="btn-xl flex-[2] bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-50">
+        <Button variant="outline" onClick={onSkip} className="flex-1">{t("visitor.skipPhoto")}</Button>
+        <Button variant="primary" onClick={onContinue} disabled={(!photo && !facePhoto) || scanning} className="flex-[2]">
           {scanning ? <Loader2 size={18} className="animate-spin" /> : t("visitor.continue")}
-        </button>
+        </Button>
       </div>
     </>
   );
@@ -502,7 +500,7 @@ function PhotoStrip({ photos, onAdd, onRemove }: {
                 <X size={12} />
               </button>
               {i === 0 && (
-                <span className="absolute bottom-0 left-0 right-0 rounded-b-xl bg-on-accent/70 py-0.5 text-center text-[9px] text-gold">
+                <span className="absolute bottom-0 left-0 right-0 rounded-b-xl bg-on-accent/70 py-0.5 text-center text-[11px] text-gold">
                   {t("visitor.idPhotoLabel")}
                 </span>
               )}
@@ -651,9 +649,9 @@ function PersonForm({ fields, setFields, photos, facePhoto, addPhoto, removePhot
       </div>
 
       <div className="border-t border-line px-4 pt-3" style={footerStyle}>
-        <button onClick={submit} disabled={busy || !fields.firstName.trim()} className="btn-xl w-full bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-50">
+        <Button variant="primary" full onClick={submit} disabled={busy || !fields.firstName.trim()}>
           {busy ? <Loader2 size={18} className="animate-spin" /> : <><Check size={18} />{t("visitor.save")}</>}
-        </button>
+        </Button>
       </div>
     </>
   );
@@ -754,9 +752,9 @@ function VehicleForm({ photos, facePhoto, addPhoto, removePhoto, station, onDone
       </div>
 
       <div className="border-t border-line px-4 pt-3" style={footerStyle}>
-        <button onClick={submit} disabled={busy || !plate.trim()} className="btn-xl w-full bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-50">
+        <Button variant="primary" full onClick={submit} disabled={busy || !plate.trim()}>
           {busy ? <Loader2 size={18} className="animate-spin" /> : <><Check size={18} />{t("visitor.save")}</>}
-        </button>
+        </Button>
       </div>
     </>
   );

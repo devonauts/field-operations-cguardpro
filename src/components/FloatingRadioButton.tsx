@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Mic, Loader2, Volume2 } from "lucide-react";
 import { useRadio } from "@/context/RadioContext";
 
@@ -13,6 +14,7 @@ const SIZE = 64;
  * any screen without opening the radio page.
  */
 export default function FloatingRadioButton() {
+  const { t } = useTranslation();
   const { onDuty, screenActive, state, speaker, talking, hint, myId, someoneElseTalking, resume, pressTalk, releaseTalk } = useRadio();
 
   const ref = useRef<HTMLDivElement>(null);
@@ -78,9 +80,9 @@ export default function FloatingRadioButton() {
   };
 
   const status =
-    talking ? "Transmitiendo…"
-    : speaker ? `${speaker.userId === myId ? "Hablando" : `${speaker.name} hablando`}…`
-    : connecting ? "Conectando…"
+    talking ? t("radio.transmitting", "Transmitiendo…")
+    : speaker ? `${speaker.userId === myId ? t("radio.talking", "Hablando") : `${speaker.name} ${t("radio.isTalking", "está hablando")}`}…`
+    : connecting ? t("radio.connecting", "Conectando…")
     : hint || null;
 
   const style: React.CSSProperties = pos
@@ -113,7 +115,7 @@ export default function FloatingRadioButton() {
         onContextMenu={(e) => e.preventDefault()}
         style={{ touchAction: "none", WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" } as any}
         className={`no-press relative grid h-16 w-16 place-items-center rounded-full ${canTalk ? "" : "opacity-70"}`}
-        aria-label="Mantén para hablar en el canal"
+        aria-label={t("radio.holdToTalkChannel", "Mantén para hablar en el canal")}
       >
         <span className={`absolute inset-0 rounded-full ${talking ? "bg-critical/25 animate-ping" : someoneElseTalking ? "bg-gold/25 animate-pulse" : "bg-gold/15"}`} />
         <span

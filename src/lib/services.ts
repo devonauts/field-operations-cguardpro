@@ -295,8 +295,37 @@ export const incidentService = {
     api.post(tenantPath("/guard/me/incident"), { data }).then(unwrap),
   update: (id: string, data: Record<string, any>) =>
     api.put(tenantPath(`/incident/${id}`), { data }).then(unwrap),
+  /**
+   * Transition an incident's workflow status (Acknowledge → In Progress →
+   * Resolved). Wraps the real `PUT /tenant/:id/incident/:id` endpoint
+   * (incidentUpdate.ts, permission `incidentEdit`). Status is persisted in the
+   * backend's Spanish vocabulary; an optional `note` is appended to
+   * `internalNotes`/`comments` so the supervisor's reasoning is recorded.
+   *
+   * NOTE: there is NO incident-assignment endpoint on the backend (the incident
+   * route exposes only create/update/find/list/destroy/dispatch, and no
+   * guard-assignment field beyond the reporter `guardNameId`). An `assign()`
+   * helper is therefore intentionally omitted — see the task report.
+   */
+  updateStatus: (id: string, status: string, note?: string) => {
+    const data: Record<string, any> = { status };
+    if (note && note.trim()) {
+      data.internalNotes = note.trim();
+      data.comments = note.trim();
+    }
+    return api.put(tenantPath(`/incident/${id}`), { data }).then(unwrap);
+  },
   /** Upload evidence photo → descriptor for `imageUrl`/`idPhoto`. */
   uploadPhoto: (file: File) => uploadToStorage(file, "incidentImageUrl"),
+};
+
+/** Backend incident status vocabulary (Spanish) keyed by the app's canonical
+ *  IncidentStatus enum. Used when transitioning an incident via updateStatus. */
+export const INCIDENT_STATUS_VALUE: Record<string, string> = {
+  open: "abierto",
+  inProgress: "en_proceso",
+  resolved: "resuelto",
+  closed: "cerrado",
 };
 
 export const incidentTypeService = {
@@ -513,19 +542,20 @@ export const messageService = {
     api.post(tenantPath(`/guard/me/messages`), { data: { body, clientMsgId, attachments: attachments && attachments.length ? attachments : undefined } }).then(unwrap),
   markRead: (id: string) =>
     api.post(tenantPath(`/guard/me/messages/${id}/read`), { data: {} }).then(unwrap),
-  /** Upload an image/video and return its attachment descriptor. */
+  /** Upload an image/video/audio and return its attachment descriptor. */
   uploadAttachment: async (file: File): Promise<MessageAttachment> => {
     const up = await uploadToStorage(file, "messageAttachments");
+    const mt = file.type || "";
     return {
       url: up.privateUrl,
-      type: (file.type || "").startsWith("video") ? "video" : "image",
+      type: mt.startsWith("video") ? "video" : mt.startsWith("audio") ? "audio" : "image",
       name: file.name,
       sizeInBytes: file.size,
     };
   },
 };
 
-export type MessageAttachment = { url: string; type: "image" | "video"; name?: string; sizeInBytes?: number };
+export type MessageAttachment = { url: string; type: "image" | "video" | "audio"; name?: string; sizeInBytes?: number };
 
 /* ------------------------------------------------------------------ */
 /* Radio check (pase de novedades) — the guard answers a roll-call     */

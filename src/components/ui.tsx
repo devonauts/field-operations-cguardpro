@@ -1,6 +1,9 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCircle2, AlertTriangle, X, ChevronsRight } from "lucide-react";
+import fb from "@/lib/feedback";
+import { Button } from "@/components/ui/kit";
 import {
   Severity,
   IncidentStatus,
@@ -176,6 +179,243 @@ export function EmptyState({
       <p className="text-sm font-medium text-ink">{title}</p>
       {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
       {action && <div className="mt-4">{action}</div>}
+    </div>
+  );
+}
+
+/* Error state with a retry — the canonical "couldn't load, try again" surface.
+   Use this anywhere a fetch can fail so a network error is never shown as an
+   empty list. Pair with: data === null ? <ErrorState onRetry={load}/> : ... */
+export function ErrorState({
+  title,
+  hint,
+  onRetry,
+  retryLabel,
+}: {
+  title?: string;
+  hint?: string;
+  onRetry?: () => void;
+  retryLabel?: string;
+}) {
+  const { t } = useTranslation();
+  return (
+    <EmptyState
+      icon={<AlertTriangle size={26} />}
+      title={title || t("app.loadError", "No se pudo cargar")}
+      hint={hint || t("app.loadErrorHint", "Revisa tu conexión e inténtalo de nuevo.")}
+      action={
+        onRetry ? (
+          <Button variant="outline" onClick={onRetry}>
+            {retryLabel || t("app.retry", "Reintentar")}
+          </Button>
+        ) : undefined
+      }
+    />
+  );
+}
+
+/* Shimmer placeholder — the ONE loading primitive (driven by `.skeleton` in
+   index.css). Compose these for skeleton screens instead of spinners. */
+export function Skeleton({ className = "" }: { className?: string }) {
+  return <div className={`skeleton ${className}`} />;
+}
+
+/* A skeleton card row matching the standard list-item height. */
+export function SkeletonList({ rows = 4 }: { rows?: number }) {
+  return (
+    <div className="space-y-2.5">
+      {Array.from({ length: rows }).map((_, i) => (
+        <Skeleton key={i} className="h-16 w-full rounded-card" />
+      ))}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Bottom sheet — the ONE reusable sheet primitive                     */
+/* ------------------------------------------------------------------ */
+
+/* Slide-up bottom sheet rendered in a portal. Backdrop tap + Esc close.
+   Reuse for confirmations, pickers, detail panels — do not hand-roll sheets. */
+export function Sheet({
+  open,
+  onClose,
+  children,
+  title,
+  className = "",
+}: {
+  open: boolean;
+  onClose: () => void;
+  children: ReactNode;
+  title?: string;
+  className?: string;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[60] flex flex-col justify-end">
+      <div className="sheet-backdrop absolute inset-0 bg-black/60" onClick={onClose} />
+      <div
+        role="dialog"
+        aria-modal="true"
+        className={`sheet-panel safe-bottom relative max-h-[88vh] overflow-y-auto rounded-t-2xl border-t border-line bg-surface ${className}`}
+      >
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 bg-surface/95 px-5 pb-2 pt-3 backdrop-blur">
+          <div className="mx-auto h-1 w-9 rounded-full bg-line-2" aria-hidden />
+        </div>
+        {title && (
+          <div className="flex items-center justify-between px-5 pb-1">
+            <h3 className="text-base font-bold text-ink">{title}</h3>
+            <button onClick={onClose} className="pressable -mr-1 p-1 text-muted" aria-label="Cerrar">
+              <X size={20} />
+            </button>
+          </div>
+        )}
+        <div className="px-5 pb-5 pt-1">{children}</div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+/* A result/confirmation sheet (success or error) with an icon, title, optional
+   detail lines, and up to two actions. Use for clock-in/out confirmations and
+   any "it worked / it failed — retry" moment. Built on <Sheet>. */
+export function ResultSheet({
+  open,
+  onClose,
+  variant = "success",
+  title,
+  lines,
+  primaryLabel,
+  onPrimary,
+  secondaryLabel,
+  onSecondary,
+}: {
+  open: boolean;
+  onClose: () => void;
+  variant?: "success" | "error";
+  title: string;
+  lines?: ReactNode[];
+  primaryLabel?: string;
+  onPrimary?: () => void;
+  secondaryLabel?: string;
+  onSecondary?: () => void;
+}) {
+  useEffect(() => {
+    if (open) variant === "success" ? fb.success() : fb.error();
+  }, [open, variant]);
+
+  return (
+    <Sheet open={open} onClose={onClose}>
+      <div className="flex flex-col items-center pb-2 text-center">
+        <span
+          className={`mb-3 grid h-16 w-16 place-items-center rounded-full ${
+            variant === "success" ? "bg-online/15 text-online" : "bg-critical/15 text-critical"
+          }`}
+        >
+          {variant === "success" ? <CheckCircle2 size={34} /> : <AlertTriangle size={34} />}
+        </span>
+        <p className="text-lg font-bold text-ink">{title}</p>
+        {lines && lines.length > 0 && (
+          <div className="mt-1.5 space-y-0.5">
+            {lines.map((l, i) => (
+              <p key={i} className="text-sm text-muted">{l}</p>
+            ))}
+          </div>
+        )}
+        <div className="mt-5 w-full space-y-2">
+          {onPrimary && (
+            <Button variant={variant === "error" ? "danger" : "primary"} full onClick={onPrimary}>
+              {primaryLabel || "OK"}
+            </Button>
+          )}
+          {onSecondary && (
+            <Button variant="outline" full onClick={onSecondary}>
+              {secondaryLabel || "Cerrar"}
+            </Button>
+          )}
+          {!onPrimary && !onSecondary && (
+            <Button variant="primary" full onClick={onClose}>
+              {primaryLabel || "OK"}
+            </Button>
+          )}
+        </div>
+      </div>
+    </Sheet>
+  );
+}
+
+/* Slide-to-confirm — a deliberate, hard-to-misfire action (panic/SOS, end shift).
+   Drag the knob to the end to fire onConfirm. Reusable; tone sets the color. */
+export function SlideToConfirm({
+  label,
+  onConfirm,
+  tone = "critical",
+}: {
+  label: string;
+  onConfirm: () => void;
+  tone?: "critical" | "gold";
+}) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [x, setX] = useState(0);
+  const [done, setDone] = useState(false);
+  const dragging = useRef(false);
+  const KNOB = 52;
+
+  const toneBg = tone === "critical" ? "bg-critical" : "bg-gold-strong";
+  const toneText = tone === "critical" ? "text-critical" : "text-gold";
+
+  const maxX = () => (trackRef.current?.offsetWidth || 260) - KNOB - 8;
+
+  const move = (clientX: number) => {
+    if (!dragging.current || done) return;
+    const rect = trackRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const nx = Math.max(0, Math.min(maxX(), clientX - rect.left - KNOB / 2));
+    setX(nx);
+    if (nx >= maxX() - 4) {
+      dragging.current = false;
+      setDone(true);
+      fb.warning();
+      onConfirm();
+    }
+  };
+
+  const end = () => {
+    dragging.current = false;
+    if (!done) setX(0);
+  };
+
+  return (
+    <div
+      ref={trackRef}
+      className="relative h-[60px] w-full select-none overflow-hidden rounded-full border border-line-2 bg-surface-2"
+      onPointerMove={(e) => move(e.clientX)}
+      onPointerUp={end}
+      onPointerLeave={end}
+    >
+      <span className={`pointer-events-none absolute inset-0 flex items-center justify-center text-sm font-bold uppercase tracking-wide ${toneText}`}>
+        {label}
+      </span>
+      <button
+        type="button"
+        aria-label={label}
+        onPointerDown={(e) => {
+          (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+          dragging.current = true;
+        }}
+        style={{ transform: `translateX(${x}px)` }}
+        className={`no-press absolute left-1 top-1 grid h-[52px] w-[52px] place-items-center rounded-full text-on-accent shadow-lg ${toneBg}`}
+      >
+        <ChevronsRight size={24} />
+      </button>
     </div>
   );
 }

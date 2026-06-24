@@ -4,5 +4,10 @@
 <dict>
 	<key>aps-environment</key>
 	<string>development</string>
+	<!-- Allows the pase de novedades push to use interruption-level
+	     "time-sensitive" so it breaks through Focus / silent (iOS 15+).
+	     Must also be enabled for the App ID in the Apple Developer portal. -->
+	<key>com.apple.developer.usernotifications.time-sensitive</key>
+	<true/>
 </dict>
 </plist>

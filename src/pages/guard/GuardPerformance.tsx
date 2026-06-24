@@ -14,7 +14,7 @@ import {
   LifeBuoy,
 } from "lucide-react";
 import { Screen } from "@/components/Screen";
-import { Card, Loader, EmptyState, ScoreRing, MeterBar, SectionTitle } from "@/components/ui";
+import { Card, Loader, EmptyState, ErrorState, ScoreRing, MeterBar, SectionTitle } from "@/components/ui";
 import { useAsync } from "@/lib/useAsync";
 import {
   loadGuardPerformanceDetail,
@@ -82,6 +82,8 @@ export default function GuardPerformance() {
 
       {perf.loading && !p ? (
         <Loader />
+      ) : perf.error && !p ? (
+        <ErrorState onRetry={() => perf.reload()} />
       ) : !p ? (
         <EmptyState icon={<BarChart3 size={40} />} title={t("perf.noData")} />
       ) : (
@@ -147,7 +149,7 @@ function Content({ p, t }: { p: any; t: (k: string, o?: any) => string }) {
             {t(`perf.tier.${p.tier}`)}
           </span>
           {p.source === "client" && (
-            <span className="mt-2 text-[10px] text-faint">{t("perf.estimated")}</span>
+            <span className="mt-2 text-xs text-faint">{t("perf.estimated")}</span>
           )}
         </div>
       </Card>
@@ -164,7 +166,7 @@ function Content({ p, t }: { p: any; t: (k: string, o?: any) => string }) {
               const c = TIER_COLOR[tierFor(pt.score)];
               return (
                 <div key={i} className="flex min-w-0 flex-1 flex-col items-center gap-1">
-                  <span className="text-[9px] font-semibold tabular-nums text-muted">
+                  <span className="text-[11px] font-semibold tabular-nums text-muted">
                     {Math.round(pt.score)}
                   </span>
                   <div className="flex w-full flex-1 items-end">
@@ -177,7 +179,7 @@ function Content({ p, t }: { p: any; t: (k: string, o?: any) => string }) {
                       }}
                     />
                   </div>
-                  <span className="w-full truncate text-center text-[9px] text-faint">
+                  <span className="w-full truncate text-center text-[11px] text-faint">
                     {pt.label}
                   </span>
                 </div>
@@ -205,7 +207,7 @@ function Content({ p, t }: { p: any; t: (k: string, o?: any) => string }) {
                   color={COMPONENT_COLOR[key]}
                 />
                 <div className="mt-1.5 flex items-start gap-2">
-                  <span className="shrink-0 rounded-md bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold text-muted">
+                  <span className="shrink-0 rounded-md bg-surface-2 px-1.5 py-0.5 text-xs font-semibold text-muted">
                     {t("perfDetail.weight", { pct })}
                   </span>
                   <p className="text-[11px] leading-snug text-muted">
@@ -225,7 +227,7 @@ function Content({ p, t }: { p: any; t: (k: string, o?: any) => string }) {
           {statTiles.map((tile) => (
             <div key={tile.key} className="rounded-xl bg-surface-2 p-2.5 text-center">
               <p className="text-base font-bold tabular-nums text-ink">{tile.value}</p>
-              <p className="mt-0.5 text-[10px] leading-tight text-muted">
+              <p className="mt-0.5 text-xs leading-tight text-muted">
                 {t(`perf.stat.${tile.key}`)}
               </p>
             </div>

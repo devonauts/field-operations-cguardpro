@@ -3,6 +3,7 @@ import { IonPage, IonContent } from "@ionic/react";
 import { useTranslation } from "react-i18next";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { Button } from "@/components/ui/kit";
 import { fb } from "@/lib/feedback";
 import ForgotPassword from "./ForgotPassword";
 import brandLogo from "../assets/brand-logo.png";
@@ -108,11 +109,7 @@ export default function Login() {
                 </p>
               )}
 
-              <button
-                type="submit"
-                disabled={submitting}
-                className="flex min-h-[54px] w-full items-center justify-center gap-2 rounded-xl bg-gold-strong px-4 py-4 text-base font-semibold leading-none text-on-accent transition active:bg-gold-hover disabled:opacity-60"
-              >
+              <Button type="submit" variant="primary" full disabled={submitting}>
                 {submitting ? (
                   <>
                     <Loader2 size={18} className="animate-spin" />
@@ -121,7 +118,7 @@ export default function Login() {
                 ) : (
                   t("auth.signIn")
                 )}
-              </button>
+              </Button>
 
               <button
                 type="button"

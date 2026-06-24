@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import { Share2, Download, Award } from "lucide-react";
 import { Screen } from "@/components/Screen";
-import { Loader, EmptyState } from "@/components/ui";
+import { EmptyState, ErrorState, Skeleton } from "@/components/ui";
+import { Button } from "@/components/ui/kit";
 import { useAsync } from "@/lib/useAsync";
 import fb from "@/lib/feedback";
 import { trainingService } from "@/lib/services";
@@ -11,7 +12,7 @@ import { trainingService } from "@/lib/services";
 export default function GuardCertificate() {
   const { t } = useTranslation();
   const { certificateId } = useParams<{ certificateId: string }>();
-  const { data, loading } = useAsync(
+  const { data, loading, error, reload } = useAsync(
     () => trainingService.certificate(certificateId),
     [certificateId],
   );
@@ -19,7 +20,6 @@ export default function GuardCertificate() {
 
   const share = async () => {
     if (!data) return;
-    fb.tap();
     const url =
       data.publicUrl ||
       (data.downloadToken
@@ -46,7 +46,6 @@ export default function GuardCertificate() {
   // (browser/native print-to-PDF). No heavy PDF dependency required.
   const download = () => {
     if (!data?.htmlContent) return;
-    fb.tap();
     try {
       const w = window.open("", "_blank");
       if (w) {
@@ -81,7 +80,9 @@ export default function GuardCertificate() {
       subtitle={t("training.certificate.subtitle")}
     >
       {loading ? (
-        <Loader />
+        <Skeleton className="h-[460px] w-full rounded-card" />
+      ) : error && !data ? (
+        <ErrorState onRetry={reload} />
       ) : !data?.htmlContent ? (
         <EmptyState
           icon={<Award size={28} />}
@@ -89,7 +90,7 @@ export default function GuardCertificate() {
         />
       ) : (
         <div className="space-y-4">
-          <div className="overflow-hidden rounded-2xl border border-line bg-white">
+          <div className="overflow-hidden rounded-card border border-line bg-white">
             <iframe
               ref={iframeRef}
               title="certificate"
@@ -100,21 +101,19 @@ export default function GuardCertificate() {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={share}
-              className="btn-xl flex items-center justify-center gap-2 border border-line text-ink active:bg-surface-2"
-            >
-              <Share2 size={18} /> {t("training.certificate.share")}
-            </button>
-            <button
-              onClick={download}
-              className="btn-xl flex items-center justify-center gap-2 bg-gold-strong text-on-accent active:bg-gold-hover"
-            >
-              <Download size={18} /> {t("training.certificate.download")}
-            </button>
+            <Button variant="outline" onClick={share}>
+              <span className="flex items-center justify-center gap-2">
+                <Share2 size={18} /> {t("training.certificate.share")}
+              </span>
+            </Button>
+            <Button variant="primary" onClick={download}>
+              <span className="flex items-center justify-center gap-2">
+                <Download size={18} /> {t("training.certificate.download")}
+              </span>
+            </Button>
           </div>
 
-          <div className="rounded-2xl border border-line bg-surface-2 p-4 text-xs text-muted">
+          <div className="rounded-card border border-line bg-surface-2 p-4 text-xs text-muted">
             <p>
               <span className="text-ink">{data.courseTitle}</span>
             </p>

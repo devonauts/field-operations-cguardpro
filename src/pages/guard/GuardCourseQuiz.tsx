@@ -9,7 +9,8 @@ import {
   Award,
 } from "lucide-react";
 import { Screen } from "@/components/Screen";
-import { Card, Loader, EmptyState, ScoreRing } from "@/components/ui";
+import { Card, EmptyState, ErrorState, ScoreRing, SkeletonList } from "@/components/ui";
+import { Button } from "@/components/ui/kit";
 import { useAsync } from "@/lib/useAsync";
 import fb from "@/lib/feedback";
 import { trainingService } from "@/lib/services";
@@ -27,7 +28,7 @@ export default function GuardCourseQuiz() {
   const { t } = useTranslation();
   const history = useHistory();
   const { enrollmentId } = useParams<{ enrollmentId: string }>();
-  const { data, loading, reload } = useAsync(
+  const { data, loading, error: loadError, reload } = useAsync(
     () => trainingService.enrollmentDetail(enrollmentId),
     [enrollmentId],
   );
@@ -63,7 +64,6 @@ export default function GuardCourseQuiz() {
 
   const submit = async () => {
     if (!bankId || !allAnswered || busy) return;
-    fb.press();
     setBusy(true);
     setError(null);
     try {
@@ -86,7 +86,6 @@ export default function GuardCourseQuiz() {
   };
 
   const retake = () => {
-    fb.tap();
     setResult(null);
     setAnswers({});
     stamped.current = false; // re-stamp start time when the new question set loads
@@ -101,7 +100,9 @@ export default function GuardCourseQuiz() {
       subtitle={t("training.quiz.subtitle")}
     >
       {loading ? (
-        <Loader />
+        <SkeletonList />
+      ) : loadError && !data ? (
+        <ErrorState onRetry={reload} />
       ) : result ? (
         <ResultView
           result={result}
@@ -109,7 +110,6 @@ export default function GuardCourseQuiz() {
           onViewCertificate={
             result.certificateId
               ? () => {
-                  fb.tap();
                   history.replace(`/guard/training/certificate/${result.certificateId}`);
                 }
               : undefined
@@ -162,13 +162,14 @@ export default function GuardCourseQuiz() {
 
           {error && <p className="text-sm text-critical">{error}</p>}
 
-          <button
-            onClick={submit}
+          <Button
+            variant="primary"
+            full
             disabled={!allAnswered || busy}
-            className="btn-xl w-full bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-50"
+            onClick={submit}
           >
             {busy ? <Loader2 size={18} className="animate-spin" /> : t("training.quiz.submit")}
-          </button>
+          </Button>
         </div>
       )}
     </Screen>
@@ -210,19 +211,15 @@ function ResultView({
       </Card>
 
       {result.passed && onViewCertificate ? (
-        <button
-          onClick={onViewCertificate}
-          className="btn-xl flex w-full items-center justify-center gap-2 bg-gold-strong text-navy active:bg-gold-hover"
-        >
-          <Award size={18} /> {t("training.quiz.viewCertificate")}
-        </button>
+        <Button variant="primary" full onClick={onViewCertificate}>
+          <span className="flex items-center justify-center gap-2">
+            <Award size={18} /> {t("training.quiz.viewCertificate")}
+          </span>
+        </Button>
       ) : (
-        <button
-          onClick={onRetake}
-          className="btn-xl w-full border border-line text-ink active:bg-surface-2"
-        >
+        <Button variant="outline" full onClick={onRetake}>
           {t("training.quiz.retake")}
-        </button>
+        </Button>
       )}
     </div>
   );

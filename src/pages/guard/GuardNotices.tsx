@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Bell, BellRing } from "lucide-react";
 import { Screen } from "@/components/Screen";
-import { Card, Loader, EmptyState } from "@/components/ui";
+import { Card, EmptyState, ErrorState, SkeletonList } from "@/components/ui";
 import { useAsync } from "@/lib/useAsync";
 import { notificationService } from "@/lib/services";
 import { relativeTime } from "@/lib/format";
@@ -10,8 +10,8 @@ import { pick } from "@/lib/normalize";
 
 export default function GuardNotices() {
   const { t } = useTranslation();
-  const { data, loading, reload } = useAsync(() =>
-    notificationService.list({ limit: 50 }).catch(() => [])
+  const { data, loading, error, reload } = useAsync(() =>
+    notificationService.list({ limit: 50 })
   );
   const notices = useMemo(
     () =>
@@ -26,7 +26,9 @@ export default function GuardNotices() {
   return (
     <Screen title={t("notices.title")} subtitle={t("notices.subtitle")} onRefresh={reload}>
       {loading ? (
-        <Loader />
+        <SkeletonList />
+      ) : error ? (
+        <ErrorState onRetry={reload} />
       ) : notices.length === 0 ? (
         <EmptyState icon={<Bell size={28} />} title={t("notices.empty")} />
       ) : (
@@ -52,7 +54,7 @@ export default function GuardNotices() {
                     <div className="flex items-center justify-between gap-2">
                       <p className="truncate text-sm font-semibold text-ink">{title}</p>
                       {unread && (
-                        <span className="shrink-0 rounded-full bg-gold px-1.5 py-0.5 text-[9px] font-bold uppercase text-on-accent">
+                        <span className="shrink-0 rounded-full bg-gold px-1.5 py-0.5 text-[11px] font-bold uppercase text-on-accent">
                           {t("notices.new")}
                         </span>
                       )}

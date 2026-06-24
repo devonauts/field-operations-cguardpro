@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHistory } from "react-router-dom";
-import { MessageSquare, ChevronRight, SquarePen, Send, Loader2, X } from "lucide-react";
+import { MessageSquare, Users, ChevronRight, SquarePen, Send, Loader2 } from "lucide-react";
 import { Screen } from "@/components/Screen";
-import { Loader, EmptyState } from "@/components/ui";
+import { EmptyState, ErrorState, SkeletonList, Sheet } from "@/components/ui";
+import { Button } from "@/components/ui/kit";
 import { useAsync } from "@/lib/useAsync";
 import { messageService } from "@/lib/services";
 import { onPush } from "@/lib/pushEvents";
@@ -22,7 +23,7 @@ const newId = () =>
 export default function GuardMessages() {
   const { t } = useTranslation();
   const history = useHistory();
-  const { data, loading, reload } = useAsync<any>(() => messageService.listThreads({ limit: 50 }).catch(() => ({ rows: [] })));
+  const { data, loading, error, reload } = useAsync<any>(() => messageService.listThreads({ limit: 50 }));
   const rows: any[] = (data?.rows || []).filter((c: any) => c && c.id);
   const [composing, setComposing] = useState(false);
 
@@ -56,17 +57,16 @@ export default function GuardMessages() {
       }
     >
       {loading ? (
-        <Loader />
+        <SkeletonList />
+      ) : error ? (
+        <ErrorState onRetry={reload} />
       ) : rows.length === 0 ? (
         <div className="flex flex-col items-center gap-4">
           <EmptyState title={t("messages.empty", "Sin mensajes")} hint={t("messages.emptyHint", "Aquí verás los mensajes de tu empresa.")} />
-          <button
-            onClick={() => { fb.tap(); setComposing(true); }}
-            className="btn-xl bg-gold-strong text-on-accent active:bg-gold-hover"
-          >
+          <Button variant="primary" onClick={() => setComposing(true)}>
             <SquarePen size={18} />
             {t("messages.contactOffice", "Escribir a la oficina")}
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="card-elev divide-y divide-line overflow-hidden">
@@ -77,14 +77,14 @@ export default function GuardMessages() {
               className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left active:bg-surface-2"
             >
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gold/15 text-gold">
-                <MessageSquare size={18} />
+                {c.isGroup ? <Users size={18} /> : <MessageSquare size={18} />}
               </span>
               <span className="min-w-0 flex-1">
                 <span className="flex items-center justify-between gap-2">
                   <span className="truncate text-[15px] font-semibold text-ink">{c.counterpartName || c.recipientName || t("messages.company", "Empresa")}</span>
-                  <span className="shrink-0 text-[10px] text-faint">{fmt(c.lastMessageAt)}</span>
+                  <span className="shrink-0 text-xs text-faint">{fmt(c.lastMessageAt)}</span>
                 </span>
-                <span className="block truncate text-xs text-muted">{c.lastMessagePreview || ""}</span>
+                <span className="block truncate text-xs text-muted">{c.lastMessagePreview || (c.isGroup ? t("messages.group", "Grupo") : "")}</span>
               </span>
               {(c.unreadCount || 0) > 0 && (
                 <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-critical px-1.5 text-[10px] font-bold text-white">{c.unreadCount}</span>
@@ -95,14 +95,14 @@ export default function GuardMessages() {
         </div>
       )}
 
-      {composing && <ComposeSheet onClose={() => setComposing(false)} onSent={onSent} />}
+      <ComposeSheet open={composing} onClose={() => setComposing(false)} onSent={onSent} />
     </Screen>
   );
 }
 
 /* ----------------------------------------------------------- Compose sheet */
 
-function ComposeSheet({ onClose, onSent }: { onClose: () => void; onSent: (conversationId: string) => void }) {
+function ComposeSheet({ open, onClose, onSent }: { open: boolean; onClose: () => void; onSent: (conversationId: string) => void }) {
   const { t } = useTranslation();
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
@@ -125,43 +125,31 @@ function ComposeSheet({ onClose, onSent }: { onClose: () => void; onSent: (conve
     }
   };
 
+  // Don't allow dismissing the sheet while a send is in flight.
+  const requestClose = () => { if (!busy) onClose(); };
+
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end" role="dialog">
-      <div className="absolute inset-0 bg-black/60" onClick={busy ? undefined : onClose} />
-      <div
-        className="relative max-h-[85vh] overflow-y-auto rounded-t-2xl border-t border-line bg-surface p-4"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" }}
+    <Sheet open={open} onClose={requestClose} title={t("messages.toOffice", "Para la oficina")}>
+      <p className="label-eyebrow -mt-1 mb-2">{t("messages.new", "Nuevo mensaje")}</p>
+
+      <textarea
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        rows={5}
+        autoFocus
+        placeholder={t("messages.placeholder", "Escribe tu mensaje para la empresa…")}
+        className="w-full resize-none rounded-xl border border-line bg-surface-2 px-3.5 py-3 text-[15px] text-ink outline-none focus:border-gold/50"
+      />
+      {error && <p className="mt-2 text-xs text-critical">{error}</p>}
+
+      <button
+        onClick={send}
+        disabled={busy || !body.trim()}
+        className="btn-xl mt-4 w-full bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-50"
       >
-        <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-line-2" />
-        <div className="mb-3 flex items-center justify-between">
-          <div>
-            <p className="label-eyebrow">{t("messages.new", "Nuevo mensaje")}</p>
-            <h3 className="text-base font-bold text-ink">{t("messages.toOffice", "Para la oficina")}</h3>
-          </div>
-          <button onClick={onClose} disabled={busy} className="rounded-full p-2 text-muted active:bg-surface-2 disabled:opacity-50" aria-label={t("app.close", "Cerrar")}>
-            <X size={20} />
-          </button>
-        </div>
-
-        <textarea
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          rows={5}
-          autoFocus
-          placeholder={t("messages.placeholder", "Escribe tu mensaje para la empresa…")}
-          className="w-full resize-none rounded-xl border border-line bg-surface-2 px-3.5 py-3 text-[15px] text-ink outline-none focus:border-gold/50"
-        />
-        {error && <p className="mt-2 text-xs text-critical">{error}</p>}
-
-        <button
-          onClick={send}
-          disabled={busy || !body.trim()}
-          className="btn-xl mt-4 w-full bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-50"
-        >
-          {busy ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-          {t("messages.send", "Enviar")}
-        </button>
-      </div>
-    </div>
+        {busy ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+        {t("messages.send", "Enviar")}
+      </button>
+    </Sheet>
   );
 }

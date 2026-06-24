@@ -20,7 +20,6 @@ import {
   Bug,
   Check,
   Trash2,
-  X,
   LogOut,
   Loader2,
   Volume2,
@@ -29,7 +28,7 @@ import {
   Sun,
 } from "lucide-react";
 import { Screen } from "@/components/Screen";
-import { Avatar } from "@/components/ui";
+import { Avatar, Sheet } from "@/components/ui";
 import {
   SectionCard,
   SectionHeader,
@@ -435,24 +434,12 @@ function BottomSheet({
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  // These sheets are conditionally rendered (mounted only while open), so the
+  // shared <Sheet> primitive is always open while this component is mounted.
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end" role="dialog">
-      <div className="sheet-backdrop absolute inset-0 bg-black/60" onClick={onClose} />
-      <div
-        className="sheet-panel relative max-h-[80vh] overflow-y-auto rounded-t-2xl border-t border-line bg-surface p-4"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" }}
-      >
-        {/* Grabber handle — native sheet affordance. */}
-        <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-line-2" />
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-base font-bold text-ink">{title}</h3>
-          <button onClick={() => { fb.tap(); onClose(); }} className="rounded-full text-muted active:text-ink" aria-label="close">
-            <X size={20} />
-          </button>
-        </div>
-        {children}
-      </div>
-    </div>
+    <Sheet open onClose={onClose} title={title}>
+      {children}
+    </Sheet>
   );
 }
 
@@ -574,7 +561,7 @@ function LogsSheet({ t, onClose }: { t: any; onClose: () => void }) {
         ) : (
           logs.map((l, i) => (
             <div key={i} className="rounded-lg border border-line bg-surface-2 p-2">
-              <p className="flex items-center justify-between text-[10px] text-faint">
+              <p className="flex items-center justify-between text-xs text-faint">
                 <span className="font-semibold text-gold">{l.ctx}</span>
                 <span>{l.t.slice(11, 19)}</span>
               </p>

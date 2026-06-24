@@ -62,13 +62,20 @@
   /* Text */
   --ink: #f2f4f7;
   --muted: #9aa1ad;
-  --faint: #656c78;
+  /* faint: decorative + small captions. Deepened to clear WCAG AA as text. */
+  --faint: #838b97;
 
   /* Accent (gold) — constant gold in both themes */
   --gold: #d4a017;
   --gold-strong: #c8860a;
   --gold-hover: #b37809;
   --gold-soft: rgba(212, 160, 23, 0.12);
+  /* gold-text: AA-safe gold for TEXT/links (text-gold resolves here, not --gold,
+     so fills/borders keep the brand gold while text passes contrast). In dark the
+     brand gold already passes on dark surfaces, so it equals --gold. */
+  --gold-text: #d4a017;
+  /* Visible keyboard/switch-control focus ring color */
+  --focus-ring: #d4a017;
 
   /* Dark text shown ON gold (constant dark in both themes — old "navy") */
   --on-accent: #0b0c0e;
@@ -178,13 +185,18 @@ html.theme-light {
 
   --ink: #0f172a;
   --muted: #5b6573;
-  --faint: #98a2b2;
+  /* faint deepened to clear AA on white (#98a2b2 was 2.58:1) */
+  --faint: #6b7480;
 
   /* Accent (gold) — deeper gold for contrast on white */
   --gold: #b9860c;
   --gold-strong: #a3760a;
   --gold-hover: #8f6708;
   --gold-soft: rgba(185, 134, 12, 0.1);
+  /* gold-text: AA-safe (~5:1 on white). #b9860c was only 3.24:1 as text. */
+  --gold-text: #8a6300;
+  /* Focus ring tuned for white surfaces */
+  --focus-ring: #8a6300;
 
   /* Dark text shown ON gold stays constant dark */
   --on-accent: #0b0c0e;

@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LifeBuoy, Loader2, Check, X, MapPin } from "lucide-react";
 import { Screen } from "@/components/Screen";
-import { Card, Loader, EmptyState, Avatar } from "@/components/ui";
+import { Card, SkeletonList, EmptyState, ErrorState, Avatar } from "@/components/ui";
+import { Button } from "@/components/ui/kit";
 import { useAsync } from "@/lib/useAsync";
 import { performanceService } from "@/lib/services";
 import { fmtDate } from "@/lib/format";
@@ -16,8 +17,8 @@ const subjectName = (ev: any) =>
 
 export default function BackupConfirm() {
   const { t } = useTranslation();
-  const { data, loading, reload } = useAsync(() =>
-    performanceService.backupEvents("offered").catch(() => []),
+  const { data, loading, error, reload } = useAsync(() =>
+    performanceService.backupEvents("offered"),
   );
   const rows = (data as any[]) || [];
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -25,7 +26,6 @@ export default function BackupConfirm() {
   const act = async (id: string, confirm: boolean) => {
     if (busyId) return;
     setBusyId(id);
-    fb.press();
     try {
       if (confirm) await performanceService.confirmBackup(id);
       else await performanceService.rejectBackup(id);
@@ -47,7 +47,9 @@ export default function BackupConfirm() {
       onRefresh={reload}
     >
       {loading ? (
-        <Loader />
+        <SkeletonList />
+      ) : error ? (
+        <ErrorState onRetry={reload} />
       ) : rows.length === 0 ? (
         <EmptyState
           icon={<LifeBuoy size={28} />}
@@ -74,10 +76,11 @@ export default function BackupConfirm() {
                 <p className="mt-2 text-xs text-faint">{ev.notes}</p>
               )}
               <div className="mt-3 flex gap-2.5">
-                <button
+                <Button
+                  variant="primary"
                   onClick={() => act(ev.id, true)}
                   disabled={busyId === ev.id}
-                  className="flex min-h-[46px] flex-1 items-center justify-center gap-2 rounded-xl bg-gold-strong text-sm font-semibold text-on-accent active:bg-gold-hover disabled:opacity-50"
+                  className="flex flex-1 items-center justify-center gap-2"
                 >
                   {busyId === ev.id ? (
                     <Loader2 size={16} className="animate-spin" />
@@ -87,15 +90,16 @@ export default function BackupConfirm() {
                       {t("backupConfirm.confirm")}
                     </>
                   )}
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="outline"
                   onClick={() => act(ev.id, false)}
                   disabled={busyId === ev.id}
-                  className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl border border-line px-5 text-sm font-semibold text-muted active:bg-surface-2 disabled:opacity-50"
+                  className="flex items-center justify-center gap-2 px-5"
                 >
                   <X size={16} />
                   {t("backupConfirm.reject")}
-                </button>
+                </Button>
               </div>
             </Card>
           ))}

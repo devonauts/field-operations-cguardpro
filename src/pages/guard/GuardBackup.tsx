@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LifeBuoy, Loader2, Check, MapPin } from "lucide-react";
 import { Screen } from "@/components/Screen";
-import { Card, Loader, EmptyState } from "@/components/ui";
+import { Card, EmptyState, ErrorState, SkeletonList } from "@/components/ui";
 import { useAsync } from "@/lib/useAsync";
 import { guardService } from "@/lib/services";
 import { fmtDate, fmtTime } from "@/lib/format";
@@ -20,8 +20,8 @@ interface OpenShift {
 
 export default function GuardBackup() {
   const { t } = useTranslation();
-  const { data, loading, reload } = useAsync(() =>
-    guardService.backupOpen().catch(() => []),
+  const { data, loading, error, reload } = useAsync(() =>
+    guardService.backupOpen(),
   );
   const rows: OpenShift[] = (data as OpenShift[]) || [];
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -50,7 +50,9 @@ export default function GuardBackup() {
       onRefresh={reload}
     >
       {loading ? (
-        <Loader />
+        <SkeletonList />
+      ) : error ? (
+        <ErrorState onRetry={reload} />
       ) : rows.length === 0 ? (
         <EmptyState icon={<LifeBuoy size={28} />} title={t("backup.empty")} />
       ) : (

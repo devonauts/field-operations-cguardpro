@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ClipboardCheck, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { Screen } from "@/components/Screen";
-import { Card, Loader, EmptyState, ScoreRing } from "@/components/ui";
+import { Card, EmptyState, ErrorState, ScoreRing, SkeletonList } from "@/components/ui";
+import { Button } from "@/components/ui/kit";
 import { useAsync } from "@/lib/useAsync";
 import { guardService } from "@/lib/services";
 import fb from "@/lib/feedback";
@@ -23,8 +24,8 @@ interface QuizResult {
 
 export default function GuardQuiz() {
   const { t } = useTranslation();
-  const { data, loading, reload } = useAsync(() =>
-    guardService.quiz().catch(() => null),
+  const { data, loading, error: loadError, reload } = useAsync(() =>
+    guardService.quiz(),
   );
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState(false);
@@ -58,7 +59,6 @@ export default function GuardQuiz() {
 
   const submit = async () => {
     if (!quiz || !allAnswered || busy) return;
-    fb.press();
     setBusy(true);
     setError(null);
     try {
@@ -85,7 +85,6 @@ export default function GuardQuiz() {
   };
 
   const retake = () => {
-    fb.tap();
     setResult(null);
     setAnswers({});
     stamped.current = false; // re-stamp start time when the new question set loads
@@ -95,7 +94,9 @@ export default function GuardQuiz() {
   return (
     <Screen back title={t("quiz.title")} subtitle={t("quiz.subtitle")}>
       {loading ? (
-        <Loader />
+        <SkeletonList />
+      ) : loadError && !data ? (
+        <ErrorState onRetry={reload} />
       ) : result ? (
         <ResultView result={result} onRetake={retake} />
       ) : !quiz ? (
@@ -150,17 +151,18 @@ export default function GuardQuiz() {
 
           {error && <p className="text-sm text-critical">{error}</p>}
 
-          <button
-            onClick={submit}
+          <Button
+            variant="primary"
+            full
             disabled={!allAnswered || busy}
-            className="btn-xl w-full bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-50"
+            onClick={submit}
           >
             {busy ? (
               <Loader2 size={18} className="animate-spin" />
             ) : (
               t("quiz.submit")
             )}
-          </button>
+          </Button>
         </div>
       )}
     </Screen>
@@ -198,12 +200,9 @@ function ResultView({
           })}
         </p>
       </Card>
-      <button
-        onClick={onRetake}
-        className="btn-xl w-full border border-line text-ink active:bg-surface-2"
-      >
+      <Button variant="outline" full onClick={onRetake}>
         {t("quiz.retake")}
-      </button>
+      </Button>
     </div>
   );
 }

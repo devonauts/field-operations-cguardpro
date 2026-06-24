@@ -74,11 +74,44 @@ export default function PatrolTracking() {
   const selected = activeRoute || routes[0]?.id || null;
   const route = routes.find((r) => r.id === selected) || routes[0];
 
-  // A checkpoint is "cleared" if it has a scan (today/in the loaded window).
-  const scannedTagIds = useMemo(
-    () => new Set(scans.map((s) => s.siteTourTagId).filter(Boolean)),
-    [scans]
+  // Clearance must be scoped to the current operating window, NOT to whatever
+  // happens to be in the loaded 200-row scan page — otherwise yesterday's scans
+  // light up today's checkpoints as "done". Mirror the shift/day scoping used in
+  // OnDutyView (which filters scans to >= shiftStart): with no clock-in context
+  // on the supervisor side, scope to the start of the current local day.
+  const dayStart = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }, [data]);
+
+  // Latest in-window scan per checkpoint (siteTourTagId), so each cleared
+  // checkpoint can show WHEN it was scanned and by WHOM.
+  const scanByTag = useMemo(() => {
+    const m = new Map<string, any>();
+    for (const s of scans as any[]) {
+      const tagId = s.siteTourTagId;
+      if (!tagId) continue;
+      const ts = new Date(s.scannedAt).getTime();
+      if (Number.isNaN(ts) || ts < dayStart) continue;
+      const prev = m.get(tagId);
+      if (!prev || ts > new Date(prev.scannedAt).getTime()) m.set(tagId, s);
+    }
+    return m;
+  }, [scans, dayStart]);
+
+  // Recent scan activity, also scoped to the current day window.
+  const recentScans = useMemo(
+    () =>
+      (scans as any[]).filter((s) => {
+        const ts = new Date(s.scannedAt).getTime();
+        return !Number.isNaN(ts) && ts >= dayStart;
+      }),
+    [scans, dayStart]
   );
+
+  const guardOf = (s: any): string | undefined =>
+    s?.guard?.fullName || s?.guardName || s?.scannedData?.guardName;
 
   const checkpoints: RondaCheckpoint[] = useMemo(
     () =>
@@ -87,7 +120,7 @@ export default function PatrolTracking() {
         .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0)),
     [route]
   );
-  const cleared = checkpoints.filter((c) => scannedTagIds.has(c.id)).length;
+  const cleared = checkpoints.filter((c) => scanByTag.has(c.id)).length;
 
   return (
     <Screen root title={t("patrol.title")} subtitle={t("patrol.subtitle")} onRefresh={reload}>
@@ -152,7 +185,13 @@ export default function PatrolTracking() {
             ) : (
               <div className="space-y-2">
                 {checkpoints.map((cp, i) => {
-                  const done = scannedTagIds.has(cp.id);
+                  const scan = scanByTag.get(cp.id);
+                  const done = !!scan;
+                  const guard = guardOf(scan);
+                  // Subtitle: who scanned it (cleared) or the checkpoint location.
+                  const subtitle = done
+                    ? [guard, fmtTime(scan.scannedAt)].filter(Boolean).join(" · ")
+                    : cp.location || cp.instructions || "";
                   return (
                     <Card key={cp.id ?? `${cp.name || "cp"}-${i}`} className="flex items-center gap-3 p-3.5">
                       {done ? (
@@ -164,9 +203,9 @@ export default function PatrolTracking() {
                         <p className="truncate text-sm font-medium text-ink">
                           {cp.name || `CP-${i + 1}`}
                         </p>
-                        <p className="truncate text-xs text-muted">
-                          {cp.location || cp.instructions || ""}
-                        </p>
+                        {subtitle && (
+                          <p className="truncate text-xs text-muted">{subtitle}</p>
+                        )}
                       </div>
                       <span className="shrink-0 text-[11px] font-medium">
                         {done ? (
@@ -182,23 +221,26 @@ export default function PatrolTracking() {
             )}
           </div>
 
-          {/* Recent scan activity */}
-          {scans.length > 0 && (
+          {/* Recent scan activity (today) — its own label, not the incidents one */}
+          {recentScans.length > 0 && (
             <div>
               <SectionTitle icon={<Activity size={16} />}>
-                {t("dashboard.recentIncidents") /* reused label "recent activity" */}
+                {t("patrol.recentScans", "Actividad de rondas")}
               </SectionTitle>
               <div className="space-y-2">
-                {scans.slice(0, 8).map((s, i) => {
-                  const data: any = s.scannedData || {};
+                {recentScans.slice(0, 8).map((s: any, i: number) => {
+                  const sd: any = s.scannedData || {};
+                  const cpName =
+                    sd.checkpointName || s.tag?.name || t("patrol.title");
+                  const guard = guardOf(s);
                   return (
                     <Card key={s.id ?? `${s.scannedAt || ""}-${i}`} className="flex items-center gap-3 p-3">
                       <CheckCircle2 size={16} className="shrink-0 text-online" />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm text-ink">
-                          {data.checkpointName || t("patrol.title")}
+                        <p className="truncate text-sm text-ink">{cpName}</p>
+                        <p className="truncate text-[11px] text-faint">
+                          {[guard, fmtTime(s.scannedAt)].filter(Boolean).join(" · ")}
                         </p>
-                        <p className="text-[11px] text-faint">{fmtTime(s.scannedAt)}</p>
                       </div>
                       <span className="shrink-0 text-[11px] text-muted">
                         {relativeTime(s.scannedAt)}

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { MapPin, Camera, Bell, Mic, Check, X, Loader2, RefreshCw } from "lucide-react";
 import { Screen } from "@/components/Screen";
+import { Button } from "@/components/ui/kit";
 import { registerPush } from "@/lib/push";
 import { fb } from "@/lib/feedback";
 
@@ -109,7 +110,6 @@ export default function GuardPermissions() {
   useEffect(() => { checkAll(); }, [checkAll]);
 
   const request = async (kind: Kind) => {
-    fb.press();
     setBusy(kind);
     const s = await requestOne(kind);
     setStatus((prev) => ({ ...prev, [kind]: s }));
@@ -175,13 +175,14 @@ export default function GuardPermissions() {
                       {t("perm.blockedHelp", "Está bloqueado. Ábrelo en Ajustes del teléfono → esta app → Permisos, y actívalo.")}
                     </p>
                   ) : (
-                    <button
+                    <Button
+                      variant="primary"
+                      full
                       onClick={() => request(it.kind)}
                       disabled={busy === it.kind}
-                      className="btn-xl w-full bg-gold-strong text-on-accent active:bg-gold-hover disabled:opacity-50"
                     >
                       {busy === it.kind ? <Loader2 size={18} className="animate-spin" /> : t("perm.allow", "Permitir")}
-                    </button>
+                    </Button>
                   )}
                 </div>
               )}

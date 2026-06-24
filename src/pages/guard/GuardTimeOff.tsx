@@ -3,7 +3,7 @@ import { IonModal } from "@ionic/react";
 import { useTranslation } from "react-i18next";
 import { CalendarOff, Plus, X, Loader2 } from "lucide-react";
 import { Screen } from "@/components/Screen";
-import { Card, Loader, EmptyState } from "@/components/ui";
+import { Card, EmptyState, ErrorState, SkeletonList } from "@/components/ui";
 import { useAsync } from "@/lib/useAsync";
 import { guardService } from "@/lib/services";
 import { asRows } from "@/lib/api";
@@ -29,8 +29,8 @@ function statusKey(raw: any): "pending" | "approved" | "rejected" {
 export default function GuardTimeOff() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const { data, loading, reload } = useAsync(() =>
-    guardService.timeOff().catch(() => [])
+  const { data, loading, error, reload } = useAsync(() =>
+    guardService.timeOff()
   );
   const rows = asRows(data);
 
@@ -50,7 +50,9 @@ export default function GuardTimeOff() {
       }
     >
       {loading ? (
-        <Loader />
+        <SkeletonList />
+      ) : error ? (
+        <ErrorState onRetry={reload} />
       ) : rows.length === 0 ? (
         <EmptyState icon={<CalendarOff size={28} />} title={t("timeoff.empty")} />
       ) : (

@@ -72,6 +72,59 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
+  /* Honor the OS text-size / dynamic-type setting instead of locking size */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* ------------------------------------------------------------------ */
+/* Accessibility baseline                                              */
+/* ------------------------------------------------------------------ */
+
+/* text-gold resolves to the AA-safe text gold (not the fill gold). This is an
+   unlayered rule, so it wins over Tailwind's layered `.text-gold` utility while
+   bg-gold / border-gold keep the brand --gold. Fixes ~122 text-gold usages at
+   once with zero per-file edits. */
+.text-gold {
+  color: var(--gold-text);
+}
+
+/* Visible focus ring for keyboard / switch-control / external-keyboard users
+   (WCAG 2.4.7). :where() = zero specificity, so any component can override. */
+:where(button, [role="button"], a, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-tile);
+}
+
+/* Respect reduced-motion: kill the infinite pulses/sweeps/spins and snap
+   transitions. Keeps the app calm for motion-sensitive users. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Skeleton shimmer — the single loading primitive (use the <Skeleton> component) */
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 25%,
+    var(--line) 37%,
+    var(--surface-2) 63%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  border-radius: var(--radius-tile);
 }
 
 /* Full-height chat layout: make IonContent's shadow scroll container a flex
