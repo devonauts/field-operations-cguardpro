@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useHistory } from "react-router-dom";
 import { ChevronRight, ClipboardCheck, LogOut, Siren, Timer, UserCheck } from "lucide-react";
 import { useAsync } from "@/lib/useAsync";
-import { incidentService, guardService } from "@/lib/services";
+import { incidentService, guardService, taskService } from "@/lib/services";
 import { rondasService } from "@/lib/rondas";
 import { getCurrentPosition } from "@/lib/geo";
 import { Button, MetricTile } from "@/components/ui/kit";
@@ -152,6 +152,12 @@ export default function OnDutyView({ data }: { data: any }) {
     () => rondasService.scans({ limit: 100 }).catch(() => []),
     [],
   );
+  // Client-requested tasks for my station(s).
+  const { data: shiftTasks } = useAsync<any[]>(
+    () => taskService.list().catch(() => []),
+    [],
+  );
+  const taskCount = (shiftTasks || []).length;
   const activePatrol = (patrols || [])[0] || null;
   const tagsList: any[] = Array.isArray(activePatrol?.tags) ? activePatrol.tags : [];
   const totalCheckpoints =
@@ -383,6 +389,27 @@ export default function OnDutyView({ data }: { data: any }) {
           </p>
           <span className="flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-gold">
             {t("onduty.continue", "Continuar")} <ChevronRight size={15} />
+          </span>
+        </div>
+      </NavCard>
+
+      {/* ============================= TAREAS ============================ */}
+      <NavCard
+        onClick={() => history.push("/guard/tasks")}
+        className="card-elev overflow-hidden p-4"
+      >
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-2">
+            <ClipboardCheck size={16} className="text-gold" />
+            <span className="label-eyebrow">{t("onduty.tasks", "Tareas del turno")}</span>
+            {taskCount > 0 && (
+              <span className="grid h-5 min-w-5 place-items-center rounded-full bg-gold px-1.5 text-[11px] font-bold text-black">
+                {taskCount}
+              </span>
+            )}
+          </span>
+          <span className="flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-gold">
+            {t("onduty.viewAll", "Ver todo")} <ChevronRight size={15} />
           </span>
         </div>
       </NavCard>

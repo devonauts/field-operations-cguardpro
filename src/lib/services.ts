@@ -579,3 +579,23 @@ export const radioCheckService = {
 export const dashboardService = {
   stats: () => api.get(tenantPath("/dashboard/stats")).then(unwrap),
 };
+
+/* ------------------------------------------------------------------ */
+/* Tareas — client-requested tasks for my station(s) (approved)        */
+/* ------------------------------------------------------------------ */
+export interface GuardTask {
+  id: string;
+  taskToDo: string;
+  status: string;
+  priority?: "alta" | "media" | "baja" | null;
+  dateToDoTheTask?: string | null;
+  taskBelongsToStation?: { id?: string; stationName?: string } | null;
+}
+
+export const taskService = {
+  /** Approved, not-done tasks for my active station(s). */
+  list: () => api.get(tenantPath("/guard/me/tasks")).then((r) => asRows<GuardTask>(r)),
+  /** Mark a task done (optional note + photo file descriptors). */
+  complete: (id: string, data?: { notes?: string; photo?: any[] }) =>
+    api.post(tenantPath(`/guard/me/tasks/${id}/complete`), { data: data || {} }).then(unwrap),
+};

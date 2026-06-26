@@ -29,6 +29,7 @@ import GuardRadio from "./GuardRadio";
 import GuardMessages from "./GuardMessages";
 import GuardThread from "./GuardThread";
 import GuardVisitors from "./GuardVisitors";
+import GuardTasks from "./GuardTasks";
 import GuardPermissions from "./GuardPermissions";
 import Profile from "../shared/Profile";
 import { messageService } from "@/lib/services";
@@ -133,6 +134,7 @@ export default function GuardTabs() {
         <Route exact path="/guard/map" component={GuardMap} />
         <Route exact path="/guard/radio" component={GuardRadio} />
         <Route exact path="/guard/visitors" component={GuardVisitors} />
+        <Route exact path="/guard/tasks" component={GuardTasks} />
         <Route exact path="/guard/messages" component={GuardMessages} />
         <Route exact path="/guard/messages/:conversationId" component={GuardThread} />
         <Route exact path="/guard/permissions" component={GuardPermissions} />
