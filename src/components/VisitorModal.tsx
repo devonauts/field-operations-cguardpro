@@ -236,7 +236,7 @@ export function VisitorFlow({ station, onClose, embedded }: { station: any; onCl
   };
 
   return (
-    <div className="flex h-full flex-col bg-background">
+    <div className="flex h-full flex-col overflow-x-hidden bg-background">
       <div className="safe-top flex items-center gap-2 border-b border-line px-4 py-3">
         {mode === "list" ? (
           <Users size={18} className="text-gold" />
@@ -613,19 +613,19 @@ function PersonForm({ fields, setFields, photos, facePhoto, addPhoto, removePhot
           </div>
         </Field>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-4">
           <Field label={t("visitor.firstName")}><input className={inputCls} value={fields.firstName} onChange={(e) => set("firstName", e.target.value)} /></Field>
           <Field label={t("visitor.lastName")}><input className={inputCls} value={fields.lastName} onChange={(e) => set("lastName", e.target.value)} /></Field>
         </div>
 
         <Field label={t("visitor.idNumber")}><input className={inputCls} inputMode="numeric" value={fields.idNumber} onChange={(e) => set("idNumber", e.target.value)} /></Field>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-4">
           <Field label={t("visitor.birthDate")}><input type="date" className={inputCls} value={fields.birthDate} onChange={(e) => set("birthDate", e.target.value)} /></Field>
           <Field label={t("visitor.expiryDate")}><input type="date" className={inputCls} value={fields.expiryDate} onChange={(e) => set("expiryDate", e.target.value)} /></Field>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-4">
           <Field label={t("visitor.tagNumber")}>
             <div className="relative">
               <Hash size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gold" />
@@ -638,7 +638,7 @@ function PersonForm({ fields, setFields, photos, facePhoto, addPhoto, removePhot
         <Field label={t("visitor.phone")}><input className={inputCls} inputMode="tel" value={fields.phone} onChange={(e) => set("phone", e.target.value)} /></Field>
         <Field label={t("visitor.personVisited")}><input className={inputCls} value={fields.personVisited} onChange={(e) => set("personVisited", e.target.value)} /></Field>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-4">
           <Field label={t("visitor.company")}><input className={inputCls} value={fields.company} onChange={(e) => set("company", e.target.value)} /></Field>
           <Field label={t("visitor.vehiclePlate")}><input className={`${inputCls} uppercase`} value={fields.vehiclePlate} onChange={(e) => set("vehiclePlate", e.target.value)} /></Field>
         </div>
@@ -727,7 +727,7 @@ function VehicleForm({ photos, facePhoto, addPhoto, removePhoto, station, onDone
           </div>
         </Field>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-4">
           <Field label={t("visitor.driver")}><input className={inputCls} value={driver} onChange={(e) => setDriver(e.target.value)} /></Field>
           <Field label={t("visitor.tagNumber")}>
             <div className="relative">
@@ -737,7 +737,7 @@ function VehicleForm({ photos, facePhoto, addPhoto, removePhoto, station, onDone
           </Field>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-4">
           <Field label={t("visitor.company")}><input className={inputCls} value={company} onChange={(e) => setCompany(e.target.value)} /></Field>
           <Field label={t("visitor.numPeople")}><input type="number" min={1} className={inputCls} value={numPeople} onChange={(e) => setNumPeople(Number(e.target.value))} /></Field>
         </div>
