@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { IonModal } from "@ionic/react";
 import { useTranslation } from "react-i18next";
 import {
@@ -19,17 +20,26 @@ import {
   Hash,
   Plus,
   ArrowRight,
+  Phone,
+  MapPin,
+  Calendar,
+  CalendarX,
+  Clock,
+  Building2,
+  CreditCard,
+  Fingerprint,
+  LogIn,
 } from "lucide-react";
 import { visitorService, VisitorPhoto } from "@/lib/services";
 import { fileUrlFromFile } from "@/lib/fileUrl";
 import { useAsync } from "@/lib/useAsync";
-import { fmtTime } from "@/lib/format";
+import { fmtTime, fmtDateTime } from "@/lib/format";
 import { SkeletonList, EmptyState } from "./ui";
-import { Button } from "./ui/kit";
+import { Button, SectionCard, SectionHeader, InfoCell, StatusPill, IconTile } from "./ui/kit";
 import { compressImage, takeNativePhoto, isNative, CapturedImage } from "@/lib/capture";
 import { scanId } from "@/lib/ocr";
 
-type Mode = "list" | "choose" | "capture" | "form" | "vehicle";
+type Mode = "list" | "detail" | "choose" | "capture" | "form" | "vehicle";
 const ID_TYPES = ["cedula", "passport", "license", "other"] as const;
 const VEHICLE_TYPES = ["car", "motorcycle", "van", "truck", "other"] as const;
 const footerStyle = { paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" };
@@ -117,6 +127,7 @@ export function VisitorModal({
 export function VisitorFlow({ station, onClose, embedded }: { station: any; onClose: () => void; embedded?: boolean }) {
   const { t } = useTranslation();
   const [mode, setMode] = useState<Mode>("list");
+  const [selected, setSelected] = useState<any>(null);
   const [photos, setPhotos] = useState<CapturedImage[]>([]);
   const [facePhoto, setFacePhoto] = useState<CapturedImage | null>(null);
   const [fields, setFields] = useState<Fields>(EMPTY);
@@ -131,7 +142,7 @@ export function VisitorFlow({ station, onClose, embedded }: { station: any; onCl
   const scanGen = useRef(0);
 
   const { data, loading, reload } = useAsync(() =>
-    visitorService.list({ limit: 50 }).catch(() => [])
+    visitorService.list({ limit: 50, withPhotos: 1 }).catch(() => [])
   );
   const visits = (data || []).filter((v: any) =>
     station?.id ? v.stationId === station.id || !v.stationId : true
@@ -221,19 +232,23 @@ export function VisitorFlow({ station, onClose, embedded }: { station: any; onCl
   const headerTitle =
     mode === "list"
       ? t("visitor.title")
-      : mode === "choose"
-        ? t("visitor.register")
-        : mode === "vehicle"
-          ? t("visitor.modeVehicle")
-          : mode === "capture"
-            ? t("visitor.step1")
-            : t("visitor.step2");
+      : mode === "detail"
+        ? t("visitor.detailTitle")
+        : mode === "choose"
+          ? t("visitor.register")
+          : mode === "vehicle"
+            ? t("visitor.modeVehicle")
+            : mode === "capture"
+              ? t("visitor.step1")
+              : t("visitor.step2");
 
   const goBack = () => {
     if (mode === "form") setMode("capture");
     else if (mode === "capture" || mode === "vehicle") setMode("choose");
-    else setMode("list");
+    else { setMode("list"); setSelected(null); }
   };
+
+  const openDetail = (v: any) => { setSelected(v); setMode("detail"); };
 
   return (
     <div className="flex h-full flex-col overflow-x-hidden bg-background">
@@ -257,7 +272,15 @@ export function VisitorFlow({ station, onClose, embedded }: { station: any; onCl
       <input ref={galleryInput} type="file" accept="image/*" className="hidden" onChange={(e) => onWebPick(e.target.files?.[0])} />
 
       {mode === "list" && (
-        <ListView loading={loading} visits={visits} reload={reload} onNew={() => { reset(); setMode("choose"); }} />
+        <ListView loading={loading} visits={visits} reload={reload} onNew={() => { reset(); setMode("choose"); }} onOpen={openDetail} />
+      )}
+
+      {mode === "detail" && selected && (
+        <VisitorDetail
+          visit={selected}
+          station={station}
+          onCheckedOut={(updated) => { setSelected(updated); reload(); }}
+        />
       )}
 
       {mode === "choose" && (
@@ -307,7 +330,7 @@ export function VisitorFlow({ station, onClose, embedded }: { station: any; onCl
 }
 
 /* ----------------------------- list ----------------------------- */
-function ListView({ loading, visits, reload, onNew }: { loading: boolean; visits: any[]; reload: () => void; onNew: () => void; }) {
+function ListView({ loading, visits, reload, onNew, onOpen }: { loading: boolean; visits: any[]; reload: () => void; onNew: () => void; onOpen: (v: any) => void; }) {
   const { t } = useTranslation();
   return (
     <>
@@ -327,26 +350,31 @@ function ListView({ loading, visits, reload, onNew }: { loading: boolean; visits
               const photoUrl = fileUrlFromFile(v.facePhoto) || fileUrlFromFile(v.idPhoto);
               return (
                 <div key={v.id || i} className="card flex items-center gap-3 p-3">
-                  {photoUrl ? (
-                    <img src={photoUrl} alt="" className="h-10 w-10 shrink-0 rounded-lg border border-line object-cover"
-                      onError={(e) => { const el = e.target as HTMLImageElement; el.style.display = "none"; el.nextElementSibling?.classList.remove("hidden"); }} />
-                  ) : null}
-                  <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-muted ${photoUrl ? "hidden" : ""}`}>
-                    <Camera size={16} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-ink">
-                      {isVehicle && <Car size={13} className="mr-1 inline align-[-2px]" />}{name}
-                      {v.tagNumber ? <span className="ml-2 rounded bg-gold/15 px-1.5 py-0.5 text-xs font-bold text-gold">#{v.tagNumber}</span> : null}
-                    </p>
-                    <p className="truncate text-xs text-muted">{[v.idNumber, v.reason].filter(Boolean).join(" · ") || "—"}</p>
-                    <p className="mt-0.5 text-[11px] text-faint">{fmtTime(v.visitDate)}{out ? <><ArrowRight size={11} className="mx-0.5 inline align-[-1px]" />{fmtTime(v.exitTime)}</> : null}</p>
-                  </div>
+                  {/* Tapping the row body opens the detail; the checkout button stays
+                      a separate tap target so a quick check-out never mis-fires. */}
+                  <button onClick={() => onOpen(v)} className="pressable flex min-w-0 flex-1 items-center gap-3 text-left">
+                    {photoUrl ? (
+                      <img src={photoUrl} alt="" className="h-10 w-10 shrink-0 rounded-lg border border-line object-cover"
+                        onError={(e) => { const el = e.target as HTMLImageElement; el.style.display = "none"; el.nextElementSibling?.classList.remove("hidden"); }} />
+                    ) : null}
+                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-muted ${photoUrl ? "hidden" : ""}`}>
+                      <Camera size={16} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-ink">
+                        {isVehicle && <Car size={13} className="mr-1 inline align-[-2px]" />}{name}
+                        {v.tagNumber ? <span className="ml-2 rounded bg-gold/15 px-1.5 py-0.5 text-xs font-bold text-gold">#{v.tagNumber}</span> : null}
+                      </p>
+                      <p className="truncate text-xs text-muted">{[v.idNumber, v.reason].filter(Boolean).join(" · ") || "—"}</p>
+                      <p className="mt-0.5 text-[11px] text-faint">{fmtTime(v.visitDate)}{out ? <><ArrowRight size={11} className="mx-0.5 inline align-[-1px]" />{fmtTime(v.exitTime)}</> : null}</p>
+                    </div>
+                  </button>
                   {out ? (
                     <span className="shrink-0 rounded-md border border-line-2 px-2 py-0.5 text-[11px] text-muted">{t("visitor.checkedOut")}</span>
                   ) : (
                     <CheckoutButton id={v.id} onDone={reload} />
                   )}
+                  <ChevronRight size={16} className="shrink-0 text-faint" />
                 </div>
               );
             })}
@@ -757,6 +785,183 @@ function VehicleForm({ photos, facePhoto, addPhoto, removePhoto, station, onDone
         </Button>
       </div>
     </>
+  );
+}
+
+/* ---------------------------- detail ---------------------------- */
+function VisitorDetail({ visit, station, onCheckedOut }: { visit: any; station: any; onCheckedOut: (updated: any) => void }) {
+  const { t, i18n } = useTranslation();
+  const [busy, setBusy] = useState(false);
+  const [lightbox, setLightbox] = useState<string | null>(null);
+
+  const isVehicle = !visit.firstName && !visit.lastName && !!visit.vehiclePlate;
+  const name = [visit.firstName, visit.lastName].filter(Boolean).join(" ") || visit.vehiclePlate || "—";
+  const out = !!visit.exitTime;
+
+  // Photos: face is the hero, then any ID document photos. All open in a lightbox.
+  const faceUrl = fileUrlFromFile(visit.facePhoto);
+  const idUrls = (Array.isArray(visit.idPhoto) ? visit.idPhoto : visit.idPhoto ? [visit.idPhoto] : [])
+    .map((f: any) => fileUrlFromFile(f))
+    .filter(Boolean) as string[];
+  const heroUrl = faceUrl || idUrls[0] || null;
+  const galleryUrls = [faceUrl, ...idUrls].filter(Boolean) as string[];
+
+  // DATEONLY fields (birth/expiry) must render tz-neutral — formatting them in a
+  // west-of-UTC tenant timezone would shift the day backwards.
+  const dOnly = (v: any): string | null => {
+    if (!v) return null;
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(v));
+    const loc = i18n.language?.startsWith("en") ? "en-US" : "es-ES";
+    try {
+      return new Intl.DateTimeFormat(loc, { dateStyle: "medium", timeZone: "UTC" })
+        .format(new Date(m ? `${m[1]}-${m[2]}-${m[3]}T00:00:00Z` : v));
+    } catch { return String(v); }
+  };
+
+  const idTypeLabel = visit.idType && visit.idType !== "vehicle"
+    ? t(`visitor.idTypes.${visit.idType}`, visit.idType)
+    : null;
+  const stationLabel = visit.stationName || station?.stationName || station?.name || null;
+
+  const identity: Row[] = [
+    [<CreditCard size={16} />, t("visitor.idType"), idTypeLabel],
+    [<Fingerprint size={16} />, t("visitor.idNumber"), visit.idNumber],
+    [<Calendar size={16} />, t("visitor.birthDate"), dOnly(visit.birthDate)],
+    [<CalendarX size={16} />, t("visitor.expiryDate"), dOnly(visit.idExpiry)],
+  ];
+  const visitInfo: Row[] = [
+    [<User size={16} />, t("visitor.personVisited"), visit.personVisited],
+    [<Building2 size={16} />, t("visitor.company"), visit.company],
+    [<MapPin size={16} />, t("visitor.station"), stationLabel],
+    [<Clock size={16} />, t("visitor.reason"), visit.reason],
+  ];
+  const vehicleInfo: Row[] = [
+    [<Car size={16} />, t("visitor.vehiclePlate"), visit.vehiclePlate],
+    [<Car size={16} />, t("visitor.vehicleType"), visit.vehicleType ? t(`visitor.vehicleTypes.${visit.vehicleType}`, visit.vehicleType) : null],
+  ];
+
+  const checkout = async () => {
+    setBusy(true);
+    try {
+      await visitorService.checkout(visit.id);
+      onCheckedOut({ ...visit, exitTime: new Date().toISOString() });
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <>
+      <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
+        {/* Hero */}
+        <SectionCard className="flex flex-col items-center text-center">
+          {heroUrl ? (
+            <button onClick={() => setLightbox(heroUrl)} className="pressable">
+              <img src={heroUrl} alt="" className="h-24 w-24 rounded-2xl border border-line object-cover" />
+            </button>
+          ) : (
+            <span className="grid h-24 w-24 place-items-center rounded-2xl bg-surface-2 text-muted">
+              {isVehicle ? <Car size={34} /> : <User size={34} />}
+            </span>
+          )}
+          <h3 className="mt-3 flex items-center gap-1.5 text-lg font-bold text-ink">
+            {isVehicle && <Car size={18} className="text-info" />}{name}
+          </h3>
+          {(idTypeLabel || visit.idNumber) && (
+            <p className="mt-0.5 text-sm text-muted">{[idTypeLabel, visit.idNumber].filter(Boolean).join(" · ")}</p>
+          )}
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+            <StatusPill tone={out ? "neutral" : "green"}>{out ? t("visitor.checkedOut") : t("visitor.inside")}</StatusPill>
+            {visit.tagNumber && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-gold/15 px-2.5 py-1 text-[11px] font-bold text-gold">
+                <Hash size={11} />{visit.tagNumber}
+              </span>
+            )}
+          </div>
+        </SectionCard>
+
+        {/* Entry / exit / people */}
+        <SectionCard inset={false} className="flex items-stretch divide-x divide-line py-4">
+          <InfoCell icon={<LogIn size={16} />} tone="green" label={t("visitor.entryTime")} value={fmtTime(visit.visitDate)} />
+          <InfoCell icon={<LogOut size={16} />} tone={out ? "neutral" : "amber"} label={t("visitor.exitTimeLabel")} value={out ? fmtTime(visit.exitTime) : "—"} />
+          <InfoCell icon={<Users size={16} />} tone="blue" label={t("visitor.numPeople")} value={visit.numPeople || 1} />
+        </SectionCard>
+
+        <DetailSection title={t("visitor.identity")} rows={identity} />
+        <DetailSection title={t("visitor.visitInfo")} rows={visitInfo} />
+        {isVehicle && <DetailSection title={t("visitor.vehicleInfo")} rows={vehicleInfo} />}
+
+        {/* Phone — a one-tap call action */}
+        {visit.phone && (
+          <a href={`tel:${visit.phone}`} className="pressable flex items-center gap-3 rounded-2xl border border-line bg-surface px-5 py-4 active:bg-surface-2">
+            <IconTile tone="green"><Phone size={18} /></IconTile>
+            <div className="min-w-0 flex-1">
+              <p className="label-eyebrow">{t("visitor.phone")}</p>
+              <p className="truncate text-[15px] font-semibold text-ink">{visit.phone}</p>
+            </div>
+            <span className="text-xs font-semibold text-online">{t("visitor.call")}</span>
+          </a>
+        )}
+
+        {/* Photos */}
+        {galleryUrls.length > 0 && (
+          <div>
+            <SectionHeader title={t("visitor.photos")} />
+            <div className="grid grid-cols-3 gap-2">
+              {galleryUrls.map((u, i) => (
+                <button key={i} onClick={() => setLightbox(u)} className="pressable aspect-square overflow-hidden rounded-xl border border-line">
+                  <img src={u} alt="" className="h-full w-full object-cover" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <p className="pt-1 text-center text-[11px] text-faint">{fmtDateTime(visit.visitDate)}</p>
+      </div>
+
+      {/* Action footer — only while the visitor is still inside */}
+      {!out && (
+        <div className="border-t border-line px-4 pt-3" style={footerStyle}>
+          <Button variant="primary" full onClick={checkout} disabled={busy}>
+            {busy ? <Loader2 size={18} className="animate-spin" /> : <><LogOut size={18} />{t("visitor.checkout")}</>}
+          </Button>
+        </div>
+      )}
+
+      {/* Full-screen photo viewer — portalled to <body> so it covers the viewport
+          even inside an Ionic page (whose transforms otherwise scope `fixed`). */}
+      {lightbox && createPortal(
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/90 p-4" onClick={() => setLightbox(null)}>
+          <img src={lightbox} alt="" className="max-h-full max-w-full rounded-lg object-contain" />
+          <button className="safe-top absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white" onClick={() => setLightbox(null)} aria-label={t("app.close")}>
+            <X size={22} />
+          </button>
+        </div>,
+        document.body,
+      )}
+    </>
+  );
+}
+
+/** A detail row: icon · eyebrow label · value (stacked, wraps cleanly). */
+type Row = [React.ReactNode, string, any];
+function DetailSection({ title, rows }: { title: string; rows: Row[] }) {
+  const visible = rows.filter(([, , value]) => value !== null && value !== undefined && value !== "");
+  if (!visible.length) return null;
+  return (
+    <SectionCard inset={false} className="px-5 pb-3 pt-1">
+      <p className="label-eyebrow pb-1 pt-3.5">{title}</p>
+      <div className="divide-y divide-line">
+        {visible.map(([icon, label, value], i) => (
+          <div key={i} className="flex items-start gap-3 py-3">
+            <span className="mt-0.5 shrink-0 text-faint">{icon}</span>
+            <div className="min-w-0 flex-1">
+              <p className="label-eyebrow">{label}</p>
+              <p className="mt-0.5 break-words text-[14px] font-medium text-ink">{value}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </SectionCard>
   );
 }
 
