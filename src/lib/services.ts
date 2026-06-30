@@ -73,9 +73,22 @@ export const guardService = {
         tenantPath("/guard/me/clock-in/request?stationId=" + encodeURIComponent(stationId)),
       )
       .then(unwrap),
-  /** Update my own contact details (phone/address) — notifies HR in the CRM. */
-  updateProfile: (data: { phone?: string; address?: string }) =>
+  /** Update my own contact details (phone/address/photo) — notifies HR in the CRM. */
+  updateProfile: (data: { phone?: string; address?: string; profileImage?: any[] }) =>
     api.patch(tenantPath("/guard/me/profile"), { data }).then(unwrap),
+  /**
+   * Set my profile photo: upload the file via the multipart credentials flow,
+   * then PATCH the stored file descriptor so the backend links it to my
+   * securityGuard.profileImage (the source of the dashboard `photoUrl`).
+   */
+  uploadProfileImage: async (file: File) => {
+    const up = await uploadToStorage(file, "guardProfileSelfie");
+    return api
+      .patch(tenantPath("/guard/me/profile"), {
+        data: { profileImage: [{ ...up, new: true }] },
+      })
+      .then(unwrap);
+  },
   /** Recent site activity for the on-duty home feed. */
   activity: () => api.get(tenantPath("/guard/me/activity")).then((r) => asRows(r)),
   timeOff: () => api.get(tenantPath("/guard/me/time-off")).then(unwrap),
@@ -590,6 +603,13 @@ export interface GuardTask {
   priority?: "alta" | "media" | "baja" | null;
   dateToDoTheTask?: string | null;
   taskBelongsToStation?: { id?: string; stationName?: string } | null;
+  // Completion detail (present when the task is done) + the client's optional
+  // reference image — used by the task detail screen.
+  wasItDone?: boolean | null;
+  completionNotes?: string | null;
+  dateCompletedTask?: string | null;
+  taskCompletedImage?: Array<{ downloadUrl?: string | null; publicUrl?: string | null }> | null;
+  imageOptional?: Array<{ downloadUrl?: string | null; publicUrl?: string | null }> | null;
 }
 
 export const taskService = {
@@ -598,4 +618,6 @@ export const taskService = {
   /** Mark a task done (optional note + photo file descriptors). */
   complete: (id: string, data?: { notes?: string; photo?: any[] }) =>
     api.post(tenantPath(`/guard/me/tasks/${id}/complete`), { data: data || {} }).then(unwrap),
+  /** Upload a completion photo and get the descriptor for the `photo` field. */
+  uploadPhoto: (file: File) => uploadToStorage(file, "guardTaskCompletedImage"),
 };
