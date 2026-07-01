@@ -24,6 +24,14 @@ export function pageTransition(_baseEl: HTMLElement, opts: any): Animation {
   const enteringEl: HTMLElement = opts.enteringEl;
   const leavingEl: HTMLElement | undefined = opts.leavingEl;
 
+  // A page can opt into a vertical "sheet" transition (slides UP from the bottom on
+  // open, DOWN on close) instead of the horizontal push — via `data-sheet-transition`
+  // on its .ion-page (see Screen `sheet` prop). On push the entering page is the sheet;
+  // on pop the leaving page is.
+  const hasSheet = (el?: HTMLElement | null) =>
+    !!el && (el.hasAttribute?.("data-sheet-transition") || !!el.querySelector?.("[data-sheet-transition]"));
+  const sheet = back ? hasSheet(leavingEl) : hasSheet(enteringEl);
+
   const reduce =
     typeof window !== "undefined" &&
     window.matchMedia &&
@@ -42,7 +50,25 @@ export function pageTransition(_baseEl: HTMLElement, opts: any): Animation {
   const leaving = leavingEl ? createAnimation().addElement(leavingEl) : null;
   if (leaving) root.addAnimation(leaving);
 
-  if (!back) {
+  if (sheet) {
+    // VERTICAL sheet: entering rises from the bottom (push) / current drops away (pop);
+    // the page underneath stays put + opaque, so there's no bleed-through.
+    if (!back) {
+      entering
+        .beforeStyles({ "z-index": "101" })
+        .fromTo("transform", "translateY(100%)", "translateY(0)")
+        .fromTo("opacity", "1", "1");
+      if (leaving) leaving.beforeStyles({ "z-index": "100" }).fromTo("opacity", "1", "1");
+    } else {
+      entering.beforeStyles({ "z-index": "100" }).fromTo("opacity", "1", "1");
+      if (leaving) {
+        leaving
+          .beforeStyles({ "z-index": "101" })
+          .fromTo("transform", "translateY(0)", "translateY(100%)")
+          .fromTo("opacity", "1", "1");
+      }
+    }
+  } else if (!back) {
     // PUSH
     entering
       .beforeStyles({ "z-index": "101" })

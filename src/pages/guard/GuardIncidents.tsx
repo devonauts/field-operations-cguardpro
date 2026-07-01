@@ -23,6 +23,7 @@ export default function GuardIncidents() {
   return (
     <Screen
       back
+      sheet
       title={t("guard.myIncidents")}
       subtitle={t("guard.reportIncident")}
       onRefresh={reload}

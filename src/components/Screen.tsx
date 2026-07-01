@@ -1,4 +1,5 @@
 import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   IonPage,
   IonContent,
@@ -25,7 +26,15 @@ const REFRESH_MODE: "ios" | "md" = isPlatform("ios") ? "ios" : "md";
  *    a big title at rest that shrinks into a blurred sticky bar as you scroll
  *    (reproduced with CSS so it behaves the same on iOS, Android and web).
  *
- * Pass `back` on pushed sub-screens to show a top-left back button.
+ * Screen DEPTH MODEL (one consistent hierarchy across the app):
+ *  • TAB ROOTS — the bottom-tab destinations (Dashboard, Patrol/Training,
+ *    Schedule, Messages, Profile). Pass `root` → NO back button (you switch
+ *    roots via the tab bar, you never "go back" from one).
+ *  • DETAIL / SUB-PAGES — anything pushed on top of a root (a thread, a course,
+ *    an incident, the shift detail…). These show a back button by DEFAULT, so a
+ *    pushed screen always has a way back. `back` forces it explicitly.
+ * Rule of thumb: if it's reachable from the tab bar it's a root; if it's pushed
+ * via history.push it's a detail. Never both.
  */
 export function Screen({
   title,
@@ -43,6 +52,7 @@ export function Screen({
   avatar,
   header,
   fill,
+  sheet,
 }: {
   title?: string;
   titleClassName?: string;
@@ -69,8 +79,14 @@ export function Screen({
   avatar?: ReactNode;
   /** Fully custom header node (takes precedence over title/largeTitle). */
   header?: ReactNode;
+  /** Present this page with a vertical slide-up (like a sheet) instead of the
+   *  horizontal push — see pageTransition. Kept a routed page so deep-links work. */
+  sheet?: boolean;
 }) {
+  const { t } = useTranslation();
   const history = useHistory();
+  // Marks the .ion-page so pageTransition slides it up from the bottom.
+  const pageAttrs = sheet ? { "data-sheet-transition": "true" } : {};
   // Sub-pages show a back button by default; only tab roots opt out via `root`.
   const showBack = back === true || !root;
   const goBack = () => {
@@ -121,7 +137,7 @@ export function Screen({
   // -------------------------------------------------- Custom header mode
   if (header) {
     return (
-      <IonPage>
+      <IonPage {...pageAttrs}>
         <IonContent forceOverscroll={REFRESH_MODE === "ios"}>
           {refresher}
           <div className="safe-top">{header}</div>
@@ -135,7 +151,7 @@ export function Screen({
   if (largeTitle) {
     const p = Math.min(1, Math.max(0, scrollTop / COLLAPSE)); // 0 open → 1 collapsed
     return (
-      <IonPage>
+      <IonPage {...pageAttrs}>
         <IonContent
           scrollEvents
           forceOverscroll={REFRESH_MODE === "ios"}
@@ -195,7 +211,7 @@ export function Screen({
   // is what previously collapsed the chat to zero height.
   if (fill) {
     return (
-      <IonPage>
+      <IonPage {...pageAttrs}>
         <IonContent className="chat-fill" forceOverscroll={false}>
           <div className="safe-top bg-surface-2 border-b border-line shrink-0">
             <div className="flex items-start justify-between gap-3 px-4 pb-3 pt-3">
@@ -203,7 +219,7 @@ export function Screen({
                 {showBack && (
                   <button
                     onClick={goBack}
-                    aria-label="Atrás"
+                    aria-label={t("aria.back", "Atrás")}
                     className="pressable -ml-1.5 mt-0.5 shrink-0 rounded-full p-1.5 text-ink active:bg-surface-2"
                   >
                     <ChevronLeft size={22} />
@@ -225,7 +241,7 @@ export function Screen({
 
   // -------------------------------------------------- Default compact header
   return (
-    <IonPage>
+    <IonPage {...pageAttrs}>
       <IonContent forceOverscroll={REFRESH_MODE === "ios"}>
         <div className="safe-top bg-surface-2 border-b border-line">
           <div className="flex items-start justify-between gap-3 px-4 pb-3 pt-3">
@@ -233,7 +249,7 @@ export function Screen({
               {showBack && (
                 <button
                   onClick={goBack}
-                  aria-label="Atrás"
+                  aria-label={t("aria.back", "Atrás")}
                   className="-ml-1.5 mt-0.5 shrink-0 rounded-full p-1.5 text-ink active:bg-surface-2"
                 >
                   <ChevronLeft size={22} />
