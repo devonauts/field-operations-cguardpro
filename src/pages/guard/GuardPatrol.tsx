@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { IonModal, useIonToast } from "@ionic/react";
+import { modalEnterAnimation, modalLeaveAnimation } from "@/lib/modalAnimation";
 import {
   MapPin, CheckCircle2, Circle, ScanLine, Loader2, X, AlertTriangle,
   PartyPopper, RefreshCw, Navigation, Plus, Flag, History, CloudOff, ChevronRight,
@@ -495,7 +496,7 @@ function ScanConfirm({ checkpoint, settings, onClose, onSubmit }: {
   const input = "w-full rounded-xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none focus:border-gold/60";
 
   return (
-    <IonModal isOpen onDidDismiss={onClose}>
+    <IonModal isOpen onDidDismiss={onClose} enterAnimation={modalEnterAnimation} leaveAnimation={modalLeaveAnimation}>
       <div className="flex h-full flex-col bg-background">
         <Inputs />
         <div className="safe-top flex items-center justify-between border-b border-line px-4 py-3">

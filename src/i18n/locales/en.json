@@ -16,7 +16,8 @@
     "now": "Now",
     "refresh": "Refresh",
     "takePhoto": "Take photo",
-    "fromGallery": "Gallery"
+    "fromGallery": "Gallery",
+    "remove": "Remove"
   },
   "auth": {
     "signIn": "Sign in",
@@ -259,7 +260,9 @@
     "daySummary": "Day summary",
     "dayShift": "Day shift",
     "eveShift": "Evening shift",
-    "nightShift": "Night shift"
+    "nightShift": "Night shift",
+    "fromPrevDay": "(prev. day)",
+    "toNextDay": "(continues)"
   },
   "reports": {
     "title": "Reports & Analytics",
@@ -338,6 +341,7 @@
     "noHistory": "No patrols yet"
   },
   "onduty": {
+    "liveAlerts": "Incidents",
     "active": "On duty",
     "timeOnDuty": "Time on duty",
     "insideArea": "Inside the post area",
@@ -421,7 +425,37 @@
     "photos": "Photos",
     "addPhoto": "Add image",
     "idPhotoLabel": "ID photo",
-    "visitPhotoLabel": "Visit photo"
+    "visitPhotoLabel": "Visit photo",
+    "detailTitle": "Visit details",
+    "identity": "Identity",
+    "visitInfo": "Visit",
+    "vehicleInfo": "Vehicle",
+    "entryTime": "Entry",
+    "exitTimeLabel": "Exit",
+    "station": "Site / station",
+    "call": "Call",
+    "preauth": {
+      "scanButton": "Scan visitor pass",
+      "scanSubtitle": "Validate a pass pre-authorized by the client",
+      "validating": "Validating pass…",
+      "registered": "Visit registered ✓",
+      "successHint": "Access was authorized and the visit has been logged.",
+      "scanAnother": "Scan another pass",
+      "done": "Done",
+      "retry": "Retry",
+      "vehiclePlate": "Vehicle plate",
+      "errorTitle": "Pass not valid",
+      "networkError": "No connection. Check your internet and try again.",
+      "genericError": "Couldn't validate the pass. Please try again.",
+      "reasons": {
+        "already_used": "This pass has already been used.",
+        "revoked": "The client revoked this pass.",
+        "not_yet_valid": "This pass is not valid yet.",
+        "expired": "This pass has expired.",
+        "station_mismatch": "This pass is for a different site.",
+        "not_found": "Pass not found or invalid."
+      }
+    }
   },
   "panic": {
     "title": "Panic alert",
@@ -535,7 +569,12 @@
     "spanish": "Spanish",
     "english": "English",
     "account": "Account",
-    "version": "Version"
+    "version": "Version",
+    "changePhoto": "Profile photo",
+    "takeSelfie": "Take a selfie",
+    "choosePhoto": "Choose from gallery",
+    "removePhoto": "Remove photo",
+    "photoError": "Could not upload the photo. Please try again."
   },
   "startShift": {
     "eyebrow": "Before you start",
@@ -744,11 +783,37 @@
     "talking": "Talking",
     "transmitting": "Transmitting…",
     "you": "you",
-    "youTalking": "You're talking"
+    "youTalking": "You're talking",
+    "recording": "Recording your report…",
+    "sending": "Sending…",
+    "actionHint": "Answer the radio check so you don’t lose your mark.",
+    "stopAndSend": "Stop and send",
+    "openRadio": "Open radio screen",
+    "replyError": "Could not send. Please try again.",
+    "micUnavailable": "Recording is not available on this device.",
+    "micDenied": "Could not access the microphone. Check permissions."
   },
   "map": {
     "openInMaps": "View on map",
     "lastSeen": "seen {{ago}}",
     "locate": "Map"
+  },
+  "tasks": {
+    "complete": "Complete",
+    "completeTitle": "Complete task",
+    "whatDidYouDo": "What did you do?",
+    "notesPlaceholder": "Describe what you did…",
+    "photosOptional": "Photos (optional)",
+    "markDone": "Mark as completed",
+    "completed": "Task completed",
+    "completeError": "Could not complete the task. Please try again."
+  },
+  "common": {
+    "cancel": "Cancel",
+    "close": "Close"
+  },
+  "aria": {
+    "notifications": "Notifications",
+    "back": "Back"
   }
 }

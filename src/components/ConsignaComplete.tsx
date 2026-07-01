@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { IonModal } from "@ionic/react";
+import { modalEnterAnimation, modalLeaveAnimation } from "@/lib/modalAnimation";
 import {
   X, Camera, Video, Mic, Square, Trash2, Check, Loader2, Clock, AlertCircle, ClipboardCheck,
 } from "lucide-react";
@@ -132,7 +133,7 @@ export function ConsignaComplete({
   };
 
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={handleClose}>
+    <IonModal isOpen={isOpen} onDidDismiss={handleClose} enterAnimation={modalEnterAnimation} leaveAnimation={modalLeaveAnimation}>
       <div className="flex h-full flex-col bg-background">
         <div className="safe-top flex items-center gap-2 border-b border-line px-4 py-3">
           <ClipboardCheck size={18} className="text-gold" />

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { IonModal } from "@ionic/react";
+import { modalEnterAnimation, modalLeaveAnimation } from "@/lib/modalAnimation";
 import {
   X, MapPin, Clock, BatteryCharging, BatteryFull, BatteryLow,
   Package, ListChecks, ShieldCheck, CheckCircle2, Circle, ArrowRight,
@@ -100,7 +101,7 @@ export function StartShiftModal({
     });
 
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={onClose}>
+    <IonModal isOpen={isOpen} onDidDismiss={onClose} enterAnimation={modalEnterAnimation} leaveAnimation={modalLeaveAnimation}>
       <div className="flex h-full flex-col bg-background text-ink">
         {/* header */}
         <div

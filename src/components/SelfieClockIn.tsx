@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { IonModal } from "@ionic/react";
+import { modalEnterAnimation, modalLeaveAnimation } from "@/lib/modalAnimation";
 import { Camera, MapPin, RefreshCw, Check, X, Loader2, ShieldCheck } from "lucide-react";
 import { getCurrentPosition, reverseGeocode, Coords } from "@/lib/geo";
 import { getAppTimeZone } from "@/lib/format";
@@ -368,7 +369,7 @@ export function SelfieClockIn({
   };
 
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={onCancel}>
+    <IonModal isOpen={isOpen} onDidDismiss={onCancel} enterAnimation={modalEnterAnimation} leaveAnimation={modalLeaveAnimation}>
       <div className="relative flex h-full w-full flex-col bg-black">
         {/* top bar */}
         <div

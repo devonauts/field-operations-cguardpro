@@ -250,6 +250,21 @@ export function Sheet({
   title?: string;
   className?: string;
 }) {
+  const { t } = useTranslation();
+  // Keep the sheet mounted through its slide-DOWN exit before unmounting, so closing
+  // animates like a native modal instead of vanishing.
+  const [render, setRender] = useState(open);
+  const [closing, setClosing] = useState(false);
+  useEffect(() => {
+    if (open) {
+      setRender(true);
+      setClosing(false);
+    } else if (render) {
+      setClosing(true);
+      const id = setTimeout(() => { setRender(false); setClosing(false); }, 260);
+      return () => clearTimeout(id);
+    }
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -257,14 +272,14 @@ export function Sheet({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!render) return null;
   return createPortal(
     <div className="fixed inset-0 z-[60] flex flex-col justify-end">
-      <div className="sheet-backdrop absolute inset-0 bg-black/60" onClick={onClose} />
+      <div className={`sheet-backdrop absolute inset-0 bg-black/60 ${closing ? "sheet-backdrop-out" : ""}`} onClick={onClose} />
       <div
         role="dialog"
         aria-modal="true"
-        className={`sheet-panel safe-bottom relative max-h-[88vh] overflow-y-auto rounded-t-2xl border-t border-line bg-surface ${className}`}
+        className={`sheet-panel safe-bottom relative max-h-[88vh] overflow-y-auto rounded-t-2xl border-t border-line bg-surface ${closing ? "sheet-panel-out" : ""} ${className}`}
       >
         <div className="sticky top-0 z-10 flex items-center justify-between gap-3 bg-surface/95 px-5 pb-2 pt-3 backdrop-blur">
           <div className="mx-auto h-1 w-9 rounded-full bg-line-2" aria-hidden />
@@ -272,7 +287,7 @@ export function Sheet({
         {title && (
           <div className="flex items-center justify-between px-5 pb-1">
             <h3 className="text-base font-bold text-ink">{title}</h3>
-            <button onClick={onClose} className="pressable -mr-1 p-1 text-muted" aria-label="Cerrar">
+            <button onClick={onClose} className="pressable -mr-1 p-1 text-muted" aria-label={t("common.close", "Cerrar")}>
               <X size={20} />
             </button>
           </div>

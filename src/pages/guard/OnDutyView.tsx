@@ -424,7 +424,7 @@ export default function OnDutyView({ data }: { data: any }) {
       >
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-2">
-            <span className="label-eyebrow">{t("onduty.liveAlerts", "Alertas")}</span>
+            <span className="label-eyebrow">{t("onduty.liveAlerts", "Novedades")}</span>
             {alertBadge > 0 && (
               <span className="grid h-5 min-w-5 place-items-center rounded-full bg-critical px-1.5 text-[11px] font-bold text-white">
                 {alertBadge}

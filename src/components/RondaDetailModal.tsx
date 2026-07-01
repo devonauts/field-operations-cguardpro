@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { IonModal } from "@ionic/react";
+import { modalEnterAnimation, modalLeaveAnimation } from "@/lib/modalAnimation";
 import { Navigation, X, Loader2, CheckCircle2, Circle } from "lucide-react";
 import { Card, EmptyState } from "@/components/ui";
 import { rondasService } from "@/lib/rondas";
@@ -38,7 +39,7 @@ export default function RondaDetailModal({
   const cps: any[] = detail?.checkpoints || [];
 
   return (
-    <IonModal isOpen onDidDismiss={onClose}>
+    <IonModal isOpen onDidDismiss={onClose} enterAnimation={modalEnterAnimation} leaveAnimation={modalLeaveAnimation}>
       <div className="flex h-full flex-col bg-background">
         <div className="safe-top flex items-center gap-2 border-b border-line px-4 py-3">
           <Navigation size={18} className="text-gold" />

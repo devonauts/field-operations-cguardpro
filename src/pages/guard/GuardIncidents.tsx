@@ -32,10 +32,10 @@ export default function GuardIncidents() {
             fb.tap();
             setFormOpen(true);
           }}
-          className="flex min-h-[40px] items-center gap-1.5 rounded-lg bg-gold-strong px-4 text-xs font-semibold text-on-accent active:bg-gold-hover"
+          aria-label={t("incidents.logIncident")}
+          className="pressable grid h-10 w-10 place-items-center rounded-full bg-gold-strong text-on-accent shadow-sm active:bg-gold-hover"
         >
-          <Plus size={16} />
-          {t("incidents.logIncident")}
+          <Plus size={20} strokeWidth={2.5} />
         </button>
       }
     >
@@ -46,7 +46,7 @@ export default function GuardIncidents() {
       ) : rows.length === 0 ? (
         <EmptyState icon={<AlertTriangle size={28} />} title={t("app.noData")} />
       ) : (
-        <div className="space-y-3">
+        <div className="stagger space-y-3">
           {rows.map((inc: any, i: number) => (
             <IncidentRow
               key={inc.id || i}

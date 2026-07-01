@@ -110,6 +110,29 @@ body {
   }
 }
 
+/* ── Entrance transitions ──────────────────────────────────────────────────
+   Reusable so content eases in instead of blinking. `.animate-in` for a single
+   block that swaps in (loaded data replacing a skeleton); `.stagger` on a list
+   container cascades its direct children. The reduced-motion block above already
+   neutralizes both for motion-sensitive users. */
+@keyframes enter-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-in { animation: enter-up 0.34s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.stagger > * { animation: enter-up 0.34s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.stagger > *:nth-child(1) { animation-delay: 0.02s; }
+.stagger > *:nth-child(2) { animation-delay: 0.06s; }
+.stagger > *:nth-child(3) { animation-delay: 0.10s; }
+.stagger > *:nth-child(4) { animation-delay: 0.14s; }
+.stagger > *:nth-child(5) { animation-delay: 0.18s; }
+.stagger > *:nth-child(6) { animation-delay: 0.22s; }
+.stagger > *:nth-child(7) { animation-delay: 0.26s; }
+.stagger > *:nth-child(8) { animation-delay: 0.30s; }
+.stagger > *:nth-child(9) { animation-delay: 0.34s; }
+/* Cap the cascade so a long list's tail doesn't lag. */
+.stagger > *:nth-child(n+10) { animation-delay: 0.38s; }
+
 /* Skeleton shimmer — the single loading primitive (use the <Skeleton> component) */
 @keyframes skeleton-shimmer {
   0% { background-position: 200% 0; }
@@ -365,6 +388,17 @@ button:not(:disabled):not(.no-press):not([class*="ion-"]):active,
 }
 .sheet-panel { animation: sheet-up 300ms cubic-bezier(0.22, 1, 0.36, 1); will-change: transform; }
 .sheet-backdrop { animation: sheet-fade 240ms ease-out; }
+/* Bottom-sheet EXIT — slide back down + fade the backdrop (native dismiss). */
+@keyframes sheet-down {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+@keyframes sheet-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+.sheet-panel-out { animation: sheet-down 260ms cubic-bezier(0.4, 0, 1, 1) forwards; will-change: transform; }
+.sheet-backdrop-out { animation: sheet-fade-out 240ms ease-in forwards; }
 
 /* Full-screen modals (forms) — prevents the footer/button being clipped by a
    content-sized sheet. Header uses safe-top, footers add safe-bottom padding. */

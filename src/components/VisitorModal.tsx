@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { IonModal } from "@ionic/react";
+import { modalEnterAnimation, modalLeaveAnimation } from "@/lib/modalAnimation";
 import { useTranslation } from "react-i18next";
 import {
   X,
@@ -29,8 +30,10 @@ import {
   CreditCard,
   Fingerprint,
   LogIn,
+  QrCode,
 } from "lucide-react";
 import { visitorService, VisitorPhoto } from "@/lib/services";
+import { VisitorPreAuthScan } from "./VisitorPreAuthScan";
 import { fileUrlFromFile } from "@/lib/fileUrl";
 import { useAsync } from "@/lib/useAsync";
 import { fmtTime, fmtDateTime } from "@/lib/format";
@@ -118,7 +121,7 @@ export function VisitorModal({
   station: any;
 }) {
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={onClose}>
+    <IonModal isOpen={isOpen} onDidDismiss={onClose} enterAnimation={modalEnterAnimation} leaveAnimation={modalLeaveAnimation}>
       {isOpen && <VisitorFlow station={station} onClose={onClose} />}
     </IonModal>
   );
@@ -127,6 +130,7 @@ export function VisitorModal({
 export function VisitorFlow({ station, onClose, embedded }: { station: any; onClose: () => void; embedded?: boolean }) {
   const { t } = useTranslation();
   const [mode, setMode] = useState<Mode>("list");
+  const [scanPreAuth, setScanPreAuth] = useState(false);
   const [selected, setSelected] = useState<any>(null);
   const [photos, setPhotos] = useState<CapturedImage[]>([]);
   const [facePhoto, setFacePhoto] = useState<CapturedImage | null>(null);
@@ -254,7 +258,15 @@ export function VisitorFlow({ station, onClose, embedded }: { station: any; onCl
     <div className="flex h-full flex-col overflow-x-hidden bg-background">
       <div className="safe-top flex items-center gap-2 border-b border-line px-4 py-3">
         {mode === "list" ? (
-          <Users size={18} className="text-gold" />
+          // Embedded as a pushed screen → a back button pops the stack; as a
+          // modal → just the section icon (the X handles closing).
+          embedded ? (
+            <button onClick={onClose} className="pressable text-muted" aria-label={t("aria.back", "Atrás")}>
+              <ArrowLeft size={20} />
+            </button>
+          ) : (
+            <Users size={18} className="text-gold" />
+          )
         ) : (
           <button onClick={goBack} className="text-muted">
             <ArrowLeft size={20} />
@@ -272,7 +284,23 @@ export function VisitorFlow({ station, onClose, embedded }: { station: any; onCl
       <input ref={galleryInput} type="file" accept="image/*" className="hidden" onChange={(e) => onWebPick(e.target.files?.[0])} />
 
       {mode === "list" && (
-        <ListView loading={loading} visits={visits} reload={reload} onNew={() => { reset(); setMode("choose"); }} onOpen={openDetail} />
+        <ListView
+          loading={loading}
+          visits={visits}
+          reload={reload}
+          onNew={() => { reset(); setMode("choose"); }}
+          onOpen={openDetail}
+          onScanPreAuth={() => setScanPreAuth(true)}
+        />
+      )}
+
+      {/* Visitor pre-authorization QR scanner — full-screen overlay. Refresh the
+          visit list on a successful scan (the backend created the log). */}
+      {scanPreAuth && (
+        <VisitorPreAuthScan
+          onClose={() => setScanPreAuth(false)}
+          onRegistered={reload}
+        />
       )}
 
       {mode === "detail" && selected && (
@@ -330,7 +358,7 @@ export function VisitorFlow({ station, onClose, embedded }: { station: any; onCl
 }
 
 /* ----------------------------- list ----------------------------- */
-function ListView({ loading, visits, reload, onNew, onOpen }: { loading: boolean; visits: any[]; reload: () => void; onNew: () => void; onOpen: (v: any) => void; }) {
+function ListView({ loading, visits, reload, onNew, onOpen, onScanPreAuth }: { loading: boolean; visits: any[]; reload: () => void; onNew: () => void; onOpen: (v: any) => void; onScanPreAuth: () => void; }) {
   const { t } = useTranslation();
   return (
     <>
@@ -381,7 +409,21 @@ function ListView({ loading, visits, reload, onNew, onOpen }: { loading: boolean
           </div>
         )}
       </div>
-      <div className="border-t border-line px-4 pt-3" style={footerStyle}>
+      <div className="space-y-2 border-t border-line px-4 pt-3" style={footerStyle}>
+        {/* Pre-authorized visitor pass — scan the QR the client generated. */}
+        <button
+          onClick={onScanPreAuth}
+          className="pressable flex w-full items-center gap-3 rounded-2xl border border-gold/40 bg-gold-soft px-4 py-3 text-left active:opacity-80"
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gold/15 text-gold">
+            <QrCode size={20} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold text-ink">{t("visitor.preauth.scanButton")}</span>
+            <span className="block truncate text-xs text-muted">{t("visitor.preauth.scanSubtitle")}</span>
+          </span>
+          <ChevronRight size={18} className="shrink-0 text-gold" />
+        </button>
         <Button variant="primary" full onClick={onNew}>
           <UserPlus size={18} />
           {t("visitor.register")}
@@ -629,7 +671,7 @@ function PersonForm({ fields, setFields, photos, facePhoto, addPhoto, removePhot
                 key={ty}
                 type="button"
                 onClick={() => set("idType", ty)}
-                className={`flex-1 rounded-full px-2 py-2.5 text-[13px] font-semibold transition-colors ${
+                className={`min-h-11 flex-1 rounded-full px-2 py-3 text-sm font-semibold transition-colors ${
                   fields.idType === ty
                     ? "bg-gold text-on-accent shadow-sm"
                     : "text-muted active:bg-surface"
@@ -743,7 +785,7 @@ function VehicleForm({ photos, facePhoto, addPhoto, removePhoto, station, onDone
                 key={ty}
                 type="button"
                 onClick={() => setVehicleType(ty)}
-                className={`flex-1 rounded-full px-1 py-2.5 text-xs font-semibold transition-colors ${
+                className={`min-h-11 flex-1 rounded-full px-1 py-3 text-[13px] font-semibold transition-colors ${
                   vehicleType === ty
                     ? "bg-gold text-on-accent shadow-sm"
                     : "text-muted active:bg-surface"

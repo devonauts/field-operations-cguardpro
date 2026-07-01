@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { IonModal } from "@ionic/react";
+import { modalEnterAnimation, modalLeaveAnimation } from "@/lib/modalAnimation";
 import { X, FileText, Send, Loader2, Mic, Square, Plus, Trash2, ClipboardList, CheckCircle2 } from "lucide-react";
 import { useSpeechToText } from "@/lib/useSpeechToText";
 import { ErrorState } from "@/components/ui";
@@ -31,7 +32,7 @@ export function ClockOutReportModal({
 }) {
   const close = () => onCancel();
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={close}>
+    <IonModal isOpen={isOpen} onDidDismiss={close} enterAnimation={modalEnterAnimation} leaveAnimation={modalLeaveAnimation}>
       {isOpen && <ReportBody busy={busy} error={error} onCancel={onCancel} onSubmit={onSubmit} />}
     </IonModal>
   );

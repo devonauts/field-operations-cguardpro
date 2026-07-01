@@ -16,7 +16,8 @@
     "now": "Ahora",
     "refresh": "Actualizar",
     "takePhoto": "Tomar foto",
-    "fromGallery": "Galería"
+    "fromGallery": "Galería",
+    "remove": "Quitar"
   },
   "auth": {
     "signIn": "Iniciar sesión",
@@ -259,7 +260,9 @@
     "daySummary": "Resumen del día",
     "dayShift": "Turno día",
     "eveShift": "Turno tarde",
-    "nightShift": "Turno noche"
+    "nightShift": "Turno noche",
+    "fromPrevDay": "(día anterior)",
+    "toNextDay": "(continúa)"
   },
   "reports": {
     "title": "Reportes y Analítica",
@@ -338,6 +341,7 @@
     "noHistory": "Aún no hay rondas"
   },
   "onduty": {
+    "liveAlerts": "Novedades",
     "active": "En servicio",
     "timeOnDuty": "Tiempo en servicio",
     "insideArea": "Dentro del área del puesto",
@@ -421,7 +425,37 @@
     "photos": "Fotos",
     "addPhoto": "Agregar imagen",
     "idPhotoLabel": "Foto del documento",
-    "visitPhotoLabel": "Foto de la visita"
+    "visitPhotoLabel": "Foto de la visita",
+    "detailTitle": "Detalle de la visita",
+    "identity": "Identidad",
+    "visitInfo": "Visita",
+    "vehicleInfo": "Vehículo",
+    "entryTime": "Entrada",
+    "exitTimeLabel": "Salida",
+    "station": "Puesto / estación",
+    "call": "Llamar",
+    "preauth": {
+      "scanButton": "Escanear pase de visitante",
+      "scanSubtitle": "Valida un pase pre-autorizado por el cliente",
+      "validating": "Validando pase…",
+      "registered": "Visita registrada ✓",
+      "successHint": "El acceso fue autorizado y la visita quedó registrada.",
+      "scanAnother": "Escanear otro pase",
+      "done": "Listo",
+      "retry": "Reintentar",
+      "vehiclePlate": "Placa del vehículo",
+      "errorTitle": "Pase no válido",
+      "networkError": "Sin conexión. Revisa tu internet e intenta de nuevo.",
+      "genericError": "No se pudo validar el pase. Intenta de nuevo.",
+      "reasons": {
+        "already_used": "Este pase ya fue utilizado.",
+        "revoked": "El cliente revocó este pase.",
+        "not_yet_valid": "Este pase aún no está vigente.",
+        "expired": "Este pase ya venció.",
+        "station_mismatch": "Este pase es para otro puesto.",
+        "not_found": "Pase no encontrado o inválido."
+      }
+    }
   },
   "panic": {
     "title": "Alerta de pánico",
@@ -535,7 +569,12 @@
     "spanish": "Español",
     "english": "Inglés",
     "account": "Cuenta",
-    "version": "Versión"
+    "version": "Versión",
+    "changePhoto": "Foto de perfil",
+    "takeSelfie": "Tomar selfie",
+    "choosePhoto": "Elegir de galería",
+    "removePhoto": "Quitar foto",
+    "photoError": "No se pudo subir la foto. Intenta de nuevo."
   },
   "startShift": {
     "eyebrow": "Antes de empezar",
@@ -744,11 +783,37 @@
     "talking": "Hablando",
     "transmitting": "Transmitiendo…",
     "you": "tú",
-    "youTalking": "Estás hablando"
+    "youTalking": "Estás hablando",
+    "recording": "Grabando tu reporte…",
+    "sending": "Enviando…",
+    "actionHint": "Responde el pase de novedades para no perder tu marca.",
+    "stopAndSend": "Detener y enviar",
+    "openRadio": "Abrir pantalla de radio",
+    "replyError": "No se pudo enviar. Intenta de nuevo.",
+    "micUnavailable": "La grabación no está disponible en este dispositivo.",
+    "micDenied": "No se pudo acceder al micrófono. Revisa los permisos."
   },
   "map": {
     "openInMaps": "Ver en mapa",
     "lastSeen": "visto {{ago}}",
     "locate": "Mapa"
+  },
+  "tasks": {
+    "complete": "Completar",
+    "completeTitle": "Completar tarea",
+    "whatDidYouDo": "¿Qué realizaste?",
+    "notesPlaceholder": "Describe lo que hiciste…",
+    "photosOptional": "Fotos (opcional)",
+    "markDone": "Marcar como completada",
+    "completed": "Tarea completada",
+    "completeError": "No se pudo completar la tarea. Intenta de nuevo."
+  },
+  "common": {
+    "cancel": "Cancelar",
+    "close": "Cerrar"
+  },
+  "aria": {
+    "notifications": "Notificaciones",
+    "back": "Atrás"
   }
 }

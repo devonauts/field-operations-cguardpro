@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { IonModal } from "@ionic/react";
+import { modalEnterAnimation, modalLeaveAnimation } from "@/lib/modalAnimation";
 import { X, Clock, Send, Loader2 } from "lucide-react";
 
 const footerStyle = { paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" };
@@ -38,7 +39,7 @@ export function EarlyClockOutModal({
   };
 
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={onCancel}>
+    <IonModal isOpen={isOpen} onDidDismiss={onCancel} enterAnimation={modalEnterAnimation} leaveAnimation={modalLeaveAnimation}>
       <div className="flex h-full flex-col bg-background">
         <div className="safe-top flex items-center gap-2 border-b border-line px-4 py-3">
           <Clock size={18} className="text-gold" />

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { IonModal } from "@ionic/react";
+import { modalEnterAnimation, modalLeaveAnimation } from "@/lib/modalAnimation";
 import { useTranslation } from "react-i18next";
 import { X, Loader2, Check, AlertTriangle, MapPin, Zap } from "lucide-react";
 import { incidentService, incidentTypeService } from "@/lib/services";
@@ -49,7 +50,7 @@ export function IncidentForm({
   station?: any;
 }) {
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={onClose}>
+    <IonModal isOpen={isOpen} onDidDismiss={onClose} enterAnimation={modalEnterAnimation} leaveAnimation={modalLeaveAnimation}>
       {isOpen && (
         <IncidentBody onClose={onClose} onCreated={onCreated} asGuard={asGuard} station={station} />
       )}
