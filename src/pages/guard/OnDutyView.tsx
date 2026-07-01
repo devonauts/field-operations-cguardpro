@@ -9,6 +9,7 @@ import { getCurrentPosition } from "@/lib/geo";
 import { Button, MetricTile } from "@/components/ui/kit";
 import { Sheet, ResultSheet, SlideToConfirm } from "@/components/ui";
 import fb from "@/lib/feedback";
+import IncomingPassdownGate from "@/components/IncomingPassdownGate";
 
 /* ----------------------------------------------------------------- helpers */
 
@@ -268,6 +269,8 @@ export default function OnDutyView({ data }: { data: any }) {
 
   return (
     <div className="space-y-4">
+      {/* Pase de turno left by the previous shift (auto-received on the backend). */}
+      <IncomingPassdownGate />
       {/* ============================ CURRENT SHIFT ============================ */}
       <NavCard
         onClick={() => history.push("/guard/shift")}

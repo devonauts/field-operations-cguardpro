@@ -6,7 +6,7 @@ import { getCurrentPosition } from "@/lib/geo";
 import { Button } from "@/components/ui/kit";
 import { ResultSheet } from "@/components/ui";
 import { EarlyClockOutModal } from "@/components/EarlyClockOutModal";
-import { ClockOutReportModal } from "@/components/ClockOutReportModal";
+import { ClockOutReportModal, type PassdownPayload } from "@/components/ClockOutReportModal";
 
 /** "8h 02m" between two timestamps. */
 function fmtDuration(fromMs: number, toMs: number): string {
@@ -44,7 +44,7 @@ export function ClockOutFlow({
   const punchInTime =
     data?.activeClockIn?.punchInTime || data?.activeClockIn?.createdAt || null;
 
-  const handleClockOut = async (summary?: string) => {
+  const handleClockOut = async (payload?: PassdownPayload) => {
     setBusy(true);
     setReportError(null);
     try {
@@ -57,7 +57,13 @@ export function ClockOutFlow({
       } catch {
         /* GPS optional on clock-out */
       }
-      const res = await guardService.clockOut({ ...coords, observations: summary });
+      // The passdown (novedades + instructions) rides along with clock-out; each
+      // instruction becomes a task for the incoming guard on the backend.
+      const res = await guardService.clockOut({
+        ...coords,
+        observations: payload?.summary,
+        passdown: { instructions: payload?.instructions || [] },
+      });
       // Early clock-out needs supervisor approval first.
       if (res && res.success === false && res.error === "approval_required") {
         setReportOpen(false);
@@ -162,7 +168,7 @@ export function ClockOutFlow({
           setReportError(null);
           setReportOpen(false);
         }}
-        onSubmit={(summary) => handleClockOut(summary)}
+        onSubmit={(payload) => handleClockOut(payload)}
       />
 
       {/* Clock-OUT confirmation (P0): echoes the outcome so the punch is never

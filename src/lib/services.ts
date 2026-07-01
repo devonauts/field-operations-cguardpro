@@ -51,7 +51,10 @@ export const guardService = {
     latitude?: number;
     longitude?: number;
     observations?: string;
+    passdown?: { instructions: Array<{ text: string; priority: string }> };
   }) => api.post(tenantPath("/guard/me/clock-out"), { data }).then(unwrap),
+  /** The pase de turno left at my post by the previous shift (auto-received). */
+  incomingPassdown: () => api.get(tenantPath("/guard/me/passdown/incoming")).then(unwrap),
   /** Request supervisor approval to clock out early. */
   requestClockOut: (data?: { reason?: string }) =>
     api.post(tenantPath("/guard/me/clock-out/request"), { data: data || {} }).then(unwrap),
