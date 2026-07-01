@@ -20,6 +20,7 @@ import {
   RondaCheckpoint, RondaRoute, CheckpointScanStatus, RondaSettings, DEFAULT_SETTINGS, TagScan,
 } from "@/types/rondas";
 import { fmtDateTime } from "@/lib/format";
+import RondaDetailModal from "@/components/RondaDetailModal";
 
 const footerStyle = { paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" };
 const SCAN_STATUSES: CheckpointScanStatus[] = ["completed", "late", "issue", "skipped"];
@@ -64,6 +65,7 @@ export default function GuardPatrol() {
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [detailId, setDetailId] = useState<string | null>(null);
   const [pendingCp, setPendingCp] = useState<RondaCheckpoint | null>(null);
   const [issueOpen, setIssueOpen] = useState(false);
   const [pending, setPending] = useState<PendingScan[]>(() => ls.get<PendingScan[]>(PENDING_KEY, []));
@@ -73,7 +75,22 @@ export default function GuardPatrol() {
 
   const { data, loading, reload } = useAsync(async () => {
     const dash = await guardService.dashboard().catch(() => null);
-    const station = dash?.stations?.[0] || null;
+    // Resolve the station the guard is ACTUALLY working. `dash.stations` only
+    // holds PERMANENT (assignedGuards junction) stations — a guard working a
+    // station via the schedule or an ad-hoc clock-in has an empty array, so the
+    // rondas assigned to that station would never appear. Fall back, in order
+    // of "where the guard is right now": the on-duty clock-in station → the
+    // current/next scheduled shift's station → any permanent junction station.
+    const junction: any[] = dash?.stations || [];
+    const clockInStationId: string | null = dash?.activeClockIn?.stationNameId || null;
+    const shiftStation: any = dash?.currentShift?.station || dash?.nextShift?.station || null;
+    // Stations we have a full record (incl. name) for, keyed by id.
+    const named = new Map<string, any>();
+    for (const s of junction) if (s?.id) named.set(s.id, s);
+    if (shiftStation?.id) named.set(shiftStation.id, { ...shiftStation });
+    const effectiveId: string | null =
+      clockInStationId || shiftStation?.id || junction[0]?.id || null;
+    const station = effectiveId ? named.get(effectiveId) || { id: effectiveId } : null;
     const settings: RondaSettings = await rondasService.settings().catch(() => DEFAULT_SETTINGS);
     // Rondas are isolated per STATION. Fetch only this station's tours (server-side
     // filter by stationId) and keep strictly those whose stationId matches — never
@@ -256,6 +273,7 @@ export default function GuardPatrol() {
 
   return (
     <Screen
+      root
       title={t("rondas.title")}
       subtitle={route?.name || t("rondas.subtitle")}
       onRefresh={reload}
@@ -344,11 +362,12 @@ export default function GuardPatrol() {
                   <span>{t("rondas.noRoutes")}</span>
                 </div>
               )}
-              <RondaHistory patrols={data?.patrols || []} canStart={routes.length > 0} />
+              <RondaHistory patrols={data?.patrols || []} canStart={routes.length > 0} onOpen={setDetailId} />
             </>
           )}
         </div>
       )}
+      {detailId && <RondaDetailModal assignmentId={detailId} onClose={() => setDetailId(null)} />}
 
       {chooserOpen && (
         <RouteChooserSheet
@@ -548,7 +567,7 @@ function ScanConfirm({ checkpoint, settings, onClose, onSubmit }: {
 
 /* ----------------------------- history ----------------------------- */
 /** Primary content while no patrol is running: the ronda history, newest first. */
-function RondaHistory({ patrols, canStart }: { patrols: any[]; canStart: boolean }) {
+function RondaHistory({ patrols, canStart, onOpen }: { patrols: any[]; canStart: boolean; onOpen: (id: string) => void }) {
   const { t } = useTranslation();
   return (
     <div>
@@ -566,7 +585,11 @@ function RondaHistory({ patrols, canStart }: { patrols: any[]; canStart: boolean
       ) : (
         <Card className="divide-y divide-line p-0">
           {patrols.slice(0, 30).map((p, i) => (
-            <div key={p.id || i} className="flex items-center gap-3 px-4 py-3">
+            <button
+              key={p.id || i}
+              onClick={() => { fb.tap(); onOpen(p.id); }}
+              className="pressable flex w-full items-center gap-3 px-4 py-3 text-left"
+            >
               <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${p.status === "completed" ? "bg-online/15 text-online" : "bg-gold/15 text-gold"}`}>
                 {p.status === "completed" ? <CheckCircle2 size={18} /> : <Navigation size={18} />}
               </span>
@@ -577,7 +600,8 @@ function RondaHistory({ patrols, canStart }: { patrols: any[]; canStart: boolean
               <span className={`shrink-0 rounded-md border px-2 py-0.5 text-[11px] font-medium ${p.status === "completed" ? "border-online/40 bg-online/5 text-online" : "border-line-2 text-muted"}`}>
                 {p.status === "completed" ? t("rondas.scanStatus.completed") : t("rondas.inProgress")}
               </span>
-            </div>
+              <ChevronRight size={16} className="shrink-0 text-faint" />
+            </button>
           ))}
         </Card>
       )}

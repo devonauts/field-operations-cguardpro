@@ -53,16 +53,23 @@ export const rondasService = {
   /** Effective patrol settings for the guard's post (enforcement config). */
   settings: () => api.get(tenantPath("/guard/me/ronda-settings")).then(unwrap),
 
-  /** The guard's patrol history (assignments). */
+  /** The guard's patrol history (assignments) — current shift day only. */
   patrols: () => api.get(tenantPath("/guard/me/patrols")).then((r) => asRows(r)),
+
+  /** Full detail of one of my rounds (checkpoints + scans/photos/notes). */
+  patrolDetail: (id: string) => api.get(tenantPath(`/guard/me/patrols/${id}`)).then(unwrap),
+
+  /** Full detail of ANY round (supervisor view, staff-scoped). */
+  rondaDetail: (id: string) => api.get(tenantPath(`/site-tour/ronda/${id}`)).then(unwrap),
 
   /** Mark the start of a patrol (stamps startAt + notifies tenant/client). */
   startPatrol: (tourId: string) =>
     api.post(tenantPath("/guard/me/patrol/start"), { data: { tourId } }).then(unwrap),
 
-  /** Register this device's FCM token for push. */
-  registerDeviceToken: (token: string) =>
-    api.post(tenantPath("/guard/me/device-token"), { data: { token } }).then(unwrap),
+  /** Register this device's FCM token for push (with the stable deviceId so the
+   *  token attaches to the guard's real device row, not a duplicate). */
+  registerDeviceToken: (token: string, deviceId?: string | null) =>
+    api.post(tenantPath("/guard/me/device-token"), { data: { token, deviceId } }).then(unwrap),
 
   /** Report this device's identity (deviceId + model/OS/app version) — bind/flag. */
   registerDevice: (data: Record<string, any>) =>

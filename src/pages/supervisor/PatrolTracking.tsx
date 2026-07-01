@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { App as CapacitorApp } from "@capacitor/app";
 import { useTranslation } from "react-i18next";
-import { Map as MapIcon, CheckCircle2, Circle, Activity } from "lucide-react";
+import { Map as MapIcon, CheckCircle2, Circle, Activity, ChevronRight } from "lucide-react";
 import { Screen } from "@/components/Screen";
 import { Card, Loader, SectionTitle, EmptyState, Dot } from "@/components/ui";
+import RondaDetailModal from "@/components/RondaDetailModal";
 import { useAsync } from "@/lib/useAsync";
 import { rondasService } from "@/lib/rondas";
 import { RondaRoute, RondaCheckpoint, TagScan } from "@/types/rondas";
@@ -18,6 +19,7 @@ import { fb } from "@/lib/feedback";
 export default function PatrolTracking() {
   const { t } = useTranslation();
   const [activeRoute, setActiveRoute] = useState<string | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
 
   const { data, loading, reload } = useAsync(async () => {
     const routes: RondaRoute[] = await rondasService.routes().catch(() => []);
@@ -233,8 +235,14 @@ export default function PatrolTracking() {
                   const cpName =
                     sd.checkpointName || s.tag?.name || t("patrol.title");
                   const guard = guardOf(s);
+                  const aid = s.tourAssignmentId;
                   return (
-                    <Card key={s.id ?? `${s.scannedAt || ""}-${i}`} className="flex items-center gap-3 p-3">
+                    <button
+                      key={s.id ?? `${s.scannedAt || ""}-${i}`}
+                      onClick={() => { if (aid) { fb.tap(); setDetailId(aid); } }}
+                      disabled={!aid}
+                      className="card-elev pressable flex w-full items-center gap-3 p-3 text-left disabled:opacity-100"
+                    >
                       <CheckCircle2 size={16} className="shrink-0 text-online" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm text-ink">{cpName}</p>
@@ -245,7 +253,8 @@ export default function PatrolTracking() {
                       <span className="shrink-0 text-[11px] text-muted">
                         {relativeTime(s.scannedAt)}
                       </span>
-                    </Card>
+                      {aid && <ChevronRight size={15} className="shrink-0 text-faint" />}
+                    </button>
                   );
                 })}
               </div>
@@ -253,6 +262,7 @@ export default function PatrolTracking() {
           )}
         </div>
       )}
+      {detailId && <RondaDetailModal assignmentId={detailId} staff onClose={() => setDetailId(null)} />}
     </Screen>
   );
 }
