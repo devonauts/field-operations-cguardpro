@@ -1,7 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { setupIonicReact } from "@ionic/react";
-import { iosTransitionAnimation } from "@ionic/core";
+import { pageTransition } from "./lib/pageTransition";
 
 /* Core Ionic CSS (required) */
 import "@ionic/react/css/core.css";
@@ -54,7 +54,9 @@ logInfo("env", "startup", {
 // Avisos) shows the old page bleeding through. The iOS transition slides the
 // entering page in opaque from the right with a parallax exit, so there's no
 // double-exposure.
-setupIonicReact({ mode: "md", navAnimation: iosTransitionAnimation });
+// Material component styling, but a real native push/pop page slide (mode-agnostic,
+// see pageTransition) + the native edge swipe-back gesture (off by default in md).
+setupIonicReact({ mode: "md", navAnimation: pageTransition, swipeBackEnabled: true });
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
