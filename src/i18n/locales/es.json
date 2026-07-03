@@ -455,7 +455,12 @@
         "station_mismatch": "Este pase es para otro puesto.",
         "not_found": "Pase no encontrado o inválido."
       }
-    }
+    },
+    "host": "Anfitrión",
+    "badge": "Credencial",
+    "vehicle": "Vehículo",
+    "expectedDeparture": "Salida est.",
+    "checkedIn": "Dentro"
   },
   "panic": {
     "title": "Alerta de pánico",

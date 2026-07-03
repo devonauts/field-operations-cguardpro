@@ -455,7 +455,12 @@
         "station_mismatch": "This pass is for a different site.",
         "not_found": "Pass not found or invalid."
       }
-    }
+    },
+    "host": "Host",
+    "badge": "Badge",
+    "vehicle": "Vehicle",
+    "expectedDeparture": "Exp. Departure",
+    "checkedIn": "Checked In"
   },
   "panic": {
     "title": "Panic alert",

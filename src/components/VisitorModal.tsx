@@ -358,6 +358,27 @@ export function VisitorFlow({ station, onClose, embedded }: { station: any; onCl
 }
 
 /* ----------------------------- list ----------------------------- */
+/** Short date+time for the visitor card (e.g. "May 20, 8:45 AM"). */
+function fmtDT(iso: any): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+/** A labelled icon field inside a visitor card. */
+function VInfo({ icon, label, value }: { icon: React.ReactNode; label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex min-w-0 items-start gap-2">
+      <span className="mt-0.5 shrink-0 text-muted">{icon}</span>
+      <div className="min-w-0">
+        <p className="text-[11px] text-muted">{label}</p>
+        <p className="truncate text-[13px] font-semibold text-ink">{value || "—"}</p>
+      </div>
+    </div>
+  );
+}
+
 function ListView({ loading, visits, reload, onNew, onOpen, onScanPreAuth }: { loading: boolean; visits: any[]; reload: () => void; onNew: () => void; onOpen: (v: any) => void; onScanPreAuth: () => void; }) {
   const { t } = useTranslation();
   return (
@@ -376,33 +397,56 @@ function ListView({ loading, visits, reload, onNew, onOpen, onScanPreAuth }: { l
               // Prefer the backend's token-based downloadUrl (never a raw privateUrl).
               // Prefer the person's face photo as the thumbnail; fall back to the ID photo.
               const photoUrl = fileUrlFromFile(v.facePhoto) || fileUrlFromFile(v.idPhoto);
+              const vehicle = v.vehiclePlate ? `${v.vehiclePlate}${v.vehicleType ? ` (${v.vehicleType})` : ""}` : null;
+              const dotColor = out ? "#9aa3af" : "#22c55e";
               return (
-                <div key={v.id || i} className="card flex items-center gap-3 p-3">
-                  {/* Tapping the row body opens the detail; the checkout button stays
-                      a separate tap target so a quick check-out never mis-fires. */}
-                  <button onClick={() => onOpen(v)} className="pressable flex min-w-0 flex-1 items-center gap-3 text-left">
-                    {photoUrl ? (
-                      <img src={photoUrl} alt="" className="h-10 w-10 shrink-0 rounded-lg border border-line object-cover"
-                        onError={(e) => { const el = e.target as HTMLImageElement; el.style.display = "none"; el.nextElementSibling?.classList.remove("hidden"); }} />
-                    ) : null}
-                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-muted ${photoUrl ? "hidden" : ""}`}>
-                      <Camera size={16} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-ink">
-                        {isVehicle && <Car size={13} className="mr-1 inline align-[-2px]" />}{name}
-                        {v.tagNumber ? <span className="ml-2 rounded bg-gold/15 px-1.5 py-0.5 text-xs font-bold text-gold">#{v.tagNumber}</span> : null}
-                      </p>
-                      <p className="truncate text-xs text-muted">{[v.idNumber, v.reason].filter(Boolean).join(" · ") || "—"}</p>
-                      <p className="mt-0.5 text-[11px] text-faint">{fmtTime(v.visitDate)}{out ? <><ArrowRight size={11} className="mx-0.5 inline align-[-1px]" />{fmtTime(v.exitTime)}</> : null}</p>
+                <div key={v.id || i} className="rounded-2xl border border-line bg-surface p-3.5">
+                  {/* Tapping the card opens the detail; check-out is a separate tap target. */}
+                  <button onClick={() => onOpen(v)} className="pressable block w-full text-left">
+                    <div className="flex items-start gap-3">
+                      <span className="relative shrink-0">
+                        {photoUrl ? (
+                          <img src={photoUrl} alt="" className="h-12 w-12 rounded-full border border-line object-cover"
+                            onError={(e) => { const el = e.target as HTMLImageElement; el.style.display = "none"; el.nextElementSibling?.classList.remove("hidden"); }} />
+                        ) : null}
+                        <span className={`grid h-12 w-12 place-items-center rounded-full bg-surface-2 text-muted ${photoUrl ? "hidden" : ""}`}>
+                          <Camera size={18} />
+                        </span>
+                        <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-surface" style={{ background: dotColor }} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[16px] font-bold text-ink">
+                          {isVehicle && <Car size={14} className="mr-1 inline align-[-2px]" />}{name}
+                        </p>
+                      </div>
+                      <span className="shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-bold"
+                        style={out ? { color: "#9aa3af", borderColor: "#9aa3af66" } : { color: "#22c55e", borderColor: "#22c55e66" }}>
+                        {out ? t("visitor.checkedOut") : t("visitor.checkedIn", "Dentro")}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 flex gap-3">
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <VInfo icon={<Building2 size={14} />} label={t("visitor.company", "Empresa")} value={v.company} />
+                        <VInfo icon={<User size={14} />} label={t("visitor.host", "Anfitrión")} value={v.personVisited} />
+                      </div>
+                      <div className="min-w-0 flex-1 space-y-2 border-l border-line pl-3">
+                        <VInfo icon={<CreditCard size={14} />} label={t("visitor.badge", "Credencial")} value={v.tagNumber} />
+                        <VInfo icon={<Car size={14} />} label={t("visitor.vehicle", "Vehículo")} value={vehicle} />
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex gap-3 border-t border-line pt-3">
+                      <VInfo icon={<Calendar size={14} />} label={t("visitor.checkedIn", "Entrada")} value={fmtDT(v.visitDate)} />
+                      <VInfo icon={out ? <Clock size={14} /> : <Calendar size={14} />} label={out ? t("visitor.checkedOut") : t("visitor.expectedDeparture", "Salida est.")} value={out ? fmtDT(v.exitTime) : "—"} />
                     </div>
                   </button>
-                  {out ? (
-                    <span className="shrink-0 rounded-md border border-line-2 px-2 py-0.5 text-[11px] text-muted">{t("visitor.checkedOut")}</span>
-                  ) : (
-                    <CheckoutButton id={v.id} onDone={reload} />
+
+                  {!out && (
+                    <div className="mt-3">
+                      <CheckoutButton id={v.id} onDone={reload} />
+                    </div>
                   )}
-                  <ChevronRight size={16} className="shrink-0 text-faint" />
                 </div>
               );
             })}
