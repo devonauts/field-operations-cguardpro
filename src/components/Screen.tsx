@@ -52,6 +52,7 @@ export function Screen({
   avatar,
   header,
   fill,
+  flush,
   sheet,
 }: {
   title?: string;
@@ -70,6 +71,9 @@ export function Screen({
   root?: boolean;
   /** Full-height, non-scrolling page (the child owns its own scroll/layout — e.g. chat). */
   fill?: boolean;
+  /** Large-title mode only: skip the default px-4 child padding (the screen manages
+   *  its own horizontal padding / sticky sub-headers). */
+  flush?: boolean;
   /** When set, renders the collapsing iOS-style large title instead of `title`. */
   largeTitle?: string;
   largeSubtitle?: string;
@@ -198,7 +202,7 @@ export function Screen({
             {largeSubtitle && <p className="mt-1.5 text-sm text-muted">{largeSubtitle}</p>}
           </div>
 
-          <div className="px-4 pb-6 pt-1 safe-bottom">{children}</div>
+          <div className={`${flush ? "" : "px-4 pt-1"} pb-6 safe-bottom`}>{children}</div>
         </IonContent>
       </IonPage>
     );

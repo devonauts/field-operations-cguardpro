@@ -1,24 +1,75 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHistory } from "react-router-dom";
-import { MessageSquare, Users, ChevronRight, SquarePen, Send, Loader2 } from "lucide-react";
+import { MessageSquare, Users, Megaphone, SquarePen, Send, Loader2, Search } from "lucide-react";
 import { Screen } from "@/components/Screen";
-import { EmptyState, ErrorState, SkeletonList, Sheet } from "@/components/ui";
-import { Button } from "@/components/ui/kit";
+import { ErrorState, SkeletonList, Sheet } from "@/components/ui";
 import { useAsync } from "@/lib/useAsync";
 import { messageService } from "@/lib/services";
+import { useFileUrl } from "@/lib/fileUrl";
 import { onPush } from "@/lib/pushEvents";
 import { fb } from "@/lib/feedback";
-
-const fmt = (d?: string | null) => {
-  if (!d) return "";
-  try { return new Date(d).toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }); } catch { return ""; }
-};
+import styles from "./GuardMessages.module.css";
 
 const newId = () =>
   (globalThis.crypto && (globalThis.crypto as any).randomUUID
     ? (globalThis.crypto as any).randomUUID()
     : `m_${Date.now()}_${Math.random().toString(36).slice(2)}`);
+
+type Chip = "all" | "unread";
+
+function nameOf(c: any): string {
+  return c.recipientName || c.counterpartName || c.subject || "Empresa";
+}
+function fmtTime(iso?: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const today = new Date(); const y = new Date(); y.setDate(today.getDate() - 1);
+  const same = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+  if (same(d, today)) return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  if (same(d, y)) return "Ayer";
+  return d.toLocaleDateString([], { day: "numeric", month: "short" });
+}
+
+function ConvAvatar({ c }: { c: any }) {
+  const photo = useFileUrl(c.avatarUrl || c.avatar || null);
+  const meta = c.isOneWay
+    ? { bg: "#22c55e22", fg: "#22c55e", icon: <Megaphone size={20} /> }
+    : c.isGroup
+      ? { bg: "#3b82f622", fg: "#3b82f6", icon: <Users size={20} /> }
+      : { bg: "var(--surface-2)", fg: "var(--muted)", icon: <MessageSquare size={20} /> };
+  return (
+    <span className={styles.avatarWrap}>
+      <span className={styles.avatar} style={{ background: meta.bg, color: meta.fg }}>
+        {photo ? <img src={photo} alt="" /> : meta.icon}
+      </span>
+    </span>
+  );
+}
+
+function ConvRow({ c, onOpen }: { c: any; onOpen: () => void }) {
+  const preview = c.lastMessagePreview || (c.isGroup ? "Grupo" : "");
+  const [sender, ...rest] = String(preview).split(/:\s(.+)/);
+  const hasSender = rest.length > 0;
+  return (
+    <button type="button" onClick={onOpen} className={styles.row}>
+      <ConvAvatar c={c} />
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center justify-between gap-2">
+          <span className={`truncate ${styles.name}`}>{nameOf(c)}</span>
+          <span className={styles.time}>{fmtTime(c.lastMessageAt)}</span>
+        </span>
+        <span className="mt-0.5 flex items-center gap-1.5">
+          <span className={`min-w-0 flex-1 truncate ${styles.preview}`}>
+            {hasSender ? (<><span className={styles.previewSender} style={{ color: "var(--online)" }}>{sender}: </span>{rest[0]}</>) : preview}
+          </span>
+          {(c.unreadCount || 0) > 0 && <span className={styles.badge}>{c.unreadCount}</span>}
+        </span>
+      </span>
+    </button>
+  );
+}
 
 export default function GuardMessages() {
   const { t } = useTranslation();
@@ -26,15 +77,25 @@ export default function GuardMessages() {
   const { data, loading, error, reload } = useAsync<any>(() => messageService.listThreads({ limit: 50 }));
   const rows: any[] = (data?.rows || []).filter((c: any) => c && c.id);
   const [composing, setComposing] = useState(false);
+  const [chip, setChip] = useState<Chip>("all");
+  const [q, setQ] = useState("");
 
-  // A new message arriving anywhere refreshes the inbox.
   useEffect(() => {
     const off = onPush((d: any) => { if (d?.type === "message.new") reload(); });
     return off;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Send a brand-new message to the office, then open the created thread.
+  const shown = useMemo(() => {
+    let list = rows;
+    if (chip === "unread") list = list.filter((c) => (c.unreadCount || 0) > 0);
+    if (q.trim()) {
+      const s = q.toLowerCase();
+      list = list.filter((c) => `${nameOf(c)} ${c.lastMessagePreview || ""}`.toLowerCase().includes(s));
+    }
+    return list;
+  }, [rows, chip, q]);
+
   const onSent = async (conversationId: string) => {
     setComposing(false);
     await reload();
@@ -44,7 +105,9 @@ export default function GuardMessages() {
   return (
     <Screen
       root
-      title={t("messages.title", "Mensajes")}
+      largeTitle={t("messages.title", "Mensajes")}
+      largeSubtitle={t("messages.subtitle", "Todas las conversaciones")}
+      flush
       onRefresh={async () => { await reload(); }}
       right={
         <button
@@ -56,42 +119,36 @@ export default function GuardMessages() {
         </button>
       }
     >
-      {loading ? (
-        <SkeletonList />
-      ) : error ? (
-        <ErrorState onRetry={reload} />
-      ) : rows.length === 0 ? (
-        <div className="flex flex-col items-center gap-4">
-          <EmptyState title={t("messages.empty", "Sin mensajes")} hint={t("messages.emptyHint", "Aquí verás los mensajes de tu empresa.")} />
-          <Button variant="primary" onClick={() => setComposing(true)}>
-            <SquarePen size={18} />
-            {t("messages.contactOffice", "Escribir a la oficina")}
-          </Button>
-        </div>
-      ) : (
-        <div className="card-elev divide-y divide-line overflow-hidden">
-          {rows.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => { fb.tap(); history.push(`/guard/messages/${c.id}`); }}
-              className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left active:bg-surface-2"
-            >
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gold/15 text-gold">
-                {c.isGroup ? <Users size={18} /> : <MessageSquare size={18} />}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center justify-between gap-2">
-                  <span className="truncate text-[15px] font-semibold text-ink">{c.counterpartName || c.recipientName || t("messages.company", "Empresa")}</span>
-                  <span className="shrink-0 text-xs text-faint">{fmt(c.lastMessageAt)}</span>
-                </span>
-                <span className="block truncate text-xs text-muted">{c.lastMessagePreview || (c.isGroup ? t("messages.group", "Grupo") : "")}</span>
-              </span>
-              {(c.unreadCount || 0) > 0 && (
-                <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-critical px-1.5 text-[10px] font-bold text-white">{c.unreadCount}</span>
-              )}
-              <ChevronRight size={18} className="shrink-0 text-faint" />
-            </button>
+      {/* Search + filter chips */}
+      <div className="px-4 pt-3">
+        <label className={styles.search}>
+          <Search size={18} className="text-faint" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("messages.searchConversations", "Buscar conversaciones")} />
+        </label>
+        <div className="mt-3 flex gap-2">
+          {([["all", t("visitors.all", "Todas")], ["unread", t("messages.unread", "No leídas")]] as [Chip, string][]).map(([key, label]) => (
+            <button key={key} type="button" onClick={() => { fb.select(); setChip(key); }} className={`${styles.chip} ${chip === key ? styles.chipActive : ""}`}>{label}</button>
           ))}
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="px-4 pt-4"><SkeletonList /></div>
+      ) : error ? (
+        <div className="px-4 pt-8"><ErrorState onRetry={reload} /></div>
+      ) : (
+        <div className="mt-3">
+          {shown.length === 0 ? (
+            <div className="mt-16 flex flex-col items-center gap-2 text-center">
+              <MessageSquare size={30} className="text-faint" />
+              <p className="text-sm text-muted">{t("messages.empty", "Sin conversaciones")}</p>
+              <button onClick={() => setComposing(true)} className="mt-2 flex items-center gap-2 rounded-xl bg-gold px-4 py-2.5 text-sm font-bold text-on-accent">
+                <SquarePen size={16} />{t("messages.contactOffice", "Escribir a la oficina")}
+              </button>
+            </div>
+          ) : (
+            shown.map((c) => <ConvRow key={c.id} c={c} onOpen={() => { fb.tap(); history.push(`/guard/messages/${c.id}`); }} />)
+          )}
         </div>
       )}
 
@@ -125,7 +182,6 @@ function ComposeSheet({ open, onClose, onSent }: { open: boolean; onClose: () =>
     }
   };
 
-  // Don't allow dismissing the sheet while a send is in flight.
   const requestClose = () => { if (!busy) onClose(); };
 
   return (

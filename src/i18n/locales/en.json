@@ -820,5 +820,11 @@
   "aria": {
     "notifications": "Notifications",
     "back": "Back"
+  },
+  "messages": {
+    "subtitle": "All conversations",
+    "searchConversations": "Search conversations",
+    "unread": "Unread",
+    "members": "members"
   }
 }

@@ -1,0 +1,34 @@
+/* Component-scoped styles for SupervisorMessages.tsx (conversation list). */
+
+.tabs { display: flex; gap: 1.5rem; overflow-x: auto; border-bottom: 1px solid var(--line); padding: 0.4rem 1rem 0; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { position: relative; flex-shrink: 0; display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.1rem 0.75rem; font-size: 15px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.tabActive { color: var(--gold); }
+.tabActive::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; border-radius: 9999px; background: var(--gold); }
+.tabCount { min-width: 22px; padding: 0 6px; height: 20px; display: inline-flex; align-items: center; justify-content: center; border-radius: 9999px; font-size: 11px; font-weight: 800; }
+
+.search { display: flex; align-items: center; gap: 0.6rem; border-radius: 0.9rem; border: 1px solid var(--line); background: var(--surface-2); padding: 0.7rem 0.9rem; }
+.search input { flex: 1; background: transparent; border: none; outline: none; font-size: 14px; color: var(--ink); }
+.search input::placeholder { color: var(--faint); }
+
+.chip { flex-shrink: 0; padding: 0.35rem 0.95rem; border-radius: 9999px; border: 1px solid var(--line); font-size: 13px; font-weight: 600; color: var(--muted); }
+.chipActive { border-color: var(--gold); color: var(--gold); }
+
+.row { display: flex; gap: 0.85rem; align-items: center; padding: 0.8rem 1rem; border-bottom: 1px solid var(--line); width: 100%; text-align: left; }
+.row:active { background: var(--surface-2); }
+.avatarWrap { position: relative; width: 52px; height: 52px; flex-shrink: 0; }
+.avatar { width: 100%; height: 100%; border-radius: 9999px; display: grid; place-items: center; overflow: hidden; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; }
+.dot { position: absolute; bottom: 1px; right: 1px; width: 12px; height: 12px; border-radius: 9999px; border: 2px solid var(--background); background: var(--online); }
+.name { font-size: 15.5px; font-weight: 700; color: var(--ink); }
+.preview { font-size: 13px; color: var(--muted); }
+.previewSender { font-weight: 600; }
+.time { font-size: 12px; color: var(--faint); flex-shrink: 0; }
+.badge { grid-column: 1; display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 9999px; background: var(--online); color: #04120c; font-size: 11px; font-weight: 800; }
+
+.archived { display: flex; align-items: center; gap: 0.85rem; padding: 0.9rem 1rem; width: 100%; border-top: 1px solid var(--line); }
+
+/* Compose sheet (IonModal) — give it a solid dark surface (was transparent). */
+.composeSheet::part(handle) { background: rgba(255, 255, 255, 0.3); width: 40px; height: 5px; }
+.composeSheet::part(content) { border-radius: 18px 18px 0 0; background: var(--surface); overflow: hidden; }
+.composeSheet ion-content { --background: var(--surface); }
