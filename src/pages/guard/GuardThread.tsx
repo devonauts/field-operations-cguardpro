@@ -14,15 +14,12 @@ import { useFileUrl } from "@/lib/fileUrl";
 import { useAuth } from "@/context/AuthContext";
 import { startRecording, stopRecording, cancelRecording, isRecordingSupported } from "@/lib/audioRecorder";
 import { ensureMicPermission } from "@/lib/micPermission";
+import { ImageViewer } from "@/components/shared/ImageViewer";
 import styles from "./GuardThread.module.css";
 
 function AttachmentImage({ src, alt, className }: { src?: string | null; alt?: string; className?: string }) {
   const url = useFileUrl(src);
   return <img src={url} alt={alt} loading="lazy" className={className} />;
-}
-function AttachmentLink({ src, children }: { src?: string | null; children: ReactNode }) {
-  const url = useFileUrl(src);
-  return <a href={url} target="_blank" rel="noreferrer">{children}</a>;
 }
 function AttachmentVideo({ src, className }: { src?: string | null; className?: string }) {
   const url = useFileUrl(src);
@@ -81,6 +78,7 @@ export default function GuardThread() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [pending, setPending] = useState<MessageAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [viewerSrc, setViewerSrc] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [recElapsed, setRecElapsed] = useState(0);
   const recStartedAt = useRef(0);
@@ -144,6 +142,17 @@ export default function GuardThread() {
       setDraft(body); setPending(atts); fb.error();
       setSendError(e?.message || t("messages.sendFailed", "No se pudo enviar. Reintenta."));
     } finally { setSending(false); }
+  };
+
+  const sendEditedImage = async (file: File) => {
+    if (!validId) return;
+    setUploading(true); setSendError(null);
+    try {
+      const att = await messageService.uploadAttachment(file);
+      await messageService.send(conversationId, "", newId(), [att]);
+      await load();
+    } catch (e: any) { fb.error(); setSendError(e?.message || t("messages.sendFailed", "No se pudo enviar. Reintenta.")); }
+    finally { setUploading(false); }
   };
 
   const onPickFiles = async (files: FileList | null) => {
@@ -239,7 +248,7 @@ export default function GuardThread() {
                   {mine ? (
                     <div className={styles.rowOut}>
                       <div className={`${styles.bubbleOut} ${m._pending ? "opacity-70" : ""}`}>
-                        <Attachments m={m} />
+                        <Attachments m={m} onImageTap={setViewerSrc} />
                         {m.body && <p className={styles.text}>{m.body}</p>}
                         <div className={`${styles.meta} ${styles.metaOut}`}>
                           <span>{fmt(m.createdAt)}</span>
@@ -253,7 +262,7 @@ export default function GuardThread() {
                       <div className={styles.bubbleIn}>
                         {/* Always show WHO sent it (name + stable color) so the guard knows. */}
                         {m.senderName && <p className={styles.sender} style={{ color: colorFor(senderKey) }}>{m.senderName}</p>}
-                        <Attachments m={m} />
+                        <Attachments m={m} onImageTap={setViewerSrc} />
                         {m.body && <p className={styles.text}>{m.body}</p>}
                         <div className={`${styles.meta} ${styles.metaIn}`}><span>{fmt(m.createdAt)}</span></div>
                       </div>
@@ -317,6 +326,8 @@ export default function GuardThread() {
           </div>
         )}
       </div>
+
+      <ImageViewer src={viewerSrc} open={!!viewerSrc} onClose={() => setViewerSrc(null)} onSendEdited={sendEditedImage} />
     </Screen>
   );
 }
@@ -330,14 +341,16 @@ function MsgAvatar({ m }: { m: any }) {
   );
 }
 
-function Attachments({ m }: { m: any }) {
+function Attachments({ m, onImageTap }: { m: any; onImageTap?: (url: string) => void }) {
   if (!Array.isArray(m.attachments) || m.attachments.length === 0) return null;
   return (
     <div className="mb-1 grid gap-1.5">
       {m.attachments.map((a: any, i: number) => (
         a.type === "video" ? <AttachmentVideo key={a.id || a.url || i} src={a.url} className="max-h-64 w-full rounded-lg bg-surface-2" />
           : a.type === "audio" ? <AttachmentAudio key={a.id || a.url || i} src={a.url} />
-          : <AttachmentLink key={a.id || a.url || i} src={a.url}><AttachmentImage src={a.url} alt={a.name || "imagen"} className="max-h-64 w-full rounded-lg object-cover" /></AttachmentLink>
+          : <button key={a.id || a.url || i} type="button" onClick={() => { fb.tap(); onImageTap?.(a.url); }} className="block">
+              <AttachmentImage src={a.url} alt={a.name || "imagen"} className="max-h-64 w-full rounded-lg object-cover" />
+            </button>
       ))}
     </div>
   );
