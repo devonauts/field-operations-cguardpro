@@ -237,7 +237,7 @@ function Editor({ url, onCancel, onDone }: { url: string; onCancel: () => void; 
               style={{ background: cc, borderColor: color === cc ? "#fff" : "rgba(255,255,255,0.4)", transform: color === cc ? "scale(1.18)" : "scale(1)" }} />
           ))}
         </div>
-        <button type="button" onClick={done} disabled={busy} className="flex h-12 items-center gap-2 rounded-full bg-gold px-5 text-[15px] font-bold text-on-accent disabled:opacity-50">
+        <button type="button" onClick={done} disabled={busy} className="flex min-h-[3.25rem] items-center gap-2.5 rounded-full bg-gold px-8 py-3.5 text-[15px] font-bold text-on-accent disabled:opacity-50">
           <Send size={18} />Enviar
         </button>
       </div>
