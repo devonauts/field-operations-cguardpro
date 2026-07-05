@@ -825,6 +825,9 @@
     "subtitle": "Todas las conversaciones",
     "searchConversations": "Buscar conversaciones",
     "unread": "No leídas",
-    "members": "miembros"
+    "members": "miembros",
+    "deleteChat": "Eliminar conversación",
+    "deleteHint": "Se eliminará solo para ti.",
+    "e2e": "Los mensajes están cifrados de extremo a extremo."
   }
 }

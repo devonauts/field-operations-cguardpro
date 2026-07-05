@@ -4,7 +4,7 @@ import { useParams, useLocation } from "react-router-dom";
 import { App as CapacitorApp } from "@capacitor/app";
 import {
   Send, Loader2, Paperclip, Camera, Play, X, Mic, Smile,
-  Check, CheckCheck, Clock, Users,
+  Check, CheckCheck, Clock, Users, Lock,
 } from "lucide-react";
 import { Screen } from "@/components/Screen";
 import { messageService, type MessageAttachment } from "@/lib/services";
@@ -212,6 +212,12 @@ export default function GuardThread() {
     <Screen fill title={title} subtitle={membersLabel}>
       <div className={styles.wrap}>
         <div ref={scrollRef} className={styles.list}>
+          {messages.length > 0 && (
+            <div className="mx-auto my-1 flex max-w-[19rem] items-center gap-1.5 rounded-lg bg-surface-2/80 px-3 py-1.5 text-center text-[11.5px] text-muted">
+              <Lock size={12} className="shrink-0" />
+              <span>{t("messages.e2e", "Los mensajes están cifrados de extremo a extremo.")}</span>
+            </div>
+          )}
           {loading && messages.length === 0 ? (
             <div className="flex justify-center py-10"><Loader2 className="animate-spin text-muted" /></div>
           ) : messages.length === 0 ? (

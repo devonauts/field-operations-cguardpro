@@ -825,6 +825,9 @@
     "subtitle": "All conversations",
     "searchConversations": "Search conversations",
     "unread": "Unread",
-    "members": "members"
+    "members": "members",
+    "deleteChat": "Delete conversation",
+    "deleteHint": "It will be deleted only for you.",
+    "e2e": "Messages are end-to-end encrypted."
   }
 }

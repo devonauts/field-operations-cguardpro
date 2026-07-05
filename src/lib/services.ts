@@ -558,6 +558,8 @@ export const messageService = {
     api.post(tenantPath(`/guard/me/messages`), { data: { body, clientMsgId, attachments: attachments && attachments.length ? attachments : undefined } }).then(unwrap),
   markRead: (id: string) =>
     api.post(tenantPath(`/guard/me/messages/${id}/read`), { data: {} }).then(unwrap),
+  /** Delete the conversation FOR ME ONLY (WhatsApp-style hide). */
+  remove: (id: string) => api.delete(tenantPath(`/guard/me/messages/${id}`)).then(unwrap),
   /** Upload an image/video/audio and return its attachment descriptor. */
   uploadAttachment: async (file: File): Promise<MessageAttachment> => {
     const up = await uploadToStorage(file, "messageAttachments");

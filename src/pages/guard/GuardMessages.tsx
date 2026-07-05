@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHistory } from "react-router-dom";
+import { useIonActionSheet } from "@ionic/react";
 import { MessageSquare, Users, Megaphone, SquarePen, Send, Loader2, Search } from "lucide-react";
 import { Screen } from "@/components/Screen";
 import { ErrorState, SkeletonList, Sheet } from "@/components/ui";
@@ -48,12 +49,25 @@ function ConvAvatar({ c }: { c: any }) {
   );
 }
 
-function ConvRow({ c, onOpen }: { c: any; onOpen: () => void }) {
+function ConvRow({ c, onOpen, onLongPress }: { c: any; onOpen: () => void; onLongPress: () => void }) {
   const preview = c.lastMessagePreview || (c.isGroup ? "Grupo" : "");
   const [sender, ...rest] = String(preview).split(/:\s(.+)/);
   const hasSender = rest.length > 0;
+  const timer = useRef<any>(null);
+  const longFired = useRef(false);
+  const start = () => { longFired.current = false; timer.current = setTimeout(() => { longFired.current = true; fb.press(); onLongPress(); }, 500); };
+  const clear = () => { if (timer.current) { clearTimeout(timer.current); timer.current = null; } };
   return (
-    <button type="button" onClick={onOpen} className={styles.row}>
+    <button
+      type="button"
+      onClick={() => { if (longFired.current) { longFired.current = false; return; } onOpen(); }}
+      onPointerDown={start}
+      onPointerUp={clear}
+      onPointerMove={clear}
+      onPointerLeave={clear}
+      onContextMenu={(e) => e.preventDefault()}
+      className={styles.row}
+    >
       <ConvAvatar c={c} />
       <span className="min-w-0 flex-1">
         <span className="flex items-center justify-between gap-2">
@@ -79,6 +93,18 @@ export default function GuardMessages() {
   const [composing, setComposing] = useState(false);
   const [chip, setChip] = useState<Chip>("all");
   const [q, setQ] = useState("");
+  const [presentActionSheet] = useIonActionSheet();
+
+  const confirmDelete = (c: any) => {
+    presentActionSheet({
+      header: nameOf(c),
+      subHeader: t("messages.deleteHint", "Se eliminará solo para ti."),
+      buttons: [
+        { text: t("messages.deleteChat", "Eliminar conversación"), role: "destructive", handler: () => { messageService.remove(String(c.id)).then(() => reload()).catch(() => {}); } },
+        { text: t("app.cancel", "Cancelar"), role: "cancel" },
+      ],
+    });
+  };
 
   useEffect(() => {
     const off = onPush((d: any) => { if (d?.type === "message.new") reload(); });
@@ -147,7 +173,7 @@ export default function GuardMessages() {
               </button>
             </div>
           ) : (
-            shown.map((c) => <ConvRow key={c.id} c={c} onOpen={() => { fb.tap(); history.push(`/guard/messages/${c.id}`); }} />)
+            shown.map((c) => <ConvRow key={c.id} c={c} onOpen={() => { fb.tap(); history.push(`/guard/messages/${c.id}`); }} onLongPress={() => confirmDelete(c)} />)
           )}
         </div>
       )}
