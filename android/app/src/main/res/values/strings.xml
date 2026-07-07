@@ -4,4 +4,12 @@
     <string name="title_activity_main">CGuardPro</string>
     <string name="package_name">com.cguardpro.operaciones</string>
     <string name="custom_url_scheme">com.cguardpro.operaciones</string>
+
+    <!-- Permission rationale strings (Spanish), mirroring the iOS Info.plist usage
+         descriptions — for the app's pre-permission rationale UI + store consistency. -->
+    <string name="permission_camera">C-Guard Pro usa la cámara para la selfie de marcación, fotos de incidentes, rondas y evidencia.</string>
+    <string name="permission_fine_location">C-Guard Pro usa tu ubicación para registrar marcaciones, rondas y patrullajes con GPS.</string>
+    <string name="permission_record_audio">C-Guard Pro usa el micrófono para el radio (PTT), notas de voz y reportes de consigna por audio.</string>
+    <string name="permission_post_notifications">C-Guard Pro envía notificaciones de turnos, alarmas, tareas y mensajes.</string>
+    <string name="permission_read_media_images">C-Guard Pro accede a tus fotos para adjuntar evidencia a incidentes y reportes.</string>
 </resources>

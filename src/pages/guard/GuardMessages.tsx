@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHistory } from "react-router-dom";
 import { useIonActionSheet } from "@ionic/react";
@@ -49,18 +49,18 @@ function ConvAvatar({ c }: { c: any }) {
   );
 }
 
-function ConvRow({ c, onOpen, onLongPress }: { c: any; onOpen: () => void; onLongPress: () => void }) {
+function ConvRow({ c, onOpen, onLongPress }: { c: any; onOpen: (c: any) => void; onLongPress: (c: any) => void }) {
   const preview = c.lastMessagePreview || (c.isGroup ? "Grupo" : "");
   const [sender, ...rest] = String(preview).split(/:\s(.+)/);
   const hasSender = rest.length > 0;
   const timer = useRef<any>(null);
   const longFired = useRef(false);
-  const start = () => { longFired.current = false; timer.current = setTimeout(() => { longFired.current = true; fb.press(); onLongPress(); }, 500); };
+  const start = () => { longFired.current = false; timer.current = setTimeout(() => { longFired.current = true; fb.press(); onLongPress(c); }, 500); };
   const clear = () => { if (timer.current) { clearTimeout(timer.current); timer.current = null; } };
   return (
     <button
       type="button"
-      onClick={() => { if (longFired.current) { longFired.current = false; return; } onOpen(); }}
+      onClick={() => { if (longFired.current) { longFired.current = false; return; } onOpen(c); }}
       onPointerDown={start}
       onPointerUp={clear}
       onPointerMove={clear}
@@ -85,6 +85,9 @@ function ConvRow({ c, onOpen, onLongPress }: { c: any; onOpen: () => void; onLon
   );
 }
 
+// Memoized so a parent re-render (unread tick, push) doesn't re-render all ~50 rows.
+const ConvRowMemo = memo(ConvRow);
+
 export default function GuardMessages() {
   const { t } = useTranslation();
   const history = useHistory();
@@ -95,7 +98,7 @@ export default function GuardMessages() {
   const [q, setQ] = useState("");
   const [presentActionSheet] = useIonActionSheet();
 
-  const confirmDelete = (c: any) => {
+  const confirmDelete = useCallback((c: any) => {
     presentActionSheet({
       header: nameOf(c),
       subHeader: t("messages.deleteHint", "Se eliminará solo para ti."),
@@ -104,7 +107,11 @@ export default function GuardMessages() {
         { text: t("app.cancel", "Cancelar"), role: "cancel" },
       ],
     });
-  };
+  }, [presentActionSheet, t, reload]);
+
+  // Stable handlers so memoized ConvRowMemo rows don't re-render every tick.
+  const openConv = useCallback((c: any) => { fb.tap(); history.push(`/guard/messages/${c.id}`); }, [history]);
+  const longPressConv = useCallback((c: any) => confirmDelete(c), [confirmDelete]);
 
   useEffect(() => {
     const off = onPush((d: any) => { if (d?.type === "message.new") reload(); });
@@ -173,7 +180,7 @@ export default function GuardMessages() {
               </button>
             </div>
           ) : (
-            shown.map((c) => <ConvRow key={c.id} c={c} onOpen={() => { fb.tap(); history.push(`/guard/messages/${c.id}`); }} onLongPress={() => confirmDelete(c)} />)
+            shown.map((c) => <ConvRowMemo key={c.id} c={c} onOpen={openConv} onLongPress={longPressConv} />)
           )}
         </div>
       )}

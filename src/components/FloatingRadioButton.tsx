@@ -6,6 +6,19 @@ import { useRadio } from "@/context/RadioContext";
 const POS_KEY = "radioMicFabPos";
 const SIZE = 64;
 
+/** Resolved safe-area-inset-bottom in px (home indicator height). A CSS custom
+ *  property stores the unresolved env() token, so measure it with a probe. */
+function safeAreaBottom(): number {
+  try {
+    const el = document.createElement("div");
+    el.style.cssText = "position:fixed;bottom:0;left:0;height:env(safe-area-inset-bottom);width:0;visibility:hidden;pointer-events:none;";
+    document.body.appendChild(el);
+    const h = el.getBoundingClientRect().height;
+    document.body.removeChild(el);
+    return Number.isFinite(h) ? h : 0;
+  } catch { return 0; }
+}
+
 /**
  * App-wide floating push-to-talk button for the live radio (Canal abierto).
  * Visible ONLY while on duty (and hidden while the full radio screen is open).
@@ -26,7 +39,7 @@ export default function FloatingRadioButton() {
         // Clamp a previously-saved position back into the viewport so a stale
         // off-screen value (rotation / smaller screen) can't strand the button.
         const x = Math.max(8, Math.min(window.innerWidth - SIZE - 8, s.x));
-        const y = Math.max(8, Math.min(window.innerHeight - SIZE - 8, s.y));
+        const y = Math.max(8, Math.min(window.innerHeight - SIZE - 8 - safeAreaBottom(), s.y));
         return { x, y };
       }
       return null;
@@ -63,7 +76,7 @@ export default function FloatingRadioButton() {
     const w = ref.current?.offsetWidth ?? SIZE;
     const h = ref.current?.offsetHeight ?? SIZE;
     const x = Math.max(8, Math.min(window.innerWidth - w - 8, e.clientX - d.ox));
-    const y = Math.max(8, Math.min(window.innerHeight - h - 8, e.clientY - d.oy));
+    const y = Math.max(8, Math.min(window.innerHeight - h - 8 - safeAreaBottom(), e.clientY - d.oy));
     setPos({ x, y });
   };
 

@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -94,21 +95,36 @@ export function RadioProvider({ children }: { children: ReactNode }) {
     // app or the screen is locked. Runs only while connected (on duty).
     startBackgroundAudio();
 
+    // Join with EXPONENTIAL BACKOFF (not a fixed 400ms hammer): retry only when
+    // connected-but-not-joined, backing off 300ms→~8s on transient rejects so a
+    // rate-limit/error can't spin the loop. Resets on success; stops when joined.
     let alive = true;
-    let id: ReturnType<typeof setInterval> | null = null;
-    const tryJoin = () => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let delay = 300;
+    const MAX_DELAY = 8000;
+    const reschedule = () => {
+      if (!alive || timeoutId) return;
+      timeoutId = setTimeout(attempt, delay);
+      delay = Math.min(MAX_DELAY, Math.round(delay * 1.8));
+    };
+    const attempt = () => {
+      timeoutId = null;
+      if (!alive || vc.joined) return;
+      if (!vc.connected) { reschedule(); return; }
       vc.join()
         .then(({ roster, speaker }) => {
-          if (alive) { setRoster(roster); setSpeaker(speaker); }
-          if (id !== null) { clearInterval(id); id = null; }
+          if (!alive) return;
+          setRoster(roster); setSpeaker(speaker);
+          delay = 300; // reset backoff on success
+          if (!vc.joined) reschedule();
         })
-        .catch(() => {});
+        .catch(() => { if (alive) reschedule(); });
     };
-    id = setInterval(() => { if (vc.connected && !vc.joined) tryJoin(); }, 400);
+    attempt();
 
     return () => {
       alive = false;
-      if (id !== null) clearInterval(id);
+      if (timeoutId) clearTimeout(timeoutId);
       try { vc.disconnect(); } catch { /* ignore */ }
       stopBackgroundAudio();
       vcRef.current = null;
@@ -163,10 +179,16 @@ export function RadioProvider({ children }: { children: ReactNode }) {
 
   const someoneElseTalking = !!speaker && speaker.userId !== myId;
 
+  // Memoize the context value so a roster/speaker/talking tick doesn't re-render
+  // EVERY useRadio() consumer (FloatingRadioButton, RadioLiveChannel, …) — the
+  // core of the app is live PTT, so this fires constantly.
+  const value = useMemo(
+    () => ({ onDuty, state, roster, speaker, talking, hint, myId, someoneElseTalking, screenActive, setScreenActive, resume, pressTalk, releaseTalk }),
+    [onDuty, state, roster, speaker, talking, hint, myId, someoneElseTalking, screenActive, setScreenActive, resume, pressTalk, releaseTalk],
+  );
+
   return (
-    <RadioContext.Provider
-      value={{ onDuty, state, roster, speaker, talking, hint, myId, someoneElseTalking, screenActive, setScreenActive, resume, pressTalk, releaseTalk }}
-    >
+    <RadioContext.Provider value={value}>
       {children}
     </RadioContext.Provider>
   );
