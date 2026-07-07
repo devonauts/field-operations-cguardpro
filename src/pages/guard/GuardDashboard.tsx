@@ -35,6 +35,7 @@ import {
   ResultSheet,
 } from "@/components/ui";
 import { useAsync } from "@/lib/useAsync";
+import { useAuth } from "@/context/AuthContext";
 import { guardService } from "@/lib/services";
 import { setDuty } from "@/lib/dutyState";
 import fb from "@/lib/feedback";
@@ -115,6 +116,10 @@ export default function GuardDashboard() {
   const { t } = useTranslation();
   const history = useHistory();
   const [presentToast] = useIonToast();
+  // The shell keeps GuardDashboard mounted across a same-role re-auth, so every
+  // async poll below is keyed on the signed-in guard's id — a re-auth tears down
+  // the stale interval so one guard's approval poll can never mutate another's UI.
+  const { user } = useAuth();
   const { data, loading, error, reload } = useAsync(() => guardService.dashboard());
   const perf = useAsync(() => loadGuardPerformance(30));
   const [busy, setBusy] = useState(false);
@@ -242,7 +247,7 @@ export default function GuardDashboard() {
       clearInterval(id);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClockedIn, clockInReqStationId, clockInReqStatus]);
+  }, [isClockedIn, clockInReqStationId, clockInReqStatus, user?.id]);
 
   // Live early-clock-out decision: while a request is PENDING, poll the
   // lightweight status endpoint so the UI flips to "approved/rejected" the
@@ -268,7 +273,7 @@ export default function GuardDashboard() {
       clearInterval(id);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClockedIn, clockOutStatus]);
+  }, [isClockedIn, clockOutStatus, user?.id]);
 
   // Instant early-clock-out decision: the backend pushes
   // attendance.clockout_approved / attendance.clockout_rejected to this guard's

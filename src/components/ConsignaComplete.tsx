@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { consignasService, ConsignaItem } from "@/lib/rondas";
 import { compressImage, CapturedImage } from "@/lib/capture";
+import { ensureMicPermission } from "@/lib/micPermission";
 
 const footerStyle = { paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" };
 const PRIO: Record<string, string> = { alta: "text-critical", media: "text-gold", baja: "text-info" };
@@ -82,6 +83,9 @@ export function ConsignaComplete({
 
   const startAudio = async () => {
     try {
+      // Request RECORD_AUDIO first — on Android getUserMedia fails silently if the
+      // native permission was never granted.
+      if (!(await ensureMicPermission())) return;
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       // If we unmounted while awaiting permission, drop the stream immediately.
       if (!mountedRef.current) { stream.getTracks().forEach((tr) => tr.stop()); return; }

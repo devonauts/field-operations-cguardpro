@@ -9,6 +9,7 @@ import { registerPush, reportDevice } from "./lib/push";
 import AnimatedSplash from "./components/AnimatedSplash";
 import { StatusBanner } from "./components/StatusBanner";
 import { startDeviceStatus } from "./lib/deviceStatus";
+import { startLocationReporter } from "./lib/locationReporter";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import GuardTabs from "./pages/guard/GuardTabs";
@@ -41,12 +42,14 @@ function Gate() {
   const { loading, isAuthenticated, role } = useAuth();
 
   useEffect(() => {
-    if (isAuthenticated) {
-      registerPush();
-      // Guards report their device identity (device management). Other roles'
-      // calls are ignored server-side; reportDevice swallows the error.
-      if (role !== SUPERVISOR_ROLE) reportDevice();
-    }
+    if (!isAuthenticated) return;
+    // Report the device identity FIRST so the stable device row exists, THEN
+    // register the push token onto it (keyed by the same stable deviceId) — this
+    // avoids the race that created two device rows and lost the FCM token.
+    (async () => {
+      if (role !== SUPERVISOR_ROLE) await reportDevice();
+      await registerPush();
+    })();
   }, [isAuthenticated, role]);
 
   if (loading) {
@@ -77,7 +80,23 @@ export default function App() {
   const [resetToken, setResetToken] = useState<string | null>(null);
 
   // Start network + battery monitoring once for the whole app.
-  useEffect(() => { startDeviceStatus(); }, []);
+  useEffect(() => { startDeviceStatus(); startLocationReporter(); }, []);
+
+  // Android hardware back button: navigate back through the router history when a
+  // stack exists, otherwise minimize the app instead of dumping the user out.
+  // (Without this, Android's back gesture unexpectedly exits the app.)
+  useEffect(() => {
+    let sub: { remove: () => void } | undefined;
+    (async () => {
+      try {
+        sub = await CapApp.addListener("backButton", ({ canGoBack }: { canGoBack: boolean }) => {
+          if (canGoBack) window.history.back();
+          else CapApp.minimizeApp?.();
+        });
+      } catch { /* not native */ }
+    })();
+    return () => { try { sub?.remove(); } catch { /* ignore */ } };
+  }, []);
 
   // Listen for reset deep links (cold start + while running) and the web URL.
   useEffect(() => {
