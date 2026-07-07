@@ -152,10 +152,18 @@ export const fb = {
  * meaning any explicit fb.* call has already updated `lastFeedbackAt`. Excludes
  * disabled elements, `.no-press`, and ion-tab-button (tabs feed back on change).
  */
-let tapFeedbackInstalled = false;
+// AbortController-based so init is idempotent AND fully cleanable — a repeated
+// init (HMR / StrictMode) can never double-bind, and teardownTapFeedback() removes
+// it cleanly. A stale boolean guard would leak the listener across HMR re-eval.
+let tapFeedbackAbort: AbortController | null = null;
+export function teardownTapFeedback(): void {
+  tapFeedbackAbort?.abort();
+  tapFeedbackAbort = null;
+}
 export function initTapFeedback(): void {
-  if (tapFeedbackInstalled || typeof document === "undefined") return;
-  tapFeedbackInstalled = true;
+  if (tapFeedbackAbort || typeof document === "undefined") return;
+  const ac = new AbortController();
+  tapFeedbackAbort = ac;
   document.addEventListener(
     "click",
     (e) => {
@@ -178,7 +186,7 @@ export function initTapFeedback(): void {
         /* best-effort */
       }
     },
-    false,
+    { signal: ac.signal },
   );
 }
 

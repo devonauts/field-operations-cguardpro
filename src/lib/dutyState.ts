@@ -47,13 +47,24 @@ function reconcileFromStorage(): void {
 // Keep multiple webviews/tabs (web/PWA) in sync. The 'storage' event fires in
 // OTHER documents when this KEY changes; visibilitychange catches the case where
 // the value changed while this document was backgrounded.
-if (typeof window !== "undefined") {
+//
+// Registered once via initDutyStateListeners() (called from main.tsx) behind an
+// AbortController so it's idempotent and fully cleanable — no listener accumulation
+// across HMR / StrictMode re-evaluation.
+let _dutyListenersAbort: AbortController | null = null;
+
+export function initDutyStateListeners(): () => void {
+  if (typeof window === "undefined") return () => {};
+  if (_dutyListenersAbort) return () => { _dutyListenersAbort?.abort(); _dutyListenersAbort = null; };
+  const ac = new AbortController();
+  _dutyListenersAbort = ac;
   window.addEventListener("storage", (e) => {
     if (e.key === KEY || e.key === null) reconcileFromStorage();
-  });
+  }, { signal: ac.signal });
   document.addEventListener?.("visibilitychange", () => {
     if (document.visibilityState === "visible") reconcileFromStorage();
-  });
+  }, { signal: ac.signal });
+  return () => { ac.abort(); _dutyListenersAbort = null; };
 }
 
 export function subscribeDuty(f: (v: boolean) => void): () => void {

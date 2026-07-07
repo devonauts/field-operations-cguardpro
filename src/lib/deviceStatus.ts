@@ -80,6 +80,9 @@ async function refreshBattery() {
 // remove exactly what we added (and so an HMR re-eval that re-runs start after a
 // stop doesn't stack duplicate listeners).
 let windowListenersAttached = false;
+// Capture the exact Network subscription so we remove ONLY it on stop (never
+// Network.removeAllListeners(), which would rip out every app-wide Network listener).
+let networkSub: { remove: () => Promise<void> } | null = null;
 
 /** Begin monitoring. Idempotent — safe to call once at app start. */
 export function startDeviceStatus() {
@@ -87,7 +90,8 @@ export function startDeviceStatus() {
   started = true;
 
   Network.addListener("networkStatusChange", (s) => setOnline(s.connected, s.connectionType))
-    .catch?.(() => { /* ignore */ });
+    .then((h) => { networkSub = h; })
+    .catch(() => { /* ignore */ });
   refreshNetwork();
 
   // Belt-and-suspenders: the webview's own events as a fallback signal.
@@ -105,7 +109,7 @@ export function startDeviceStatus() {
 
 export function stopDeviceStatus() {
   if (batteryTimer) { clearInterval(batteryTimer); batteryTimer = null; }
-  Network.removeAllListeners().catch?.(() => { /* ignore */ });
+  if (networkSub) { networkSub.remove().catch(() => { /* ignore */ }); networkSub = null; }
   // Symmetry: remove the window listeners we added (named refs, so removable).
   if (typeof window !== "undefined" && windowListenersAttached) {
     window.removeEventListener("online", refreshNetwork);

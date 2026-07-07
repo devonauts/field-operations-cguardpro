@@ -20,7 +20,11 @@ const PERSIST_DEBOUNCE_MS = 1500;
 // which matters under an error storm (render loop → onerror → logError).
 let buffer: LogEntry[] = loadFromStorage();
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
-let persistBound = false;
+// AbortControllers so listeners are registered exactly once and are fully
+// removable — a boolean guard resets on HMR while `window` persists, leaking a
+// duplicate visibilitychange/pagehide listener on every module re-eval.
+let persistAbort: AbortController | null = null;
+let errLogAbort: AbortController | null = null;
 
 function loadFromStorage(): LogEntry[] {
   try {
@@ -43,12 +47,13 @@ function flushToStorage() {
 function schedulePersist() {
   // Flush on tab hide so we don't lose buffered entries if the throttle window
   // hasn't elapsed. Bound once, lazily.
-  if (!persistBound && typeof window !== "undefined") {
-    persistBound = true;
+  if (!persistAbort && typeof window !== "undefined") {
+    persistAbort = new AbortController();
+    const sig = persistAbort.signal;
     window.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "hidden") flushToStorage();
-    });
-    window.addEventListener("pagehide", flushToStorage);
+    }, { signal: sig });
+    window.addEventListener("pagehide", flushToStorage, { signal: sig });
   }
   if (persistTimer) return;
   persistTimer = setTimeout(flushToStorage, PERSIST_DEBOUNCE_MS);
@@ -124,16 +129,23 @@ export function clearErrorLog() {
 
 /** Install global handlers for uncaught errors + unhandled promise rejections. */
 export function installGlobalErrorLogging() {
-  if ((window as any).__errLogInstalled) return;
-  (window as any).__errLogInstalled = true;
+  if (errLogAbort || typeof window === "undefined") return;
+  errLogAbort = new AbortController();
+  const sig = errLogAbort.signal;
   window.addEventListener("error", (ev: ErrorEvent) => {
     logError("window.onerror", ev.error || ev.message, {
       src: ev.filename,
       line: ev.lineno,
       col: ev.colno,
     });
-  });
+  }, { signal: sig });
   window.addEventListener("unhandledrejection", (ev: PromiseRejectionEvent) => {
     logError("unhandledRejection", ev.reason);
-  });
+  }, { signal: sig });
+}
+
+/** Tear down all global error-logging + persist listeners (HMR/teardown safety). */
+export function uninstallErrorLogging() {
+  errLogAbort?.abort(); errLogAbort = null;
+  persistAbort?.abort(); persistAbort = null;
 }

@@ -20,6 +20,7 @@ import App from "./App";
 import { Capacitor } from "@capacitor/core";
 import { installGlobalErrorLogging, logInfo } from "./lib/errorLog";
 import { initTapFeedback } from "./lib/feedback";
+import { initDutyStateListeners } from "./lib/dutyState";
 import { applyThemeClass, getStoredTheme } from "./context/ThemeContext";
 
 // Apply the persisted theme class to <html> BEFORE React renders so there is no
@@ -34,6 +35,9 @@ installGlobalErrorLogging();
 // (respecting the Profile "Sonidos y vibración" toggle), de-duped against
 // components that already emit their own richer feedback.
 initTapFeedback();
+
+// Cross-tab/webview on-duty sync listeners (idempotent + abortable).
+initDutyStateListeners();
 
 // One-time environment snapshot — camera (getUserMedia) and geolocation BOTH
 // require a secure context (HTTPS or localhost). If `secureContext` is false

@@ -53,6 +53,12 @@ export const guardService = {
     observations?: string;
     passdown?: { instructions: Array<{ text: string; priority: string }> };
   }) => api.post(tenantPath("/guard/me/clock-out"), { data }).then(unwrap),
+
+  /** Live-telemetry ping (lat/lng/speed/heading/accuracy/battery) while on duty. */
+  pingLocation: (data: {
+    latitude: number; longitude: number;
+    speed?: number | null; heading?: number | null; accuracy?: number | null; battery?: number | null;
+  }) => api.post(tenantPath("/guard/me/location"), { data }).then(unwrap),
   /** The pase de turno left at my post by the previous shift (auto-received). */
   incomingPassdown: () => api.get(tenantPath("/guard/me/passdown/incoming")).then(unwrap),
   /** Request supervisor approval to clock out early. */
@@ -332,7 +338,7 @@ export const incidentService = {
     return api.put(tenantPath(`/incident/${id}`), { data }).then(unwrap);
   },
   /** Upload evidence photo → descriptor for `imageUrl`/`idPhoto`. */
-  uploadPhoto: (file: File) => uploadToStorage(file, "incidentImageUrl"),
+  uploadPhoto: (file: File, signal?: AbortSignal) => uploadToStorage(file, "incidentImageUrl", signal),
 };
 
 /** Backend incident status vocabulary (Spanish) keyed by the app's canonical
@@ -430,13 +436,15 @@ export interface VisitorPhoto {
  */
 export async function uploadToStorage(
   file: File,
-  storageId: string
+  storageId: string,
+  signal?: AbortSignal
 ): Promise<VisitorPhoto> {
   const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
   const cred = await api.get(
     tenantPath(
       `/file/credentials?filename=${encodeURIComponent(filename)}&storageId=${encodeURIComponent(storageId)}`
-    )
+    ),
+    { signal }
   );
   const uploadUrl = cred?.uploadCredentials?.url;
   if (!uploadUrl) throw new Error("upload url unavailable");
@@ -452,6 +460,7 @@ export async function uploadToStorage(
     body: form,
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     credentials: "include",
+    signal,
   });
   if (!resp.ok) throw new Error(`upload failed: ${resp.status}`);
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { IonModal } from "@ionic/react";
 import { modalEnterAnimation, modalLeaveAnimation } from "@/lib/modalAnimation";
 import { useTranslation } from "react-i18next";
@@ -121,6 +121,9 @@ function IncidentBody({
   const [peopleInvolved, setPeopleInvolved] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Cancel in-flight photo uploads if the form is closed/unmounted mid-submit.
+  const abortRef = useRef<AbortController | null>(null);
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   // "Reporte rápido": type + photo + auto-GPS is enough to file — everything
   // else (description, people, actions, occurred-at) becomes optional.
@@ -161,17 +164,23 @@ function IncidentBody({
     if (!subject.trim() || submitting) return;
     setSubmitting(true);
     setError(null);
+    abortRef.current?.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
     try {
-      // Upload evidence photos → descriptors.
+      // Upload evidence photos → descriptors (cancellable on close/unmount).
       const descriptors: any[] = [];
       for (const p of photos) {
+        if (ac.signal.aborted) return;
         try {
-          const up = await incidentService.uploadPhoto(p.file);
+          const up = await incidentService.uploadPhoto(p.file, ac.signal);
           descriptors.push({ ...up, new: true });
-        } catch {
+        } catch (e: any) {
+          if (ac.signal.aborted || e?.name === "AbortError") return;
           /* skip a failed upload */
         }
       }
+      if (ac.signal.aborted) return;
       const photoField = descriptors.length ? descriptors : undefined;
 
       const data: Record<string, any> = {

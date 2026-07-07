@@ -140,7 +140,10 @@ async function doRequest<T = any>(
       cache: "no-store",
       body: isForm ? (body as FormData) : body != null ? JSON.stringify(body) : undefined,
     });
-  } catch {
+  } catch (err: any) {
+    // A caller-initiated cancellation (AbortController — e.g. useAsync on unmount)
+    // must propagate as-is, NOT be surfaced as a connectivity error.
+    if (err?.name === "AbortError" || (rest as any).signal?.aborted) throw err;
     throw new ApiError("Sin conexión. Verifica tu red e inténtalo de nuevo.", 0, null);
   }
 
