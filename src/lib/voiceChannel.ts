@@ -127,8 +127,14 @@ export class VoiceChannel {
         });
 
       await room.connect(url, token, { autoSubscribe: true });
-      // Start MUTED — PTT publishes the mic on demand.
-      await room.localParticipant.setMicrophoneEnabled(false).catch(() => {});
+      // Pre-grant the mic permission now (join is a user gesture) so the FIRST
+      // push-to-talk publishes instantly instead of the permission prompt
+      // interrupting the hold. Best-effort; the track is released immediately —
+      // the mic only actually publishes on startTalk().
+      try {
+        const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+        s.getTracks().forEach((t) => t.stop());
+      } catch { /* user can still grant on first PTT */ }
     } catch (e: any) {
       this.cb.onState?.("error");
       this.cb.onError?.(e?.message || "No se pudo conectar la radio");
