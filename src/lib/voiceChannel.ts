@@ -39,6 +39,8 @@ export class VoiceChannel {
   private cb: VoiceCallbacks = {};
   private selfId = "";
   private attached = new Map<string, HTMLMediaElement>();
+  /** identity of whoever we last reported as the active speaker (for prompt clearing). */
+  private speakerId: string | null = null;
   /** true once the LiveKit room is connected (RadioContext polls this). */
   joined = false;
 
@@ -95,6 +97,7 @@ export class VoiceChannel {
         })
         .on(RoomEvent.Disconnected, () => {
           this.joined = false;
+          this.setSpeaker(null);
           this.cb.onState?.("idle");
         })
         .on(RoomEvent.Reconnecting, () => this.cb.onState?.("connecting"))
@@ -103,7 +106,12 @@ export class VoiceChannel {
           this.emitRoster();
         })
         .on(RoomEvent.ParticipantConnected, () => this.emitRoster())
-        .on(RoomEvent.ParticipantDisconnected, () => this.emitRoster())
+        .on(RoomEvent.ParticipantDisconnected, (p) => {
+          // If the speaker dropped (or the loop killed their session), clear the
+          // "X está hablando" prompt immediately — don't leave it stuck.
+          if (p && p.identity === this.speakerId) this.setSpeaker(null);
+          this.emitRoster();
+        })
         .on(RoomEvent.TrackSubscribed, (track: RemoteTrack) => {
           const sid = track.sid;
           if (track.kind === Track.Kind.Audio && sid) {
@@ -123,7 +131,12 @@ export class VoiceChannel {
         })
         .on(RoomEvent.ActiveSpeakersChanged, (speakers: Participant[]) => {
           const s = speakers[0];
-          this.cb.onSpeaker?.(s ? { userId: s.identity, name: s.name || "—" } : null);
+          this.setSpeaker(s ? { userId: s.identity, name: s.name || "—" } : null);
+        })
+        .on(RoomEvent.TrackMuted, (_pub: any, p: Participant) => {
+          // PTT release mutes the mic → clear the "X está hablando" prompt
+          // instantly instead of waiting on the speaker-detector's hold time.
+          if (p && p.identity === this.speakerId) this.setSpeaker(null);
         });
 
       await room.connect(url, token, { autoSubscribe: true });
@@ -139,6 +152,11 @@ export class VoiceChannel {
       this.cb.onState?.("error");
       this.cb.onError?.(e?.message || "No se pudo conectar la radio");
     }
+  }
+
+  private setSpeaker(sp: VoiceSpeaker): void {
+    this.speakerId = sp ? sp.userId : null;
+    this.cb.onSpeaker?.(sp);
   }
 
   private emitRoster(): void {
@@ -193,6 +211,7 @@ export class VoiceChannel {
 
   disconnect(): void {
     this.joined = false;
+    this.speakerId = null;
     try {
       this.attached.forEach((el) => { try { el.remove(); } catch { /* ignore */ } });
       this.attached.clear();
