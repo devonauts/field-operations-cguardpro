@@ -128,7 +128,7 @@ export function MenuRow({
 
 /** A list of MenuRows inside one elevated card with hairline separators. */
 export function MenuList({ children }: { children: ReactNode }) {
-  return <div className="flex flex-col gap-2.5">{children}</div>;
+  return <div className="stagger flex flex-col gap-2.5">{children}</div>;
 }
 
 /** A KPI tile: circular tinted icon, big value, caption. */
@@ -285,6 +285,56 @@ export function ActivityRow({
         {subtitle && <p className="truncate text-xs text-muted">{subtitle}</p>}
       </div>
       {time && <span className="shrink-0 text-xs text-muted">{time}</span>}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------- Segmented control */
+
+export interface SegOption<T extends string> {
+  value: T;
+  label: ReactNode;
+  icon?: ReactNode;
+}
+
+/**
+ * Segmented "multiswitch" — the app-wide pill toggle (period / view / tab
+ * pickers). Comfortable touch height by default (`md`); `lg` for primary
+ * selectors. One source of truth so every switch in the app is the same size.
+ */
+export function Segmented<T extends string>({
+  options,
+  value,
+  onChange,
+  size = "md",
+  className = "",
+}: {
+  options: SegOption<T>[];
+  value: T;
+  onChange: (v: T) => void;
+  size?: "md" | "lg";
+  className?: string;
+}) {
+  const pad = size === "lg" ? "min-h-12 py-3 text-[15px]" : "min-h-11 py-2.5 text-sm";
+  return (
+    <div className={`flex gap-1 rounded-xl bg-surface-2 p-1 ${className}`}>
+      {options.map((o) => {
+        const active = o.value === value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => { fb.select(); onChange(o.value); }}
+            aria-pressed={active}
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg font-semibold transition-colors ${pad} ${
+              active ? "bg-gold text-on-accent shadow-sm" : "text-muted active:bg-surface"
+            }`}
+          >
+            {o.icon}
+            {o.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

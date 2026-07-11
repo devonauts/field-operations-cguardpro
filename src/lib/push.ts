@@ -42,8 +42,18 @@ export async function registerPush(): Promise<void> {
     }
     if (perm.receive !== "granted") return;
 
-    const register = (token?: string | null) => {
-      if (token) rondasService.registerDeviceToken(token).catch(() => {});
+    const register = async (token?: string | null) => {
+      if (!token) return;
+      // Send the stable install id so the backend attaches the token to the
+      // guard's real device row (same key as reportDevice) instead of a
+      // duplicate token-keyed row. Surface failures (don't swallow silently).
+      let deviceId: string | null = null;
+      try { deviceId = (await getDeviceIdentity())?.deviceId ?? null; } catch { /* optional */ }
+      try {
+        await rondasService.registerDeviceToken(token, deviceId);
+      } catch (e) {
+        console.warn("registerDeviceToken failed", e);
+      }
     };
 
     await FirebaseMessaging.removeAllListeners();

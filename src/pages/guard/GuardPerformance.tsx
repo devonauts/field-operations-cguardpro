@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Screen } from "@/components/Screen";
 import { Card, Loader, EmptyState, ErrorState, ScoreRing, MeterBar, SectionTitle } from "@/components/ui";
+import { Segmented } from "@/components/ui/kit";
 import { useAsync } from "@/lib/useAsync";
 import {
   loadGuardPerformanceDetail,
@@ -63,22 +64,12 @@ export default function GuardPerformance() {
       onRefresh={() => perf.reload()}
     >
       {/* Period segmented control */}
-      <div className="mb-4 flex rounded-xl bg-surface-2 p-1">
-        {PERIODS.map((d) => (
-          <button
-            key={d}
-            onClick={() => {
-              fb.select();
-              setPeriod(d);
-            }}
-            className={`flex-1 rounded-lg py-1.5 text-[13px] font-semibold transition-colors ${
-              period === d ? "bg-gold text-on-accent" : "text-muted"
-            }`}
-          >
-            {t(`perfDetail.period${d}`)}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        className="mb-4"
+        value={String(period)}
+        onChange={(v) => setPeriod(Number(v) as Period)}
+        options={PERIODS.map((d) => ({ value: String(d), label: t(`perfDetail.period${d}`) }))}
+      />
 
       {perf.loading && !p ? (
         <Loader />

@@ -315,7 +315,7 @@ export function ResultSheet({
 }: {
   open: boolean;
   onClose: () => void;
-  variant?: "success" | "error";
+  variant?: "success" | "error" | "warning";
   title: string;
   lines?: ReactNode[];
   primaryLabel?: string;
@@ -332,7 +332,11 @@ export function ResultSheet({
       <div className="flex flex-col items-center pb-2 text-center">
         <span
           className={`mb-3 grid h-16 w-16 place-items-center rounded-full ${
-            variant === "success" ? "bg-online/15 text-online" : "bg-critical/15 text-critical"
+            variant === "success"
+              ? "bg-online/15 text-online"
+              : variant === "warning"
+                ? "bg-gold/15 text-gold"
+                : "bg-critical/15 text-critical"
           }`}
         >
           {variant === "success" ? <CheckCircle2 size={34} /> : <AlertTriangle size={34} />}

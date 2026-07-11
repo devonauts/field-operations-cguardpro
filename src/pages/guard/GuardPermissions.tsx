@@ -143,7 +143,7 @@ export default function GuardPermissions() {
       title={t("perm.title", "Permisos")}
       subtitle={t("perm.subtitle", "Activa los permisos del dispositivo")}
       right={
-        <button onClick={() => { fb.tap(); checkAll(); }} disabled={busy === "all"} aria-label="Actualizar" className="rounded-full p-2 text-muted active:bg-surface-2">
+        <button onClick={() => { fb.tap(); checkAll(); }} disabled={busy === "all"} aria-label={t("app.refresh", "Actualizar")} className="rounded-full p-2 text-muted active:bg-surface-2">
           {busy === "all" ? <Loader2 size={18} className="animate-spin" /> : <RefreshCw size={18} />}
         </button>
       }

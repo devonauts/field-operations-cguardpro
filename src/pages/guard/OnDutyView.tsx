@@ -6,6 +6,8 @@ import { useAsync } from "@/lib/useAsync";
 import { incidentService, guardService, taskService } from "@/lib/services";
 import { rondasService } from "@/lib/rondas";
 import { getCurrentPosition } from "@/lib/geo";
+import { isNetworkError } from "@/lib/api";
+import { enqueue } from "@/lib/offlineQueue";
 import { Button, MetricTile } from "@/components/ui/kit";
 import { Sheet, ResultSheet, SlideToConfirm } from "@/components/ui";
 import fb from "@/lib/feedback";
@@ -112,7 +114,7 @@ export default function OnDutyView({ data }: { data: any }) {
   // ---- Panic / SOS (P0) ----
   const [sosOpen, setSosOpen] = useState(false);
   const [sosBusy, setSosBusy] = useState(false);
-  const [sosResult, setSosResult] = useState<null | "success" | "error">(null);
+  const [sosResult, setSosResult] = useState<null | "success" | "error" | "queued">(null);
 
   const stations: any[] = data?.stations || [];
   const station = stations[0] || {};
@@ -230,7 +232,7 @@ export default function OnDutyView({ data }: { data: any }) {
       } catch {
         /* GPS optional — send the alert regardless of a fix */
       }
-      await incidentService.createAsGuard({
+      const panicData = {
         incidentType: "panic",
         type: "panic",
         isPanic: true,
@@ -247,9 +249,33 @@ export default function OnDutyView({ data }: { data: any }) {
         latitude,
         longitude,
         incidentAt: new Date().toISOString(),
-      });
-      setSosResult("success");
-      setSosOpen(false);
+      };
+
+      // Panic is life-safety — give it the resilience the rest of the app has.
+      // Retry a couple of times for a transient blip; if the network is down,
+      // QUEUE it (same "incident.create" replayer that backs incident reports)
+      // so it fires automatically on reconnect instead of silently failing.
+      let lastErr: unknown = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          await incidentService.createAsGuard(panicData);
+          setSosResult("success");
+          setSosOpen(false);
+          setSosBusy(false);
+          return;
+        } catch (e) {
+          lastErr = e;
+          if (!isNetworkError(e)) break; // server rejection → don't hammer/queue
+          await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+        }
+      }
+      if (isNetworkError(lastErr)) {
+        enqueue("incident.create", { data: panicData, asGuard: true }, t("sos.title", "SOS / Pánico"));
+        setSosResult("queued");
+        setSosOpen(false);
+      } else {
+        setSosResult("error");
+      }
     } catch {
       setSosResult("error");
     } finally {
@@ -599,20 +625,24 @@ export default function OnDutyView({ data }: { data: any }) {
         )}
       </Sheet>
 
-      {/* SOS result — success or error (with retry). */}
+      {/* SOS result — success, queued (offline, will retry), or error. */}
       <ResultSheet
         open={!!sosResult}
         onClose={() => setSosResult(null)}
-        variant={sosResult === "error" ? "error" : "success"}
+        variant={sosResult === "error" ? "error" : sosResult === "queued" ? "warning" : "success"}
         title={
           sosResult === "error"
             ? t("sos.failedTitle", "No se pudo enviar")
-            : t("sos.sentTitle", "Alerta enviada")
+            : sosResult === "queued"
+              ? t("sos.queuedTitle", "Se enviará al reconectar")
+              : t("sos.sentTitle", "Alerta enviada")
         }
         lines={
           sosResult === "error"
             ? [t("sos.failedHint", "Revisa tu conexión e inténtalo de nuevo.")]
-            : [t("sos.sentHint", "Tu central fue notificada con tu ubicación.")]
+            : sosResult === "queued"
+              ? [t("sos.queuedHint", "Sin conexión ahora. Tu alerta quedó guardada y se enviará automáticamente en cuanto vuelva la señal.")]
+              : [t("sos.sentHint", "Tu central fue notificada con tu ubicación.")]
         }
         primaryLabel={
           sosResult === "error" ? t("app.retry", "Reintentar") : t("app.ok", "OK")

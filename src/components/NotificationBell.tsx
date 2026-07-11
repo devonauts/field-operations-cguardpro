@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Bell } from "lucide-react";
 import { useNotifications } from "@/context/NotificationContext";
 import fb from "@/lib/feedback";
@@ -11,6 +12,7 @@ import NotificationCenter from "./NotificationCenter";
  * <NotificationCenter /> sheet; open state is owned here.
  */
 export default function NotificationBell() {
+  const { t } = useTranslation();
   const { unreadCount } = useNotifications();
   const [open, setOpen] = useState(false);
 
@@ -18,7 +20,7 @@ export default function NotificationBell() {
     <>
       <button
         type="button"
-        aria-label="Notificaciones"
+        aria-label={t("aria.notifications", "Notificaciones")}
         onClick={() => {
           fb.tap();
           setOpen(true);

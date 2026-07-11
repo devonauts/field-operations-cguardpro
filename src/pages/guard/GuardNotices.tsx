@@ -32,7 +32,7 @@ export default function GuardNotices() {
       ) : notices.length === 0 ? (
         <EmptyState icon={<Bell size={28} />} title={t("notices.empty")} />
       ) : (
-        <div className="space-y-3">
+        <div className="stagger space-y-3">
           {notices.map((n: any, i: number) => {
             const unread = n.readStatus === false || n.readStatus === 0;
             const title = pick<string>(n, "title", "subject") || "—";

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ChevronLeft, ChevronRight, Clock, MapPin, CalendarDays } from "lucide-react";
 import { Screen } from "@/components/Screen";
 import { Card, ErrorState, Skeleton } from "@/components/ui";
+import { Segmented } from "@/components/ui/kit";
 import { guardService } from "@/lib/services";
 import { asRows } from "@/lib/api";
 import { pick } from "@/lib/normalize";
@@ -16,6 +17,61 @@ const endOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth() + 1, 0);
 const startOfWeekMon = (d: Date) => { const x = startOfDay(d); const dow = (x.getDay() + 6) % 7; return addDays(x, -dow); };
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const sameDay = (a: Date, b: Date) => ymd(a) === ymd(b);
+const MIN_MS = 60000;
+const DAY_MIN = 1440;
+
+/** A shift's [start, end] in ms (end defaults to +30min when missing/invalid). */
+function shiftRange(s: any): { start: number; end: number } | null {
+  const start = new Date(pick(s, "startTime", "date", "shiftDate") as any).getTime();
+  if (Number.isNaN(start)) return null;
+  const endRaw = new Date(s.endTime).getTime();
+  const end = Number.isNaN(endRaw) ? start + 30 * MIN_MS : Math.max(endRaw, start + 30 * MIN_MS);
+  return { start, end };
+}
+
+/** True when a shift overlaps the given calendar day (handles overnight shifts). */
+function overlapsDay(s: any, day: Date): boolean {
+  const r = shiftRange(s);
+  if (!r) return false;
+  const dayStart = startOfDay(day).getTime();
+  return r.start < dayStart + DAY_MIN * MIN_MS && r.end > dayStart;
+}
+
+/** Every calendar-day key a shift touches (so an overnight shift marks BOTH days). */
+function shiftDayKeys(s: any): string[] {
+  const r = shiftRange(s);
+  if (!r) return [];
+  const keys: string[] = [];
+  let cur = startOfDay(new Date(r.start));
+  let guard = 0;
+  while (cur.getTime() < r.end && guard < 14) { keys.push(ymd(cur)); cur = addDays(cur, 1); guard++; }
+  if (!keys.length) keys.push(ymd(new Date(r.start)));
+  return keys;
+}
+
+/**
+ * Timeline blocks for ONE day: every shift that overlaps the day, clipped to the
+ * day's [0..1440] minute window. An overnight shift yields its evening slice on
+ * the start day (…→24:00) AND its morning slice on the next day (00:00→…) — the
+ * fix for night shifts that previously stopped at midnight.
+ */
+function blocksForDay(allShifts: any[], day: Date) {
+  const dayStart = startOfDay(day).getTime();
+  const dayEnd = dayStart + DAY_MIN * MIN_MS;
+  const out: any[] = [];
+  for (const s of allShifts) {
+    const r = shiftRange(s);
+    if (!r) continue;
+    const top = Math.max(r.start, dayStart);
+    const bottom = Math.min(r.end, dayEnd);
+    if (bottom <= top) continue;
+    const sMin = (top - dayStart) / MIN_MS;
+    const eMin = Math.max((bottom - dayStart) / MIN_MS, sMin + 15);
+    out.push({ s, sMin, eMin, continuesPrev: r.start < dayStart, continuesNext: r.end > dayEnd });
+  }
+  out.sort((a, b) => a.sMin - b.sMin);
+  return out;
+}
 
 type View = "day" | "week" | "month";
 
@@ -53,23 +109,21 @@ export default function GuardSchedule() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [monthKey, reloadKey]);
 
-  const byDay = useMemo(() => {
-    const m = new Map<string, any[]>();
-    for (const s of shifts) {
-      const ts = new Date(pick(s, "startTime", "date", "shiftDate") as any);
-      if (Number.isNaN(ts.getTime())) continue;
-      const k = ymd(ts);
-      (m.get(k) || m.set(k, []).get(k)!).push(s);
-    }
-    // Pre-sort each day's shifts once so consumers can read them directly.
-    for (const arr of m.values()) {
-      arr.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
-    }
-    return m;
-  }, [shifts]);
+  // The selected/anchor day's shifts — by OVERLAP, not just start day, so a night
+  // shift that began the previous evening still shows on this morning.
+  const anchorShifts = useMemo(
+    () => shifts.filter((s) => overlapsDay(s, anchor))
+      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()),
+    [shifts, anchor],
+  );
 
-  // The selected/anchor day's shifts, recomputed only when the data or anchor change.
-  const anchorShifts = useMemo(() => byDay.get(ymd(anchor)) || [], [byDay, anchor]);
+  // Every day any shift TOUCHES (start day through end day) — overnight shifts
+  // mark both days. Drives the worked-day dots and the free-day exclusion.
+  const workedDays = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of shifts) for (const k of shiftDayKeys(s)) set.add(k);
+    return set;
+  }, [shifts]);
 
   // Free/rest days ("L"): approved time-off PLUS any non-working day that falls
   // within the guard's scheduled rotation span (between the first and last
@@ -85,12 +139,12 @@ export default function GuardSchedule() {
       const last = startOfDay(new Date(Math.max(...times)));
       while (cur <= last) {
         const k = ymd(cur);
-        if (!byDay.has(k)) set.add(k);
+        if (!workedDays.has(k)) set.add(k);
         cur = addDays(cur, 1);
       }
     }
     return set;
-  }, [shifts, freeDays, byDay]);
+  }, [shifts, freeDays, workedDays]);
 
   /* ---------------- navigation ---------------- */
   const step = (dir: 1 | -1) => {
@@ -118,17 +172,16 @@ export default function GuardSchedule() {
   return (
     <Screen root title={t("nav.schedule", "Horario")}>
       {/* Segmented control */}
-      <div className="mb-3 flex rounded-xl bg-surface-2 p-1">
-        {(["day", "week", "month"] as View[]).map((v) => (
-          <button
-            key={v}
-            onClick={() => { fb.select(); setView(v); }}
-            className={`flex-1 rounded-lg py-1.5 text-[13px] font-semibold transition-colors ${view === v ? "bg-gold text-on-accent" : "text-muted"}`}
-          >
-            {v === "day" ? t("schedule.day", "Día") : v === "week" ? t("schedule.week", "Semana") : t("schedule.month", "Mes")}
-          </button>
-        ))}
-      </div>
+      <Segmented<View>
+        className="mb-3"
+        value={view}
+        onChange={setView}
+        options={[
+          { value: "day", label: t("schedule.day", "Día") },
+          { value: "week", label: t("schedule.week", "Semana") },
+          { value: "month", label: t("schedule.month", "Mes") },
+        ]}
+      />
 
       {/* Period header + nav */}
       <div className="mb-3 flex items-center justify-between">
@@ -150,7 +203,7 @@ export default function GuardSchedule() {
         <>
           {view === "month" && (
             <>
-              <MonthGrid anchor={anchor} today={today} weekdayLabels={weekdayLabels} byDay={byDay} freeDays={freeSet} onPick={(d: Date) => { fb.tap(); setAnchor(d); }} />
+              <MonthGrid anchor={anchor} today={today} weekdayLabels={weekdayLabels} workedDays={workedDays} freeDays={freeSet} onPick={(d: Date) => { fb.tap(); setAnchor(d); }} />
               <Legend t={t} />
               <div className="mt-4">
                 <DayHeader anchor={anchor} locale={locale} view={view} />
@@ -161,13 +214,13 @@ export default function GuardSchedule() {
 
           {view === "week" && (
             <>
-              <WeekTimeline anchor={anchor} today={today} weekdayLabels={weekdayLabels} byDay={byDay} freeDays={freeSet} onPick={(d: Date) => { fb.tap(); setAnchor(d); }} t={t} />
+              <WeekTimeline anchor={anchor} today={today} weekdayLabels={weekdayLabels} shifts={shifts} workedDays={workedDays} freeDays={freeSet} onPick={(d: Date) => { fb.tap(); setAnchor(d); }} t={t} />
               <Legend t={t} />
             </>
           )}
 
           {view === "day" && (
-            <DayTimeline shifts={anchorShifts} freeDay={freeSet.has(ymd(anchor))} anchor={anchor} today={today} t={t} />
+            <DayTimeline shifts={shifts} freeDay={freeSet.has(ymd(anchor))} anchor={anchor} today={today} t={t} />
           )}
         </>
       )}
@@ -177,7 +230,7 @@ export default function GuardSchedule() {
 
 /* ------------------------------------------------------------ subcomponents */
 
-function MonthGrid({ anchor, today, weekdayLabels, byDay, freeDays, onPick }: any) {
+function MonthGrid({ anchor, today, weekdayLabels, workedDays, freeDays, onPick }: any) {
   const start = startOfWeekMon(startOfMonth(anchor));
   const cells = Array.from({ length: 42 }, (_, i) => addDays(start, i));
   const month = anchor.getMonth();
@@ -191,7 +244,7 @@ function MonthGrid({ anchor, today, weekdayLabels, byDay, freeDays, onPick }: an
           const inMonth = d.getMonth() === month;
           const isToday = sameDay(d, today);
           const isSel = sameDay(d, anchor);
-          const count = (byDay.get(ymd(d)) || []).length;
+          const worked = workedDays.has(ymd(d));
           const free = freeDays.has(ymd(d));
           return (
             <button key={i} onClick={() => onPick(d)} className="relative flex aspect-square flex-col items-center justify-center rounded-xl">
@@ -201,7 +254,7 @@ function MonthGrid({ anchor, today, weekdayLabels, byDay, freeDays, onPick }: an
                 !isSel && free ? "bg-online/10" : "",
               ].join(" ")}>{d.getDate()}</span>
               {/* bottom marker: shift dot, else "L" for a free/resting day */}
-              {count > 0 ? (
+              {worked ? (
                 <span className={`absolute bottom-1 h-1.5 w-1.5 rounded-full ${isSel ? "bg-on-accent/70" : "bg-gold"}`} />
               ) : free ? (
                 <span className={`absolute bottom-0.5 text-[11px] font-bold leading-none ${isSel ? "text-on-accent" : "text-online"}`}>L</span>
@@ -217,7 +270,7 @@ function MonthGrid({ anchor, today, weekdayLabels, byDay, freeDays, onPick }: an
 /** iOS-Calendar-style week view: a day-header row (with "L" rest-day markers)
  *  over a scrollable 24h grid of 7 day-columns, with shift blocks positioned by
  *  their real times and a "now" indicator on today's column. */
-function WeekTimeline({ anchor, today, weekdayLabels, byDay, freeDays, onPick }: any) {
+function WeekTimeline({ anchor, today, weekdayLabels, shifts, workedDays, freeDays, onPick }: any) {
   const HOUR_H = 44;          // px per hour
   const GUTTER = 40;          // px width of the hour-label gutter
   const ws = startOfWeekMon(anchor);
@@ -229,21 +282,6 @@ function WeekTimeline({ anchor, today, weekdayLabels, byDay, freeDays, onPick }:
   const fmtStart = (s: any) =>
     s.startTimeLabel || new Date(s.startTime).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 
-  const blocksFor = (d: Date) =>
-    (byDay.get(ymd(d)) || [])
-      .map((s: any) => {
-        const start = new Date(s.startTime);
-        const end = new Date(s.endTime);
-        if (Number.isNaN(start.getTime())) return null;
-        const dayStart = startOfDay(d).getTime();
-        let sMin = (start.getTime() - dayStart) / 60000;
-        let eMin = (end.getTime() - dayStart) / 60000;
-        sMin = Math.max(0, Math.min(1440, sMin));
-        eMin = Math.max(sMin + 30, Math.min(1440, Number.isNaN(eMin) ? sMin + 30 : eMin));
-        return { s, sMin, eMin };
-      })
-      .filter(Boolean);
-
   return (
     <div>
       {/* Day-header row (doubles as the day selector) */}
@@ -253,13 +291,13 @@ function WeekTimeline({ anchor, today, weekdayLabels, byDay, freeDays, onPick }:
           {days.map((d, i) => {
             const isToday = sameDay(d, today);
             const isSel = sameDay(d, anchor);
-            const count = (byDay.get(ymd(d)) || []).length;
+            const worked = workedDays.has(ymd(d));
             const free = freeDays.has(ymd(d));
             return (
               <button key={i} onClick={() => onPick(d)} className={`flex flex-col items-center rounded-lg py-1 ${isSel ? "bg-gold text-on-accent" : "active:bg-surface-2"}`}>
                 <span className={`text-[11px] font-semibold uppercase ${isSel ? "text-on-accent/70" : "text-muted"}`}>{weekdayLabels[i]}</span>
                 <span className={`text-[14px] font-bold leading-tight ${isSel ? "text-on-accent" : isToday ? "text-gold" : "text-ink"}`}>{d.getDate()}</span>
-                {count > 0 ? (
+                {worked ? (
                   <span className={`mt-0.5 h-1 w-1 rounded-full ${isSel ? "bg-on-accent/70" : "bg-gold"}`} />
                 ) : free ? (
                   <span className={`mt-0.5 text-[11px] font-bold leading-none ${isSel ? "text-on-accent" : "text-online"}`}>L</span>
@@ -291,14 +329,18 @@ function WeekTimeline({ anchor, today, weekdayLabels, byDay, freeDays, onPick }:
               const isSel = sameDay(d, anchor);
               return (
                 <div key={i} className={`relative border-l border-line/40 ${isSel ? "bg-gold/[0.06]" : ""}`}>
-                  {blocksFor(d).map((b: any, j: number) => (
+                  {blocksForDay(shifts, d).map((b: any, j: number) => (
                     <button
                       key={b.s.id || j}
                       onClick={() => onPick(d)}
-                      className="absolute inset-x-0.5 z-20 overflow-hidden rounded-lg border border-gold/40 bg-gold/20 px-1 py-0.5 text-left"
+                      className={`absolute inset-x-0.5 z-20 overflow-hidden border border-gold/40 bg-gold/20 px-1 py-0.5 text-left ${
+                        b.continuesPrev ? "rounded-t-none border-t-0" : "rounded-t-lg"
+                      } ${b.continuesNext ? "rounded-b-none border-b-0" : "rounded-b-lg"}`}
                       style={{ top: (b.sMin / 60) * HOUR_H + 1, height: ((b.eMin - b.sMin) / 60) * HOUR_H - 2 }}
                     >
-                      <span className="block truncate text-[9px] font-bold leading-tight text-ink">{fmtStart(b.s)}</span>
+                      <span className="block truncate text-[9px] font-bold leading-tight text-ink">
+                        {b.continuesPrev ? "↑ " : ""}{fmtStart(b.s)}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -351,20 +393,9 @@ function DayTimeline({ shifts, freeDay, anchor, today, t }: any) {
   const fmt = (s: any, k: "start" | "end") => s[k === "start" ? "startTimeLabel" : "endTimeLabel"] ||
     new Date(s[k === "start" ? "startTime" : "endTime"]).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 
-  // Position each shift within the day (clamped, so night shifts crossing
-  // midnight still render sensibly).
-  const blocks = shifts
-    .map((s: any) => {
-      const start = new Date(s.startTime);
-      const end = new Date(s.endTime);
-      if (Number.isNaN(start.getTime())) return null;
-      let sMin = (start.getTime() - dayStart.getTime()) / 60000;
-      let eMin = (end.getTime() - dayStart.getTime()) / 60000;
-      sMin = Math.max(0, Math.min(1440, sMin));
-      eMin = Math.max(sMin + 30, Math.min(1440, Number.isNaN(eMin) ? sMin + 30 : eMin));
-      return { s, sMin, eMin };
-    })
-    .filter(Boolean);
+  // Overlap-based blocks: an overnight shift renders its evening slice today and
+  // its morning slice (00:00→…) on the next day — no longer cut off at midnight.
+  const blocks = blocksForDay(shifts, anchor);
 
   return (
     <div className="mt-3">
@@ -401,11 +432,15 @@ function DayTimeline({ shifts, freeDay, anchor, today, t }: any) {
           {blocks.map((b: any, i: number) => (
             <div
               key={b.s.id || i}
-              className="absolute z-20 overflow-hidden rounded-lg border border-gold/40 bg-gold/15 px-2 py-1"
+              className={`absolute z-20 overflow-hidden border border-gold/40 bg-gold/15 px-2 py-1 ${
+                b.continuesPrev ? "rounded-t-none border-t-0" : "rounded-t-lg"
+              } ${b.continuesNext ? "rounded-b-none border-b-0" : "rounded-b-lg"}`}
               style={{ top: (b.sMin / 60) * HOUR_H + 1, height: ((b.eMin - b.sMin) / 60) * HOUR_H - 2, left: GUTTER + 4, right: 6 }}
             >
               <p className="flex items-center gap-1 text-[12px] font-bold text-ink">
                 <Clock size={12} className="shrink-0 text-gold" /> {fmt(b.s, "start")} – {fmt(b.s, "end")}
+                {b.continuesPrev && <span className="text-[10px] font-semibold text-gold">{t("schedule.fromPrevDay", "(día anterior)")}</span>}
+                {b.continuesNext && <span className="text-[10px] font-semibold text-gold">{t("schedule.toNextDay", "(continúa)")}</span>}
               </p>
               {(b.s.station?.stationName || b.s.stationName) && (
                 <p className="mt-0.5 flex items-center gap-1 truncate text-[11px] text-muted">
@@ -450,7 +485,7 @@ function DayShifts({ shifts, freeDay, t }: any) {
   const fmt = (s: any, k: "start" | "end") => s[k === "start" ? "startTimeLabel" : "endTimeLabel"] ||
     new Date(s[k === "start" ? "startTime" : "endTime"]).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
   return (
-    <div className="space-y-2.5">
+    <div className="stagger space-y-2.5">
       {shifts.map((s: any, i: number) => (
         <Card key={s.id || i} className="overflow-hidden p-0">
           <div className="flex">

@@ -64,7 +64,7 @@ export function dataUrlToFile(dataUrl: string, name: string): File {
  */
 export async function takeNativePhoto(
   source: "camera" | "gallery" = "camera",
-  opts: { hiRes?: boolean } = {}
+  opts: { hiRes?: boolean; front?: boolean } = {}
 ): Promise<CapturedImage> {
   const { Camera, CameraResultType, CameraSource } = await import("@capacitor/camera");
   const photo = await Camera.getPhoto({
@@ -72,7 +72,8 @@ export async function takeNativePhoto(
     allowEditing: false,
     resultType: CameraResultType.DataUrl,
     source: source === "gallery" ? CameraSource.Photos : CameraSource.Camera,
-    direction: "REAR" as any,
+    // Selfies (profile photo) want the FRONT camera; documents/scenes the REAR.
+    direction: (opts.front ? "FRONT" : "REAR") as any,
     correctOrientation: true,
   });
   if (!photo.dataUrl) throw new Error("no photo");

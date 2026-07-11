@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Screen } from "@/components/Screen";
 import { Card, EmptyState, ErrorState, SkeletonList, StatCard } from "@/components/ui";
+import { Segmented } from "@/components/ui/kit";
 import { useAsync } from "@/lib/useAsync";
 import { fmtDate } from "@/lib/format";
 import fb from "@/lib/feedback";
@@ -36,53 +37,18 @@ export default function GuardTraining() {
 
   return (
     <Screen root title={t("training.title")} subtitle={t("training.subtitle")}>
-      <div className="mb-4 flex rounded-card bg-surface-2 p-1">
-        <SegBtn
-          active={tab === "courses"}
-          onClick={() => {
-            fb.select();
-            setTab("courses");
-          }}
-          icon={<BookOpen size={16} />}
-          label={t("training.tabs.courses")}
-        />
-        <SegBtn
-          active={tab === "achievements"}
-          onClick={() => {
-            fb.select();
-            setTab("achievements");
-          }}
-          icon={<Award size={16} />}
-          label={t("training.tabs.achievements")}
-        />
-      </div>
+      <Segmented<Tab>
+        className="mb-4"
+        value={tab}
+        onChange={setTab}
+        options={[
+          { value: "courses", label: t("training.tabs.courses"), icon: <BookOpen size={16} /> },
+          { value: "achievements", label: t("training.tabs.achievements"), icon: <Award size={16} /> },
+        ]}
+      />
 
       {tab === "courses" ? <CoursesTab /> : <AchievementsTab />}
     </Screen>
-  );
-}
-
-function SegBtn({
-  active,
-  onClick,
-  icon,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-sm font-semibold transition ${
-        active ? "bg-surface text-ink shadow" : "text-muted"
-      }`}
-    >
-      {icon}
-      {label}
-    </button>
   );
 }
 

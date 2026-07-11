@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHistory } from "react-router-dom";
 import {
@@ -26,7 +26,10 @@ import {
   VolumeX,
   Moon,
   Sun,
+  Camera,
+  Images,
 } from "lucide-react";
+import { compressImage, takeNativePhoto, isNative, CapturedImage } from "@/lib/capture";
 import { Screen } from "@/components/Screen";
 import { Avatar, Sheet } from "@/components/ui";
 import {
@@ -118,9 +121,71 @@ export default function Profile() {
     t("profile.noStation", "Sin puesto asignado");
 
   // Bottom-sheet router for the menu actions.
-  const [sheet, setSheet] = useState<null | "phone" | "lang" | "logs">(null);
+  const [sheet, setSheet] = useState<null | "phone" | "lang" | "logs" | "avatar">(null);
   // Sound + haptic feedback toggle.
   const [fbOn, setFbOn] = useState(soundsEnabled());
+
+  // ── Profile photo picker ────────────────────────────────────────────────
+  // Take a selfie / pick from the gallery, upload via the multipart credentials
+  // flow, then the backend links the stored descriptor to securityGuard.profileImage.
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarErr, setAvatarErr] = useState<string | null>(null);
+  const cameraInput = useRef<HTMLInputElement>(null);
+  const galleryInput = useRef<HTMLInputElement>(null);
+  const webResolver = useRef<((file: File | null) => void) | null>(null);
+
+  const pickFile = (source: "camera" | "gallery"): Promise<CapturedImage | null> => {
+    // Native uses the Capacitor camera (FRONT camera for a selfie); web falls
+    // back to a hidden <input type="file"> (capture="user" → front camera).
+    if (isNative()) return takeNativePhoto(source, { front: source === "camera" }).catch(() => null);
+    return new Promise((resolve) => {
+      webResolver.current = async (file) => {
+        if (!file) return resolve(null);
+        try { resolve(await compressImage(file)); } catch { resolve(null); }
+      };
+      (source === "camera" ? cameraInput : galleryInput).current?.click();
+    });
+  };
+
+  const onWebPick = (file?: File | null) => {
+    const r = webResolver.current;
+    webResolver.current = null;
+    r?.(file || null);
+  };
+
+  const chooseAvatar = async (source: "camera" | "gallery") => {
+    setSheet(null);
+    const img = await pickFile(source);
+    if (!img) return;
+    setAvatarBusy(true);
+    setAvatarErr(null);
+    try {
+      await guardService.uploadProfileImage(img.file);
+      fb.success();
+      await reload();
+    } catch {
+      setAvatarErr(t("profile.photoError", "No se pudo subir la foto. Intenta de nuevo."));
+      fb.error();
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
+
+  const removeAvatar = async () => {
+    setSheet(null);
+    setAvatarBusy(true);
+    setAvatarErr(null);
+    try {
+      await guardService.updateProfile({ profileImage: [] });
+      fb.success();
+      await reload();
+    } catch {
+      setAvatarErr(t("profile.photoError", "No se pudo subir la foto. Intenta de nuevo."));
+      fb.error();
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
 
   const copyId = async () => {
     try {
@@ -193,14 +258,46 @@ export default function Profile() {
         {/* ---------- Identity ---------- */}
         <SectionCard>
           <div className="flex items-start gap-4">
-            <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => { fb.tap(); setSheet("avatar"); }}
+              disabled={avatarBusy}
+              aria-label={t("profile.changePhoto", "Cambiar foto de perfil")}
+              className="pressable relative shrink-0"
+            >
               <Avatar name={name} src={avatarSrc} className="h-16 w-16 text-base" />
+              {/* On-duty status dot */}
               <span
                 className={`absolute -right-0.5 -top-0.5 h-4 w-4 rounded-full border-2 border-surface ${
                   isClockedIn ? "bg-online" : "bg-faint"
                 }`}
               />
-            </div>
+              {/* Edit affordance */}
+              <span className="absolute -bottom-0.5 -right-0.5 grid h-6 w-6 place-items-center rounded-full border-2 border-surface bg-gold-strong text-on-accent">
+                <Camera size={12} />
+              </span>
+              {/* Upload-in-progress overlay */}
+              {avatarBusy && (
+                <span className="absolute inset-0 grid place-items-center rounded-full bg-black/45">
+                  <Loader2 size={20} className="animate-spin text-white" />
+                </span>
+              )}
+            </button>
+            <input
+              ref={cameraInput}
+              type="file"
+              accept="image/*"
+              capture="user"
+              className="hidden"
+              onChange={(e) => { onWebPick(e.target.files?.[0]); e.target.value = ""; }}
+            />
+            <input
+              ref={galleryInput}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => { onWebPick(e.target.files?.[0]); e.target.value = ""; }}
+            />
             <div className="min-w-0 flex-1">
               <h2 className="truncate text-xl font-bold text-ink">{name}</h2>
               <p className="mt-0.5 flex items-center gap-1.5 text-sm text-info">
@@ -216,6 +313,8 @@ export default function Profile() {
               </button>
             </div>
           </div>
+
+          {avatarErr && <p className="mt-3 text-xs text-critical">{avatarErr}</p>}
 
           <div className="hairline my-3.5" />
 
@@ -419,7 +518,49 @@ export default function Profile() {
       )}
       {sheet === "lang" && <LangSheet i18n={i18n} t={t} onClose={() => setSheet(null)} />}
       {sheet === "logs" && <LogsSheet t={t} onClose={() => setSheet(null)} />}
+      {sheet === "avatar" && (
+        <AvatarSheet
+          hasPhoto={!!avatarSrc}
+          onPick={chooseAvatar}
+          onRemove={removeAvatar}
+          onClose={() => setSheet(null)}
+        />
+      )}
     </Screen>
+  );
+}
+
+function AvatarSheet({
+  hasPhoto,
+  onPick,
+  onRemove,
+  onClose,
+}: {
+  hasPhoto: boolean;
+  onPick: (source: "camera" | "gallery") => void;
+  onRemove: () => void;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <BottomSheet title={t("profile.changePhoto", "Foto de perfil")} onClose={onClose}>
+      <div className="space-y-2">
+        <Button variant="primary" full onClick={() => onPick("camera")}>
+          <Camera size={18} />
+          {t("profile.takeSelfie", "Tomar selfie")}
+        </Button>
+        <Button variant="outline" full onClick={() => onPick("gallery")}>
+          <Images size={18} />
+          {t("profile.choosePhoto", "Elegir de galería")}
+        </Button>
+        {hasPhoto && (
+          <Button variant="danger" full onClick={onRemove}>
+            <Trash2 size={18} />
+            {t("profile.removePhoto", "Quitar foto")}
+          </Button>
+        )}
+      </div>
+    </BottomSheet>
   );
 }
 
