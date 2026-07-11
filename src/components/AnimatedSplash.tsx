@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import logo from "../assets/brand-logo.png";
+import { getBranding } from "../lib/appBranding";
 
 /**
  * In-app animated splash. The native splash (static logo on navy) hides almost
@@ -13,6 +14,9 @@ const HOLD_MS = 3500;
 const FADE_MS = 450;
 
 export default function AnimatedSplash() {
+  // Splash is shown pre-auth: use the cached tenant branding applied at boot
+  // (a static read is fine — the splash unmounts before any refetch lands).
+  const branding = getBranding();
   const [phase, setPhase] = useState<"in" | "out" | "gone">("in");
 
   useEffect(() => {
@@ -52,13 +56,22 @@ export default function AnimatedSplash() {
         {[0, 1, 2, 3].map((i) => (
           <span key={i} className="asRing" style={{ animationDelay: `${i * 0.45}s` }} />
         ))}
-        <img src={logo} alt="" className="asLogo" draggable={false} />
+        <img
+          src={branding.useTenantLogo && branding.logoUrl ? branding.logoUrl : logo}
+          alt=""
+          className="asLogo"
+          draggable={false}
+        />
       </div>
 
-      <div className="asWord">
-        CGuard<span>Pro</span>
-      </div>
-      <div className="asTag">SEGURIDAD · OPERACIONES</div>
+      {branding.displayName ? (
+        <div className="asWord">{branding.displayName}</div>
+      ) : (
+        <div className="asWord">
+          CGuard<span>Pro</span>
+        </div>
+      )}
+      <div className="asTag">{branding.tagline ? branding.tagline.toUpperCase() : "SEGURIDAD · OPERACIONES"}</div>
     </div>
   );
 }

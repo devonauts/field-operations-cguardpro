@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { AuthService, Credentials } from "@/lib/auth";
 import { ApiError, setToken, setTenantId, getToken, setUnauthorizedHandler } from "@/lib/api";
 import { clearAppTimeZone } from "@/lib/format";
+import { refreshBranding } from "@/lib/appBranding";
 import {
   hasAllowedRole,
   resolveWorkerRole,
@@ -45,6 +46,10 @@ export const useAuth = (): AuthContextType => {
 function persistSession(user: any) {
   const tenantId = resolveTenantId(user);
   if (tenantId) setTenantId(tenantId);
+  // Tenant branding (Hub móvil): fetch + apply the tenant's app customization
+  // now that we know who/where we are. Fire-and-forget — the cached config is
+  // already applied pre-paint; this just picks up CRM-side changes.
+  void refreshBranding();
 }
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {

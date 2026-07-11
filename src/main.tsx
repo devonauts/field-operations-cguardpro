@@ -24,6 +24,12 @@ import { initDutyStateListeners } from "./lib/dutyState";
 import { initOfflineQueue } from "./lib/offlineQueue";
 import "./lib/offlineReplayers";
 import { applyThemeClass, getStoredTheme } from "./context/ThemeContext";
+import { initBrandingCache } from "./lib/appBranding";
+
+// Tenant branding (Hub móvil): re-apply the cached accent/logo config BEFORE
+// first paint (no flash of default gold) and seed the tenant's default theme
+// on a true first launch — must run before applyThemeClass reads storage.
+initBrandingCache();
 
 // Apply the persisted theme class to <html> BEFORE React renders so there is no
 // flash of the wrong theme on cold start. Default is DARK (no class).

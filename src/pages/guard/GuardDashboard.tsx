@@ -38,6 +38,7 @@ import { useAsync } from "@/lib/useAsync";
 import { useAuth } from "@/context/AuthContext";
 import { guardService } from "@/lib/services";
 import { setDuty } from "@/lib/dutyState";
+import { useBranding } from "@/lib/appBranding";
 import fb from "@/lib/feedback";
 import { onPush } from "@/lib/pushEvents";
 import { loadGuardPerformance, Tier, ComponentKey } from "@/lib/performance";
@@ -82,19 +83,29 @@ function BrandMark() {
   );
 }
 
-/** Branded operations header shown while the guard is clocked in (per design). */
+/** Branded operations header shown while the guard is clocked in (per design).
+ *  Tenant-customizable via the CRM's Hub móvil (logo, name, tagline). */
 function OnDutyHeader({ guardName, sector }: { guardName: string; sector: string | null }) {
   const { t } = useTranslation();
+  const branding = useBranding();
   return (
     <div className="px-4 pb-1 pt-3">
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2.5">
-          <BrandMark />
+          {branding.useTenantLogo && branding.logoUrl ? (
+            <img src={branding.logoUrl} alt="" className="h-9 w-9 rounded-lg object-contain" />
+          ) : (
+            <BrandMark />
+          )}
           <div className="leading-tight">
-            <p className="text-[17px] font-extrabold tracking-tight text-ink">
-              C-Guard <span className="text-gold">Pro</span>
-            </p>
-            <p className="label-eyebrow">{t("brand.tagline", "Security Operations")}</p>
+            {branding.displayName ? (
+              <p className="text-[17px] font-extrabold tracking-tight text-ink">{branding.displayName}</p>
+            ) : (
+              <p className="text-[17px] font-extrabold tracking-tight text-ink">
+                C-Guard <span className="text-gold">Pro</span>
+              </p>
+            )}
+            <p className="label-eyebrow">{branding.tagline || t("brand.tagline", "Security Operations")}</p>
           </div>
         </div>
         <NotificationBell />

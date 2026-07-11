@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/kit";
 import { fb } from "@/lib/feedback";
 import ForgotPassword from "./ForgotPassword";
 import brandLogo from "../assets/brand-logo.png";
+import { useBranding } from "@/lib/appBranding";
 
 export default function Login() {
   const { t } = useTranslation();
   const { signIn } = useAuth();
+  const branding = useBranding();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -50,15 +52,24 @@ export default function Login() {
       <IonContent>
         <div className="safe-top safe-bottom flex min-h-full flex-col justify-center px-6 py-10">
           <div className="mx-auto w-full max-w-sm">
-            {/* Brand */}
+            {/* Brand — tenant-customizable via the CRM's Hub móvil (cached
+                branding from the last session; C-Guard defaults otherwise). */}
             <div className="mb-8 text-center">
               <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl border border-gold/30 bg-surface-2">
-                <img src={brandLogo} alt="CGuardPro" className="h-14 w-14 object-contain" />
+                <img
+                  src={branding.useTenantLogo && branding.logoUrl ? branding.logoUrl : brandLogo}
+                  alt={branding.displayName || "CGuardPro"}
+                  className="h-14 w-14 object-contain"
+                />
               </div>
-              <h1 className="text-2xl font-bold tracking-tight text-ink">
-                CGUARD<span className="text-gold">PRO</span>
-              </h1>
-              <p className="mt-1 text-sm text-muted">{t("auth.subtitle")}</p>
+              {branding.displayName ? (
+                <h1 className="text-2xl font-bold tracking-tight text-ink">{branding.displayName}</h1>
+              ) : (
+                <h1 className="text-2xl font-bold tracking-tight text-ink">
+                  CGUARD<span className="text-gold">PRO</span>
+                </h1>
+              )}
+              <p className="mt-1 text-sm text-muted">{branding.tagline || t("auth.subtitle")}</p>
             </div>
 
             <form onSubmit={onSubmit} className="space-y-4">

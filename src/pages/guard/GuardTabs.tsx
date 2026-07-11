@@ -36,7 +36,46 @@ import { messageService } from "@/lib/services";
 import { onPush } from "@/lib/pushEvents";
 import { getDuty, subscribeDuty, setDuty } from "@/lib/dutyState";
 import { useAuth } from "@/context/AuthContext";
+import { useBranding } from "@/lib/appBranding";
 import fb from "@/lib/feedback";
+
+/** Disabled tenant modules land back on the dashboard (deep links included). */
+const RedirectHome = () => <Redirect to="/guard/dashboard" />;
+
+/**
+ * Notification type → guard screen. Every push the backend sends a guard should
+ * land them somewhere sensible when tapped. The backend may also send an explicit
+ * `route` (preferred); this map is the fallback so EVERY known type deep-links.
+ */
+const ROUTE_FOR_TYPE: Record<string, string> = {
+  "radio.check_request": "/guard/radio",
+  "task.assigned": "/guard/tasks",
+  "consigna.due": "/guard/dashboard",
+  "consigna.completed": "/guard/dashboard",
+  "patrol_start": "/guard/patrol",
+  "patrol_complete": "/guard/patrol",
+  "message.new": "/guard/messages",
+  "schedule_updated": "/guard/schedule",
+  "guard.forced_clockout": "/guard/dashboard",
+  "memo.created": "/guard/notices",
+  "incident_reported": "/guard/incidents",
+  "incident_escalated": "/guard/incidents",
+  "visitor.arrival": "/guard/visitors",
+  "alarm_escalated": "/guard/dashboard",
+};
+
+/** Resolve the destination for a push payload (explicit route wins; then type). */
+function routeForPush(d: any): string | null {
+  if (!d) return null;
+  if (typeof d.route === "string" && d.route.startsWith("/guard/")) return d.route;
+  const type = d.type as string | undefined;
+  if (!type) return null;
+  if (type === "message.new") {
+    const cid = d.conversationId || d.threadId;
+    return cid ? `/guard/messages/${cid}` : "/guard/messages";
+  }
+  return ROUTE_FOR_TYPE[type] || null;
+}
 
 export default function GuardTabs() {
   const { t } = useTranslation();
@@ -45,12 +84,12 @@ export default function GuardTabs() {
   const history = useHistory();
   const location = useLocation();
 
-  // Deep-link on notification TAP: a pase de novedades push guides the guard to
-  // open the app — tapping it should land them on the radio screen to report.
+  // Deep-link on notification TAP: tapping ANY push should land the guard on the
+  // relevant screen (radio pase, a new task, a message thread, an incident, …).
   useEffect(() => {
     return onPush((d: any) => {
       if (!d || d._tapped !== "1") return;
-      const route = d.route || (d.type === "radio.check_request" ? "/guard/radio" : null);
+      const route = routeForPush(d);
       if (route) { try { fb.tap(); } catch { /* ignore */ } history.push(route); }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -58,6 +97,10 @@ export default function GuardTabs() {
 
   // Off duty the app is purely informative: hide operational UI (Radio, Patrol).
   const [onDuty, setOnDuty] = useState(getDuty());
+  // Tenant module toggles (Hub móvil) — reactive so a post-login config fetch
+  // updates the tab bar/routes without a restart.
+  const branding = useBranding();
+  const isModuleEnabled = (k: string) => branding.modules?.[k] !== false;
   useEffect(() => subscribeDuty(setOnDuty), []);
 
   // Unread badge on the Messages tab. Seeded from the inbox, bumped by push,
@@ -115,25 +158,27 @@ export default function GuardTabs() {
         <Route exact path="/guard/dashboard" component={GuardDashboard} />
         <Route exact path="/guard/schedule" component={GuardSchedule} />
         <Route exact path="/guard/notices" component={GuardNotices} />
-        <Route exact path="/guard/time-off" component={GuardTimeOff} />
+        {/* Tenant-toggleable convenience modules (Hub móvil in the CRM):
+            disabled ones redirect home so deep links/cards can't reach them. */}
+        <Route exact path="/guard/time-off" component={isModuleEnabled("timeOff") ? GuardTimeOff : RedirectHome} />
         <Route exact path="/guard/quiz" component={GuardQuiz} />
         {/* Entrenamiento (professional training). Specific routes before the
             :enrollmentId param route so /certificate isn't captured as an id. */}
-        <Route exact path="/guard/training" component={GuardTraining} />
-        <Route exact path="/guard/training/certificate/:certificateId" component={GuardCertificate} />
-        <Route exact path="/guard/training/:enrollmentId/lesson/:lessonId" component={GuardLesson} />
-        <Route exact path="/guard/training/:enrollmentId/quiz" component={GuardCourseQuiz} />
-        <Route exact path="/guard/training/:enrollmentId" component={GuardCourseDetail} />
-        <Route exact path="/guard/backup" component={GuardBackup} />
-        <Route exact path="/guard/performance" component={GuardPerformance} />
+        <Route exact path="/guard/training" component={isModuleEnabled("training") ? GuardTraining : RedirectHome} />
+        <Route exact path="/guard/training/certificate/:certificateId" component={isModuleEnabled("training") ? GuardCertificate : RedirectHome} />
+        <Route exact path="/guard/training/:enrollmentId/lesson/:lessonId" component={isModuleEnabled("training") ? GuardLesson : RedirectHome} />
+        <Route exact path="/guard/training/:enrollmentId/quiz" component={isModuleEnabled("training") ? GuardCourseQuiz : RedirectHome} />
+        <Route exact path="/guard/training/:enrollmentId" component={isModuleEnabled("training") ? GuardCourseDetail : RedirectHome} />
+        <Route exact path="/guard/backup" component={isModuleEnabled("backup") ? GuardBackup : RedirectHome} />
+        <Route exact path="/guard/performance" component={isModuleEnabled("performance") ? GuardPerformance : RedirectHome} />
         <Route exact path="/guard/profile" component={Profile} />
         {/* Tab destinations + the detail screens reached from dashboard cards */}
         <Route exact path="/guard/patrol" component={GuardPatrol} />
         <Route exact path="/guard/incidents" component={GuardIncidents} />
         <Route exact path="/guard/shift" component={GuardShiftDetail} />
-        <Route exact path="/guard/map" component={GuardMap} />
+        <Route exact path="/guard/map" component={isModuleEnabled("map") ? GuardMap : RedirectHome} />
         <Route exact path="/guard/radio" component={GuardRadio} />
-        <Route exact path="/guard/visitors" component={GuardVisitors} />
+        <Route exact path="/guard/visitors" component={isModuleEnabled("visitors") ? GuardVisitors : RedirectHome} />
         <Route exact path="/guard/tasks" component={GuardTasks} />
         <Route exact path="/guard/messages" component={GuardMessages} />
         <Route exact path="/guard/messages/:conversationId" component={GuardThread} />
@@ -159,8 +204,9 @@ export default function GuardTabs() {
           <IonLabel>{t("nav.home", "Inicio")}</IonLabel>
         </IonTabButton>
 
-        {/* Duty-variant slot: operational Ronda on duty, Entrenamiento off duty. */}
-        {onDuty ? (
+        {/* Duty-variant slot: operational Ronda on duty, Entrenamiento off duty
+            (Ronda if the tenant disabled the training module in the Hub móvil). */}
+        {onDuty || !isModuleEnabled("training") ? (
           <IonTabButton tab="patrol" href="/guard/patrol">
             <Footprints size={22} />
             <IonLabel>{t("nav.patrol", "Ronda")}</IonLabel>
