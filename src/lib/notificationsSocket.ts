@@ -8,8 +8,11 @@
  * disconnect cleanup fn. Framework-agnostic — React state lives in the provider.
  */
 import { io, Socket } from "socket.io-client";
-import { apiOrigin, getToken, getTenantId } from "./api";
+import { api, apiOrigin, getToken, getTenantId } from "./api";
 import type { PlatformEvent } from "./services";
+
+/** This app's session channel (the supervisor app's copy says "supervisor"). */
+const SESSION_CHANNEL = "worker";
 
 const noop = () => {};
 
@@ -52,6 +55,16 @@ export function connectNotifications(
     } catch (e) {
       console.warn("notification handler failed", e);
     }
+  });
+
+  // Single active session: this account just signed in on ANOTHER device of
+  // the same channel. Verify against the server (never trust the event alone):
+  // an authenticated request with a superseded token gets 401, which trips the
+  // api module's unauthorized handler → AuthContext signs out → login screen.
+  // If the request succeeds, this device holds the new session — ignore.
+  socket.on("session:superseded", (p: { channel?: string } | undefined) => {
+    if (!p || p.channel !== SESSION_CHANNEL) return;
+    api.get("/auth/me").catch(() => { /* 401 path handled globally */ });
   });
 
   return () => {

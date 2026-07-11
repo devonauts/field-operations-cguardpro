@@ -12,7 +12,10 @@ export interface AuthPayload {
 
 export const AuthService = {
   signIn(credentials: Credentials): Promise<AuthPayload> {
-    return api.post<AuthPayload>("/auth/sign-in", credentials, {
+    // `app` tags the session channel for single-active-session enforcement:
+    // a login on a SECOND phone supersedes this one (401 sessionSuperseded →
+    // back to login), while the same person's CRM web session is unaffected.
+    return api.post<AuthPayload>("/auth/sign-in", { ...credentials, app: "worker" }, {
       skipAuth: true,
     });
   },
