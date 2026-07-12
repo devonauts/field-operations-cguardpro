@@ -8,6 +8,8 @@
 	<string>CGuardPro usa la cámara para escanear códigos QR de puntos de control y tomar fotos de evidencia y documentos.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>CGuardPro usa tu ubicación para validar el registro de entrada, los puntos de ronda y los incidentes.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>CGuardPro comparte tu ubicación con la central mientras estás en turno para el seguimiento en vivo y el recorrido de tu ronda, incluso con la pantalla apagada.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>CGuardPro usa tu galería para adjuntar fotos a visitas, incidentes y puntos de control.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
@@ -18,6 +20,7 @@
 	<string>CGuardPro usa el reconocimiento de voz para convertir tu dictado en texto en el reporte de salida.</string>
 	<key>UIBackgroundModes</key>
 	<array>
+		<string>location</string>
 		<string>remote-notification</string>
 		<string>audio</string>
 	</array>
