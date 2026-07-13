@@ -13,6 +13,7 @@ import { IncidentForm } from "@/components/IncidentForm";
 import { usePhotoCapture, PhotoStrip } from "@/components/photoCapture";
 import { useAsync } from "@/lib/useAsync";
 import { guardService } from "@/lib/services";
+import { requireShiftForRounds } from "@/lib/appBranding";
 import { rondasService } from "@/lib/rondas";
 import { getCurrentPosition, Coords, distanceMeters } from "@/lib/geo";
 import { dataUrlToFile } from "@/lib/capture";
@@ -108,11 +109,14 @@ export default function GuardPatrol() {
     }
     const scans: TagScan[] = await rondasService.scans({ limit: 200 }).catch(() => []);
     const patrols = await rondasService.patrols().catch(() => []);
-    return { station, settings, routes, scans, patrols };
+    return { station, settings, routes, scans, patrols, onDuty: !!dash?.activeClockIn };
   });
 
   const settings = data?.settings || DEFAULT_SETTINGS;
   const routes = data?.routes || [];
+  // Regla global de puestos: rondas solo con turno activo (el servidor
+  // rechaza el escaneo igualmente; esto es UX proactiva).
+  const mustClockIn = requireShiftForRounds() && !data?.onDuty;
   const station = data?.station;
   const route = routes.find((r) => r.id === selectedId) || routes[0];
   const routeId = route?.id || "";
@@ -159,7 +163,7 @@ export default function GuardPatrol() {
 
   const startPatrol = (rid?: string) => {
     const id = rid || routeId;
-    if (!id) return;
+    if (!id || mustClockIn) return;
     fb.press();
     setChooserOpen(false);
     if (id !== selectedId) setSelectedId(id);
@@ -281,7 +285,7 @@ export default function GuardPatrol() {
       right={
         startedAt ? (
           <span className="font-mono text-sm font-bold tabular-nums text-online">{fmtElapsed(now - startedAt)}</span>
-        ) : routes.length > 0 ? (
+        ) : routes.length > 0 && !mustClockIn ? (
           <button
             onClick={() => { fb.tap(); setChooserOpen(true); }}
             aria-label={t("rondas.start")}
@@ -296,6 +300,15 @@ export default function GuardPatrol() {
         <Loader />
       ) : (
         <div className="space-y-4">
+          {/* regla global: turno activo requerido para rondas */}
+          {mustClockIn && routes.length > 0 && (
+            <Card className="border-gold/40 bg-gold-soft p-4">
+              <p className="text-sm font-semibold">{t("rondas.clockInFirstTitle", { defaultValue: "Marca tu entrada para iniciar rondas" })}</p>
+              <p className="mt-1 text-sm text-muted">
+                {t("rondas.clockInFirstBody", { defaultValue: "Tu empresa exige turno activo para que los escaneos de ronda cuenten." })}
+              </p>
+            </Card>
+          )}
           {/* offline / pending banner (shared) */}
           {pending.length > 0 && (
             <div className="flex items-center gap-2 rounded-xl border border-high/40 bg-high/10 px-3 py-2.5 text-xs text-high">

@@ -1,12 +1,71 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Bell, BellRing } from "lucide-react";
+import { Bell, BellRing, ClipboardCheck, CheckCircle2, Loader2 } from "lucide-react";
 import { Screen } from "@/components/Screen";
-import { Card, EmptyState, ErrorState, SkeletonList } from "@/components/ui";
+import { Card, EmptyState, ErrorState, SkeletonList, SectionTitle } from "@/components/ui";
 import { useAsync } from "@/lib/useAsync";
 import { notificationService } from "@/lib/services";
+import { memosService, MemoItem } from "@/lib/rondas";
 import { relativeTime } from "@/lib/format";
 import { pick } from "@/lib/normalize";
+import { fb } from "@/lib/feedback";
+
+/** Memos pendientes de confirmación — el "Recibido" alimenta memos.wasAccepted
+ *  en el CRM (endpoint existente que la app nunca llamaba). */
+function MemoAckList() {
+  const { t } = useTranslation();
+  const { data, reload } = useAsync<MemoItem[]>(
+    () => memosService.list().catch(() => [] as MemoItem[]),
+    [],
+  );
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const pending = (data || []).filter((m: any) => !m.wasAccepted);
+  if (pending.length === 0) return null;
+
+  const accept = async (id: string) => {
+    if (busyId) return;
+    setBusyId(id);
+    try {
+      await memosService.accept(id);
+      fb.success();
+      await reload();
+    } catch {
+      fb.error?.();
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <div className="mb-4">
+      <SectionTitle icon={<ClipboardCheck size={16} />}>
+        {t("notices.memosPending", { defaultValue: "Memorandos por confirmar" })}
+      </SectionTitle>
+      <div className="space-y-3">
+        {pending.map((m: any) => (
+          <Card key={m.id} className="!border-gold/40 p-4">
+            <p className="text-sm font-semibold text-ink">{m.title || m.subject || "Memorando"}</p>
+            {(m.description || m.body || m.message) && (
+              <p className="mt-0.5 text-xs text-muted">{m.description || m.body || m.message}</p>
+            )}
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <p className="text-[11px] text-faint">{relativeTime(m.createdAt)}</p>
+              <button
+                onClick={() => accept(m.id)}
+                disabled={busyId === m.id}
+                className="flex items-center gap-1.5 rounded-lg bg-gold-strong px-3 py-1.5 text-xs font-semibold text-on-accent active:bg-gold-hover disabled:opacity-60"
+              >
+                {busyId === m.id ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
+                {t("notices.memoAck", { defaultValue: "Recibido" })}
+              </button>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function GuardNotices() {
   const { t } = useTranslation();
@@ -25,6 +84,7 @@ export default function GuardNotices() {
 
   return (
     <Screen title={t("notices.title")} subtitle={t("notices.subtitle")} onRefresh={reload}>
+      <MemoAckList />
       {loading ? (
         <SkeletonList />
       ) : error ? (

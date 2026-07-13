@@ -35,6 +35,7 @@ import {
   ResultSheet,
 } from "@/components/ui";
 import { useAsync } from "@/lib/useAsync";
+import { ConsignasSection } from "@/components/ConsignasSection";
 import { useAuth } from "@/context/AuthContext";
 import { guardService } from "@/lib/services";
 import { setDuty } from "@/lib/dutyState";
@@ -721,6 +722,9 @@ export default function GuardDashboard() {
               <p className="text-center text-xs text-critical">{gpsError}</p>
             )}
           </div>
+
+          {/* Consignas de hoy (órdenes permanentes del puesto) */}
+          <ConsignasSection />
 
           {/* Performance */}
           <PerformanceSection perf={perf} />

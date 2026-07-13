@@ -28,6 +28,8 @@ export interface AppBranding {
   useTenantLogo: boolean;
   defaultTheme: "dark" | "light" | "user";
   modules: Record<string, boolean>;
+  /** Reglas globales de puestos (server re-enforces; app uses for proactive UX). */
+  postRules: { requireActiveShiftForRounds: boolean };
   tenantName: string | null;
   logoUrl: string | null;
 }
@@ -41,6 +43,7 @@ const DEFAULTS: AppBranding = {
   useTenantLogo: true,
   defaultTheme: "dark",
   modules: {},
+  postRules: { requireActiveShiftForRounds: false },
   tenantName: null,
   logoUrl: null,
 };
@@ -113,7 +116,12 @@ function applyAccent(hex: string): void {
 /* ── store ───────────────────────────────────────────────────────────────── */
 
 function applyBranding(cfg: AppBranding): void {
-  current = { ...DEFAULTS, ...cfg, modules: { ...(cfg.modules || {}) } };
+  current = {
+    ...DEFAULTS,
+    ...cfg,
+    modules: { ...(cfg.modules || {}) },
+    postRules: { ...DEFAULTS.postRules, ...((cfg as any).postRules || {}) },
+  };
   applyAccent(current.accentColor);
   emit();
 }
@@ -158,6 +166,11 @@ export function getBranding(): AppBranding {
 }
 
 /** Convenience-module visibility (training/performance/visitors/timeOff/backup/map). Default: visible. */
+/** Regla global: rondas requieren turno activo (el servidor la re-aplica). */
+export function requireShiftForRounds(): boolean {
+  return !!current.postRules?.requireActiveShiftForRounds;
+}
+
 export function isModuleEnabled(key: string): boolean {
   const v = current.modules?.[key];
   return typeof v === "boolean" ? v : true;
