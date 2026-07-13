@@ -177,6 +177,9 @@ export default function GuardPatrol() {
   };
   const finishPatrol = () => {
     fb.success();
+    // Tell the backend the round ended — if it's incomplete, ops gets the
+    // "ronda incompleta" alert right away instead of on the overdue sweep.
+    if (routeId) rondasService.finishPatrol(routeId).catch(() => {});
     setStartedAt(null);
     ls.del(sKey(routeId));
     ls.del(scKey(routeId));

@@ -178,6 +178,9 @@ function IncidentBody({
     longitude: coords?.longitude,
     incidentAt: occurredAt ? new Date(occurredAt).toISOString() : new Date().toISOString(),
     incidentTypeId: resolveTypeId(),
+    // Selected label — backend find-or-creates the catalog row by name when
+    // no id resolved, so the type survives label/catalog drift.
+    incidentTypeName: typeOptions.find((o) => o.value === typeValue)?.label || undefined,
     actionsTaken: actionsTaken.trim() || undefined,
     action: actionsTaken.trim() || undefined,
     internalNotes: peopleInvolved.trim() || undefined,

@@ -63,6 +63,9 @@ export const rondasService = {
   rondaDetail: (id: string) => api.get(tenantPath(`/site-tour/ronda/${id}`)).then(unwrap),
 
   /** Mark the start of a patrol (stamps startAt + notifies tenant/client). */
+  /** Finish a patrol — backend alerts ops if it ends incomplete. */
+  finishPatrol: (tourId: string) =>
+    api.post(tenantPath("/guard/me/patrol/finish"), { data: { tourId } }).then(unwrap),
   startPatrol: (tourId: string) =>
     api.post(tenantPath("/guard/me/patrol/start"), { data: { tourId } }).then(unwrap),
 
