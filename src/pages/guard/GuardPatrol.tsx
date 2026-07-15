@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useLocation } from "react-router-dom";
 import { IonModal, useIonToast } from "@ionic/react";
 import { modalEnterAnimation, modalLeaveAnimation } from "@/lib/modalAnimation";
 import {
@@ -62,6 +63,10 @@ function fmtElapsed(ms: number): string {
 export default function GuardPatrol() {
   const { t } = useTranslation();
   const [present] = useIonToast();
+  // `/guard/patrol` is BOTH a bottom-tab root (no back button) AND a detail pushed
+  // from the Inicio "Ronda activa" card. When pushed from home it carries
+  // `?from=home`, so it shows a native back button; from the tab bar it's a root.
+  const pushedFromHome = new URLSearchParams(useLocation().search).get("from") === "home";
   const [selectedId, setSelectedId] = useState<string>("");
   const [scanned, setScanned] = useState<Set<string>>(new Set());
   const [startedAt, setStartedAt] = useState<number | null>(null);
@@ -281,7 +286,8 @@ export default function GuardPatrol() {
 
   return (
     <Screen
-      root
+      root={!pushedFromHome}
+      back={pushedFromHome}
       title={t("rondas.title")}
       subtitle={route?.name || t("rondas.subtitle")}
       onRefresh={reload}

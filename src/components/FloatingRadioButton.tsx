@@ -1,10 +1,15 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Mic, Loader2, Volume2 } from "lucide-react";
 import { useRadio } from "@/context/RadioContext";
 
 const POS_KEY = "radioMicFabPos";
 const SIZE = 96; // touch-target diameter in px (must match the h-24/w-24 button)
+// Gesture intent: a still hold keys the mic; a drag moves the button. Talk only
+// starts after a brief hold so a drag NEVER transmits, and once either mode is
+// chosen the gesture sticks to it (talk ⇒ never moves, drag ⇒ never talks).
+const HOLD_MS = 150; // hold-still time before the mic keys
+const DRAG_PX = 10;  // movement past this = a drag, not a talk
 
 /** Resolved safe-area-inset-bottom in px (home indicator height). A CSS custom
  *  property stores the unresolved env() token, so measure it with a probe. */
@@ -31,7 +36,11 @@ export default function FloatingRadioButton() {
   const { onDuty, screenActive, state, speaker, talking, hint, myId, someoneElseTalking, resume, pressTalk, releaseTalk } = useRadio();
 
   const ref = useRef<HTMLDivElement>(null);
-  const drag = useRef<{ sx: number; sy: number; ox: number; oy: number; moved: boolean; talked: boolean } | null>(null);
+  const drag = useRef<{
+    sx: number; sy: number; ox: number; oy: number;
+    mode: "pending" | "talk" | "drag";
+    timer: ReturnType<typeof setTimeout> | null;
+  } | null>(null);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(() => {
     try {
       const s = JSON.parse(localStorage.getItem(POS_KEY) || "null");
@@ -48,6 +57,17 @@ export default function FloatingRadioButton() {
     }
   });
 
+  // Anti-lock: if the button unmounts (screen change / off duty) mid-transmission,
+  // always release the mic so it can never stay keyed "de por gusto".
+  useEffect(() => {
+    return () => {
+      const d = drag.current;
+      if (d?.timer) clearTimeout(d.timer);
+      if (d?.mode === "talk") releaseTalk();
+      drag.current = null;
+    };
+  }, [releaseTalk]);
+
   if (!onDuty || screenActive) return null;
 
   const connecting = state === "connecting";
@@ -59,20 +79,30 @@ export default function FloatingRadioButton() {
     if (!el) return;
     try { (e.currentTarget as any).setPointerCapture?.(e.pointerId); } catch { /* ignore */ }
     const r = el.getBoundingClientRect();
-    drag.current = { sx: e.clientX, sy: e.clientY, ox: e.clientX - r.left, oy: e.clientY - r.top, moved: false, talked: false };
-    // Immediate trigger: start transmitting on press (unless busy/connecting).
-    if (canTalk) { drag.current.talked = true; pressTalk(); }
+    const d: NonNullable<typeof drag.current> = {
+      sx: e.clientX, sy: e.clientY, ox: e.clientX - r.left, oy: e.clientY - r.top,
+      mode: "pending", timer: null,
+    };
+    drag.current = d;
+    // Decide intent by waiting a beat: a still hold keys the mic; if the finger
+    // moves first it's a drag and NEVER transmits.
+    if (canTalk) {
+      d.timer = setTimeout(() => {
+        if (drag.current === d && d.mode === "pending") { d.mode = "talk"; pressTalk(); }
+      }, HOLD_MS);
+    }
   };
 
   const onMove = (e: React.PointerEvent) => {
     const d = drag.current;
     if (!d) return;
-    if (!d.moved && (Math.abs(e.clientX - d.sx) > 8 || Math.abs(e.clientY - d.sy) > 8)) {
-      d.moved = true;
-      // It's a drag, not a talk — cancel any transmission we started on press.
-      if (d.talked) { releaseTalk(); d.talked = false; }
+    if (d.mode === "talk") return; // transmitting → the button doesn't move
+    if (d.mode === "pending") {
+      if (Math.abs(e.clientX - d.sx) <= DRAG_PX && Math.abs(e.clientY - d.sy) <= DRAG_PX) return;
+      // Moved before the hold fired → it's a drag; cancel the pending talk timer.
+      d.mode = "drag";
+      if (d.timer) { clearTimeout(d.timer); d.timer = null; }
     }
-    if (!d.moved) return;
     const w = ref.current?.offsetWidth ?? SIZE;
     const h = ref.current?.offsetHeight ?? SIZE;
     const x = Math.max(8, Math.min(window.innerWidth - w - 8, e.clientX - d.ox));
@@ -85,11 +115,13 @@ export default function FloatingRadioButton() {
     const d = drag.current;
     drag.current = null;
     if (!d) return;
-    if (d.moved) {
-      setPos((p) => { try { if (p) localStorage.setItem(POS_KEY, JSON.stringify(p)); } catch { /* ignore */ } return p; });
-    } else if (d.talked) {
+    if (d.timer) clearTimeout(d.timer);
+    if (d.mode === "talk") {
       releaseTalk(); // hold released → end transmission
+    } else if (d.mode === "drag") {
+      setPos((p) => { try { if (p) localStorage.setItem(POS_KEY, JSON.stringify(p)); } catch { /* ignore */ } return p; });
     }
+    // "pending" (quick tap, no hold, no drag) → nothing keyed, nothing to release.
   };
 
   const status =
