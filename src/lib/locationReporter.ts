@@ -11,6 +11,7 @@ import { Geolocation } from "@capacitor/geolocation";
 import { guardService } from "./services";
 import { getDeviceStatus } from "./deviceStatus";
 import { subscribeDuty, getDuty } from "./dutyState";
+import i18n from "@/i18n";
 
 // The background-geolocation watcher. registerPlugin always returns a proxy;
 // calling addWatcher throws "not implemented" where the native side is absent,
@@ -116,8 +117,8 @@ async function startBackgroundWatcher(): Promise<boolean> {
   try {
     watcherId = await BackgroundGeolocation.addWatcher(
       {
-        backgroundMessage: "Tu ubicación se comparte con la central mientras estás en turno.",
-        backgroundTitle: "Turno activo",
+        backgroundMessage: i18n.t("location.bgMessage", "Tu ubicación se comparte con la central mientras estás en turno."),
+        backgroundTitle: i18n.t("location.bgTitle", "Turno activo"),
         requestPermissions: true,
         stale: false,
         distanceFilter: 20,

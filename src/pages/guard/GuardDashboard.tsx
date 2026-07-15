@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import i18n from "@/i18n";
 import { useHistory } from "react-router-dom";
 import { useIonToast } from "@ionic/react";
 import { App as CapacitorApp } from "@capacitor/app";
@@ -844,18 +845,38 @@ function useNowTick(intervalMs = 30000): number {
   return now;
 }
 
-const MONTHS_ES = [
-  "ENE", "FEB", "MAR", "ABR", "MAY", "JUN",
-  "JUL", "AGO", "SEP", "OCT", "NOV", "DIC",
-];
+/** Uppercase short month name in the app's current language (ENE/FEB… vs JAN/FEB…). */
+function monthAbbr(d: Date): string {
+  try {
+    return d
+      .toLocaleDateString(i18n.language || undefined, { month: "short" })
+      .replace(".", "")
+      .toUpperCase();
+  } catch {
+    return d
+      .toLocaleDateString(undefined, { month: "short" })
+      .replace(".", "")
+      .toUpperCase();
+  }
+}
 
 function countdownLabel(target: Date, now: number): string {
   const mins = Math.max(0, Math.round((target.getTime() - now) / 60000));
   const h = Math.floor(mins / 60);
   const m = mins % 60;
-  if (h >= 24) return `EN ${Math.floor(h / 24)}D ${h % 24}H`;
-  if (h > 0) return `EN ${h}H ${String(m).padStart(2, "0")}M`;
-  return `EN ${m}M`;
+  if (h >= 24)
+    return i18n.t("dash.countdownDaysHours", {
+      d: Math.floor(h / 24),
+      h: h % 24,
+      defaultValue: "EN {{d}}D {{h}}H",
+    });
+  if (h > 0)
+    return i18n.t("dash.countdownHoursMins", {
+      h,
+      m: String(m).padStart(2, "0"),
+      defaultValue: "EN {{h}}H {{m}}M",
+    });
+  return i18n.t("dash.countdownMins", { m, defaultValue: "EN {{m}}M" });
 }
 
 function dayLabel(target: Date, t: any): string {
@@ -1034,7 +1055,7 @@ function NextShiftCard({ shift, isCurrent }: { shift: any; isCurrent: boolean })
       <div className="mt-3 flex items-center gap-3">
         <div className="grid h-14 w-14 shrink-0 place-items-center rounded-xl border border-gold/30 bg-gold/10 leading-none">
           <span className="text-[10px] font-bold uppercase tracking-wide text-gold">
-            {MONTHS_ES[start.getMonth()]}
+            {monthAbbr(start)}
           </span>
           <span className="mt-0.5 text-xl font-bold tabular-nums text-ink">
             {String(start.getDate()).padStart(2, "0")}

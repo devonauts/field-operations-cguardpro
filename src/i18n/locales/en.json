@@ -588,7 +588,9 @@
     "expectedDeparture": "Exp. Departure",
     "checkedIn": "Checked In",
     "camera": "Camera",
-    "facePhotoLabel": "Photo of the person"
+    "facePhotoLabel": "Photo of the person",
+    "noPermission": "You don't have permission to register visitors at this post.",
+    "saveFailed": "Couldn't register the visit. Check the details and try again."
   },
   "panic": {
     "title": "Panic alert",
@@ -771,7 +773,8 @@
     "cameraError": "Couldn't access the camera. Check permissions.",
     "retake": "Retake",
     "confirm": "Confirm clock-in",
-    "retry": "Retry"
+    "retry": "Retry",
+    "insecureOrigin": "The camera needs a secure connection."
   },
   "consignas": {
     "title": "Today's standing orders",
@@ -963,7 +966,12 @@
     "micUnavailable": "Recording is not available on this device.",
     "micDenied": "Could not access the microphone. Check permissions.",
     "reportByVoice": "Report by voice",
-    "timeUp": "Time's up"
+    "timeUp": "Time's up",
+    "xTalking": "{{name}} is talking",
+    "micPermissionHint": "Turn on the microphone permission in Profile → Permissions.",
+    "micAccessError": "Couldn't access the microphone.",
+    "connectError": "Couldn't connect the radio.",
+    "notConnected": "Radio not connected"
   },
   "map": {
     "openInMaps": "View on map",
@@ -1032,7 +1040,9 @@
     "title": "Messages",
     "toOffice": "To the office",
     "tooBig": "Maximum 100 MB.",
-    "uploadFailed": "Couldn't upload the file."
+    "uploadFailed": "Couldn't upload the file.",
+    "company": "Company",
+    "imageAlt": "image"
   },
   "brand": {
     "tagline": "Security Operations"
@@ -1061,7 +1071,8 @@
     "pendingMany": "actions pending to send",
     "pendingOne": "action pending to send",
     "queuedReport": "Offline — the report will be sent when you reconnect.",
-    "syncing": "Sending pending actions…"
+    "syncing": "Sending pending actions…",
+    "connectionError": "No connection. Check your network and try again."
   },
   "notifications": {
     "clear": "Clear",
@@ -1138,5 +1149,18 @@
   },
   "visitors": {
     "all": "All"
+  },
+  "dash": {
+    "countdownDaysHours": "IN {{d}}D {{h}}H",
+    "countdownHoursMins": "IN {{h}}H {{m}}M",
+    "countdownMins": "IN {{m}}M"
+  },
+  "audio": {
+    "notSupported": "Audio recording isn't available on this device.",
+    "noneInProgress": "No recording in progress."
+  },
+  "location": {
+    "bgMessage": "Your location is shared with the control center while you're on shift.",
+    "bgTitle": "On shift"
   }
 }

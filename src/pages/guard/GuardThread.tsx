@@ -342,6 +342,7 @@ function MsgAvatar({ m }: { m: any }) {
 }
 
 function Attachments({ m, onImageTap }: { m: any; onImageTap?: (url: string) => void }) {
+  const { t } = useTranslation();
   if (!Array.isArray(m.attachments) || m.attachments.length === 0) return null;
   return (
     <div className="mb-1 grid gap-1.5">
@@ -349,7 +350,7 @@ function Attachments({ m, onImageTap }: { m: any; onImageTap?: (url: string) => 
         a.type === "video" ? <AttachmentVideo key={a.id || a.url || i} src={a.url} className="max-h-64 w-full rounded-lg bg-surface-2" />
           : a.type === "audio" ? <AttachmentAudio key={a.id || a.url || i} src={a.url} />
           : <button key={a.id || a.url || i} type="button" onClick={() => { fb.tap(); onImageTap?.(a.url); }} className="block">
-              <AttachmentImage src={a.url} alt={a.name || "imagen"} className="max-h-64 w-full rounded-lg object-cover" />
+              <AttachmentImage src={a.url} alt={a.name || t("messages.imageAlt", "imagen")} className="max-h-64 w-full rounded-lg object-cover" />
             </button>
       ))}
     </div>

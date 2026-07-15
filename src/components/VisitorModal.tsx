@@ -41,6 +41,7 @@ import { SkeletonList, EmptyState } from "./ui";
 import { Button, SectionCard, SectionHeader, InfoCell, StatusPill, IconTile } from "./ui/kit";
 import { compressImage, takeNativePhoto, isNative, CapturedImage } from "@/lib/capture";
 import { scanId } from "@/lib/ocr";
+import i18n from "@/i18n";
 
 type Mode = "list" | "detail" | "choose" | "capture" | "form" | "vehicle";
 const ID_TYPES = ["cedula", "passport", "license", "other"] as const;
@@ -84,10 +85,10 @@ const EMPTY: Fields = {
 function friendlyVisitError(e: any): string {
   const status = e?.status;
   const msg: string | undefined = e?.message;
-  if (status === 0) return "Sin conexión. Revisa tu internet e intenta de nuevo.";
-  if (status === 403) return "No tienes permiso para registrar visitas en este puesto.";
+  if (status === 0) return i18n.t("visitor.preauth.networkError", "Sin conexión. Revisa tu internet e intenta de nuevo.");
+  if (status === 403) return i18n.t("visitor.noPermission", "No tienes permiso para registrar visitas en este puesto.");
   if (status === 404 || !msg || msg === "Extraviado") {
-    return "No se pudo registrar la visita. Verifica los datos e intenta de nuevo.";
+    return i18n.t("visitor.saveFailed", "No se pudo registrar la visita. Verifica los datos e intenta de nuevo.");
   }
   return msg;
 }

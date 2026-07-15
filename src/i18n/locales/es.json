@@ -588,7 +588,9 @@
     "expectedDeparture": "Salida est.",
     "checkedIn": "Dentro",
     "camera": "Cámara",
-    "facePhotoLabel": "Foto de la persona"
+    "facePhotoLabel": "Foto de la persona",
+    "noPermission": "No tienes permiso para registrar visitas en este puesto.",
+    "saveFailed": "No se pudo registrar la visita. Verifica los datos e intenta de nuevo."
   },
   "panic": {
     "title": "Alerta de pánico",
@@ -771,7 +773,8 @@
     "cameraError": "No se pudo acceder a la cámara. Revisa los permisos.",
     "retake": "Repetir",
     "confirm": "Confirmar entrada",
-    "retry": "Reintentar"
+    "retry": "Reintentar",
+    "insecureOrigin": "La cámara necesita una conexión segura."
   },
   "consignas": {
     "title": "Consignas de hoy",
@@ -963,7 +966,12 @@
     "micUnavailable": "La grabación no está disponible en este dispositivo.",
     "micDenied": "No se pudo acceder al micrófono. Revisa los permisos.",
     "reportByVoice": "Reportar por voz",
-    "timeUp": "Tiempo agotado"
+    "timeUp": "Tiempo agotado",
+    "xTalking": "{{name}} está hablando",
+    "micPermissionHint": "Activa el permiso de micrófono en Perfil → Permisos.",
+    "micAccessError": "No se pudo acceder al micrófono.",
+    "connectError": "No se pudo conectar la radio",
+    "notConnected": "Radio no conectada"
   },
   "map": {
     "openInMaps": "Ver en mapa",
@@ -1032,7 +1040,9 @@
     "title": "Mensajes",
     "toOffice": "Para la oficina",
     "tooBig": "Máximo 100 MB.",
-    "uploadFailed": "No se pudo subir el archivo."
+    "uploadFailed": "No se pudo subir el archivo.",
+    "company": "Empresa",
+    "imageAlt": "imagen"
   },
   "brand": {
     "tagline": "Security Operations"
@@ -1061,7 +1071,8 @@
     "pendingMany": "acciones pendientes por enviar",
     "pendingOne": "acción pendiente por enviar",
     "queuedReport": "Sin conexión — el reporte se enviará al reconectar.",
-    "syncing": "Enviando acciones pendientes…"
+    "syncing": "Enviando acciones pendientes…",
+    "connectionError": "Sin conexión. Verifica tu red e inténtalo de nuevo."
   },
   "notifications": {
     "clear": "Limpiar",
@@ -1138,5 +1149,18 @@
   },
   "visitors": {
     "all": "Todas"
+  },
+  "dash": {
+    "countdownDaysHours": "EN {{d}}D {{h}}H",
+    "countdownHoursMins": "EN {{h}}H {{m}}M",
+    "countdownMins": "EN {{m}}M"
+  },
+  "audio": {
+    "notSupported": "La grabación de audio no está disponible en este dispositivo.",
+    "noneInProgress": "No hay grabación en curso."
+  },
+  "location": {
+    "bgMessage": "Tu ubicación se comparte con la central mientras estás en turno.",
+    "bgTitle": "Turno activo"
   }
 }

@@ -10,6 +10,8 @@
  * enable it later: `npm i @capacitor-community/voice-recorder && npx cap sync`
  * plus the mic permission strings, then this module picks it up automatically.
  */
+import i18n from "@/i18n";
+
 export type Recording = { file: File; durationMs: number };
 
 let mediaRecorder: MediaRecorder | null = null;
@@ -39,7 +41,7 @@ function extFor(type: string): string {
 }
 
 export async function startRecording(): Promise<void> {
-  if (!isRecordingSupported()) throw new Error('La grabación de audio no está disponible en este dispositivo.');
+  if (!isRecordingSupported()) throw new Error(i18n.t('audio.notSupported', 'La grabación de audio no está disponible en este dispositivo.'));
   // A second start before stop (double-tap / re-entry race) would otherwise
   // orphan the prior MediaStream — its tracks stay live (mic hot, OS indicator
   // on). Tear down anything in flight first.
@@ -56,7 +58,7 @@ export async function startRecording(): Promise<void> {
 export async function stopRecording(): Promise<Recording> {
   return new Promise<Recording>((resolve, reject) => {
     const mr = mediaRecorder;
-    if (!mr) return reject(new Error('No hay grabación en curso.'));
+    if (!mr) return reject(new Error(i18n.t('audio.noneInProgress', 'No hay grabación en curso.')));
     mr.onstop = () => {
       const durationMs = Date.now() - startedAt;
       const type = mr.mimeType || (chunks[0] as Blob)?.type || 'audio/webm';

@@ -22,6 +22,7 @@ import {
   type RemoteTrack,
   type Participant,
 } from "livekit-client";
+import i18n from "@/i18n";
 
 export type VoiceMember = { userId: string; name: string; role: string };
 export type VoiceSpeaker = { userId: string; name: string } | null;
@@ -150,7 +151,7 @@ export class VoiceChannel {
       } catch { /* user can still grant on first PTT */ }
     } catch (e: any) {
       this.cb.onState?.("error");
-      this.cb.onError?.(e?.message || "No se pudo conectar la radio");
+      this.cb.onError?.(e?.message || i18n.t("radio.connectError", "No se pudo conectar la radio"));
     }
   }
 
@@ -187,12 +188,12 @@ export class VoiceChannel {
   }
 
   async startTalk(): Promise<{ ok: boolean; busyWith?: string; error?: string }> {
-    if (!this.room || !this.connected) return { ok: false, error: "Radio no conectada" };
+    if (!this.room || !this.connected) return { ok: false, error: i18n.t("radio.notConnected", "Radio no conectada") };
     try {
       await this.room.localParticipant.setMicrophoneEnabled(true);
       return { ok: true };
     } catch (e: any) {
-      return { ok: false, error: e?.message || "No se pudo acceder al micrófono" };
+      return { ok: false, error: e?.message || i18n.t("radio.micAccessError", "No se pudo acceder al micrófono.") };
     }
   }
 

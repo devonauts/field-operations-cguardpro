@@ -426,7 +426,7 @@ export function SelfieClockIn({
                   <p className="max-w-full break-words px-2 text-[11px] text-faint">
                     {camError}
                     {!(window as any).isSecureContext
-                      ? " · (origen no seguro: la cámara requiere HTTPS o localhost)"
+                      ? ` · ${t("selfie.insecureOrigin", "La cámara necesita una conexión segura.")}`
                       : ""}
                   </p>
                   <button

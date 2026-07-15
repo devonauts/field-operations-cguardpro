@@ -1,6 +1,7 @@
 // Lightweight fetch-based API client for the worker app.
 // Mirrors the conventions of the main frontend: JWT bearer in localStorage
 // ("authToken"), credentials included, JSON in/out, and graceful error shape.
+import i18n from "@/i18n";
 
 const API_BASE_URL = (
   (import.meta.env.VITE_API_URL as string | undefined) ??
@@ -144,7 +145,7 @@ async function doRequest<T = any>(
     // A caller-initiated cancellation (AbortController — e.g. useAsync on unmount)
     // must propagate as-is, NOT be surfaced as a connectivity error.
     if (err?.name === "AbortError" || (rest as any).signal?.aborted) throw err;
-    throw new ApiError("Sin conexión. Verifica tu red e inténtalo de nuevo.", 0, null);
+    throw new ApiError(i18n.t("net.connectionError", "Sin conexión. Verifica tu red e inténtalo de nuevo."), 0, null);
   }
 
   const contentType = res.headers.get("content-type") || "";

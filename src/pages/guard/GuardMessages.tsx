@@ -19,17 +19,17 @@ const newId = () =>
 
 type Chip = "all" | "unread";
 
-function nameOf(c: any): string {
-  return c.recipientName || c.counterpartName || c.subject || "Empresa";
+function nameOf(c: any, t?: any): string {
+  return c.recipientName || c.counterpartName || c.subject || (t ? t("messages.company", "Empresa") : "Empresa");
 }
-function fmtTime(iso?: string | null): string {
+function fmtTime(iso: string | null | undefined, t?: any): string {
   if (!iso) return "";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
   const today = new Date(); const y = new Date(); y.setDate(today.getDate() - 1);
   const same = (a: Date, b: Date) => a.toDateString() === b.toDateString();
   if (same(d, today)) return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-  if (same(d, y)) return "Ayer";
+  if (same(d, y)) return t ? t("incidents.yesterday", "Ayer") : "Ayer";
   return d.toLocaleDateString([], { day: "numeric", month: "short" });
 }
 
@@ -50,7 +50,8 @@ function ConvAvatar({ c }: { c: any }) {
 }
 
 function ConvRow({ c, onOpen, onLongPress }: { c: any; onOpen: (c: any) => void; onLongPress: (c: any) => void }) {
-  const preview = c.lastMessagePreview || (c.isGroup ? "Grupo" : "");
+  const { t } = useTranslation();
+  const preview = c.lastMessagePreview || (c.isGroup ? t("messages.group", "Grupo") : "");
   const [sender, ...rest] = String(preview).split(/:\s(.+)/);
   const hasSender = rest.length > 0;
   const timer = useRef<any>(null);
@@ -71,8 +72,8 @@ function ConvRow({ c, onOpen, onLongPress }: { c: any; onOpen: (c: any) => void;
       <ConvAvatar c={c} />
       <span className="min-w-0 flex-1">
         <span className="flex items-center justify-between gap-2">
-          <span className={`truncate ${styles.name}`}>{nameOf(c)}</span>
-          <span className={styles.time}>{fmtTime(c.lastMessageAt)}</span>
+          <span className={`truncate ${styles.name}`}>{nameOf(c, t)}</span>
+          <span className={styles.time}>{fmtTime(c.lastMessageAt, t)}</span>
         </span>
         <span className="mt-0.5 flex items-center gap-1.5">
           <span className={`min-w-0 flex-1 truncate ${styles.preview}`}>
@@ -100,7 +101,7 @@ export default function GuardMessages() {
 
   const confirmDelete = useCallback((c: any) => {
     presentActionSheet({
-      header: nameOf(c),
+      header: nameOf(c, t),
       subHeader: t("messages.deleteHint", "Se eliminará solo para ti."),
       buttons: [
         { text: t("messages.deleteChat", "Eliminar conversación"), role: "destructive", handler: () => { messageService.remove(String(c.id)).then(() => reload()).catch(() => {}); } },
@@ -124,10 +125,10 @@ export default function GuardMessages() {
     if (chip === "unread") list = list.filter((c) => (c.unreadCount || 0) > 0);
     if (q.trim()) {
       const s = q.toLowerCase();
-      list = list.filter((c) => `${nameOf(c)} ${c.lastMessagePreview || ""}`.toLowerCase().includes(s));
+      list = list.filter((c) => `${nameOf(c, t)} ${c.lastMessagePreview || ""}`.toLowerCase().includes(s));
     }
     return list;
-  }, [rows, chip, q]);
+  }, [rows, chip, q, t]);
 
   const onSent = async (conversationId: string) => {
     setComposing(false);

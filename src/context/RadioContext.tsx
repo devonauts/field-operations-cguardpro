@@ -15,6 +15,7 @@ import { ensureMicPermission } from "@/lib/micPermission";
 import { getDuty, subscribeDuty } from "@/lib/dutyState";
 import { startBackgroundAudio, stopBackgroundAudio } from "@/lib/backgroundAudio";
 import { App as CapApp } from "@capacitor/app";
+import i18n from "@/i18n";
 
 interface RadioContextValue {
   onDuty: boolean;
@@ -198,22 +199,22 @@ export function RadioProvider({ children }: { children: ReactNode }) {
     if (!vc || state === "connecting") return;
     const sp = speakerRef.current;
     if (sp && sp.userId !== myId) {
-      setHint(`${sp.name} está hablando`);
+      setHint(i18n.t("radio.xTalking", { name: sp.name, defaultValue: "{{name}} está hablando" }));
       return;
     }
     pressedRef.current = true;
     setHint(null);
     if (!(await ensureMicPermission())) {
       pressedRef.current = false;
-      setHint("Activa el permiso de micrófono en Perfil → Permisos.");
+      setHint(i18n.t("radio.micPermissionHint", "Activa el permiso de micrófono en Perfil → Permisos."));
       return;
     }
     if (!pressedRef.current) return; // released during the permission prompt
     const r = await vc.startTalk();
     if (!pressedRef.current) { vc.stopTalk(); return; } // released mid-acquire
     if (r?.ok) setTalking(true);
-    else if (r?.busyWith) setHint(`${r.busyWith} está hablando`);
-    else setHint(r?.error || "No se pudo acceder al micrófono.");
+    else if (r?.busyWith) setHint(i18n.t("radio.xTalking", { name: r.busyWith, defaultValue: "{{name}} está hablando" }));
+    else setHint(r?.error || i18n.t("radio.micAccessError", "No se pudo acceder al micrófono."));
   }, [state, myId]);
 
   const releaseTalk = useCallback(() => {
