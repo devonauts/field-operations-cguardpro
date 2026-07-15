@@ -45,7 +45,7 @@ function MemoAckList() {
       <div className="space-y-3">
         {pending.map((m: any) => (
           <Card key={m.id} className="!border-gold/40 p-4">
-            <p className="text-sm font-semibold text-ink">{m.title || m.subject || "Memorando"}</p>
+            <p className="text-sm font-semibold text-ink">{m.title || m.subject || t("notices.memoFallback", { defaultValue: "Memorando" })}</p>
             {(m.description || m.body || m.message) && (
               <p className="mt-0.5 text-xs text-muted">{m.description || m.body || m.message}</p>
             )}

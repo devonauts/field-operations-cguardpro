@@ -97,7 +97,8 @@
     "empty": "Aún no tienes avisos",
     "new": "Nuevo",
     "memoAck": "Recibido",
-    "memosPending": "Memorandos por confirmar"
+    "memosPending": "Memorandos por confirmar",
+    "memoFallback": "Memorando"
   },
   "timeoff": {
     "title": "Permisos",
@@ -1162,5 +1163,12 @@
   "location": {
     "bgMessage": "Tu ubicación se comparte con la central mientras estás en turno.",
     "bgTitle": "Turno activo"
+  },
+  "imageViewer": {
+    "edit": "Editar",
+    "download": "Descargar",
+    "clearAll": "Borrar todo",
+    "undo": "Deshacer",
+    "send": "Enviar"
   }
 }

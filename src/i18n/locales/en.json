@@ -97,7 +97,8 @@
     "empty": "No notices yet",
     "new": "New",
     "memoAck": "Received",
-    "memosPending": "Notices to confirm"
+    "memosPending": "Notices to confirm",
+    "memoFallback": "Memo"
   },
   "timeoff": {
     "title": "Time off",
@@ -1162,5 +1163,12 @@
   "location": {
     "bgMessage": "Your location is shared with the control center while you're on shift.",
     "bgTitle": "On shift"
+  },
+  "imageViewer": {
+    "edit": "Edit",
+    "download": "Download",
+    "clearAll": "Clear all",
+    "undo": "Undo",
+    "send": "Send"
   }
 }

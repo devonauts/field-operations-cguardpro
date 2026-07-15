@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { IonModal } from "@ionic/react";
 import { X, Download, Pencil, Undo2, Send, Eraser } from "lucide-react";
 import { useFileUrl } from "@/lib/fileUrl";
@@ -47,6 +48,7 @@ export function ImageViewer({
 /* ------------------------------------------------------------------ viewer */
 
 function Viewer({ url, onClose, onEdit }: { url: string; onClose: () => void; onEdit: () => void }) {
+  const { t } = useTranslation();
   const imgRef = useRef<HTMLImageElement>(null);
   const state = useRef({ scale: 1, tx: 0, ty: 0 });
   const [, force] = useState(0);
@@ -106,10 +108,10 @@ function Viewer({ url, onClose, onEdit }: { url: string; onClose: () => void; on
   return (
     <>
       <div className="safe-top absolute inset-x-0 top-0 z-10 flex items-center justify-between px-3 py-2">
-        <button type="button" aria-label="Cerrar" onClick={() => { fb.tap(); onClose(); }} className="grid h-10 w-10 place-items-center rounded-full bg-black/40 text-white active:bg-black/60"><X size={24} /></button>
+        <button type="button" aria-label={t("app.close", "Cerrar")} onClick={() => { fb.tap(); onClose(); }} className="grid h-10 w-10 place-items-center rounded-full bg-black/40 text-white active:bg-black/60"><X size={24} /></button>
         <div className="flex items-center gap-2">
-          <button type="button" aria-label="Editar" onClick={() => { fb.tap(); onEdit(); }} className="grid h-10 w-10 place-items-center rounded-full bg-black/40 text-white active:bg-black/60"><Pencil size={21} /></button>
-          <button type="button" aria-label="Descargar" onClick={download} className="grid h-10 w-10 place-items-center rounded-full bg-black/40 text-white active:bg-black/60"><Download size={21} /></button>
+          <button type="button" aria-label={t("imageViewer.edit", "Editar")} onClick={() => { fb.tap(); onEdit(); }} className="grid h-10 w-10 place-items-center rounded-full bg-black/40 text-white active:bg-black/60"><Pencil size={21} /></button>
+          <button type="button" aria-label={t("imageViewer.download", "Descargar")} onClick={download} className="grid h-10 w-10 place-items-center rounded-full bg-black/40 text-white active:bg-black/60"><Download size={21} /></button>
         </div>
       </div>
       <div
@@ -131,6 +133,7 @@ function Viewer({ url, onClose, onEdit }: { url: string; onClose: () => void; on
 /* ------------------------------------------------------------------ editor */
 
 function Editor({ url, onCancel, onDone }: { url: string; onCancel: () => void; onDone: (file: File) => void }) {
+  const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const strokes = useRef<Stroke[]>([]);
@@ -210,10 +213,10 @@ function Editor({ url, onCancel, onDone }: { url: string; onCancel: () => void; 
   return (
     <>
       <div className="safe-top absolute inset-x-0 top-0 z-10 flex items-center justify-between px-3 py-2">
-        <button type="button" aria-label="Cancelar" onClick={() => { fb.tap(); onCancel(); }} className="grid h-10 w-10 place-items-center rounded-full bg-black/40 text-white active:bg-black/60"><X size={24} /></button>
+        <button type="button" aria-label={t("app.cancel", "Cancelar")} onClick={() => { fb.tap(); onCancel(); }} className="grid h-10 w-10 place-items-center rounded-full bg-black/40 text-white active:bg-black/60"><X size={24} /></button>
         <div className="flex items-center gap-2">
-          <button type="button" aria-label="Borrar todo" onClick={clear} className="grid h-10 w-10 place-items-center rounded-full bg-black/40 text-white active:bg-black/60"><Eraser size={20} /></button>
-          <button type="button" aria-label="Deshacer" onClick={undo} disabled={!strokes.current.length} className="grid h-10 w-10 place-items-center rounded-full bg-black/40 text-white active:bg-black/60 disabled:opacity-40"><Undo2 size={20} /></button>
+          <button type="button" aria-label={t("imageViewer.clearAll", "Borrar todo")} onClick={clear} className="grid h-10 w-10 place-items-center rounded-full bg-black/40 text-white active:bg-black/60"><Eraser size={20} /></button>
+          <button type="button" aria-label={t("imageViewer.undo", "Deshacer")} onClick={undo} disabled={!strokes.current.length} className="grid h-10 w-10 place-items-center rounded-full bg-black/40 text-white active:bg-black/60 disabled:opacity-40"><Undo2 size={20} /></button>
         </div>
       </div>
 
@@ -238,7 +241,7 @@ function Editor({ url, onCancel, onDone }: { url: string; onCancel: () => void; 
           ))}
         </div>
         <button type="button" onClick={done} disabled={busy} className="flex min-h-[3.25rem] items-center gap-2.5 rounded-full bg-gold px-8 py-3.5 text-[15px] font-bold text-on-accent disabled:opacity-50">
-          <Send size={18} />Enviar
+          <Send size={18} />{t("imageViewer.send", "Enviar")}
         </button>
       </div>
     </>
