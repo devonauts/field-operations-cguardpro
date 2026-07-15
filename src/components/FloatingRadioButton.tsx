@@ -4,7 +4,7 @@ import { Mic, Loader2, Volume2 } from "lucide-react";
 import { useRadio } from "@/context/RadioContext";
 
 const POS_KEY = "radioMicFabPos";
-const SIZE = 64;
+const SIZE = 96; // touch-target diameter in px (must match the h-24/w-24 button)
 
 /** Resolved safe-area-inset-bottom in px (home indicator height). A CSS custom
  *  property stores the unresolved env() token, so measure it with a probe. */
@@ -127,16 +127,16 @@ export default function FloatingRadioButton() {
         onPointerCancel={onUp}
         onContextMenu={(e) => e.preventDefault()}
         style={{ touchAction: "none", WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" } as any}
-        className={`no-press relative grid h-16 w-16 place-items-center rounded-full ${canTalk ? "" : "opacity-70"}`}
+        className={`no-press relative grid h-24 w-24 place-items-center rounded-full ${canTalk ? "" : "opacity-70"}`}
         aria-label={t("radio.holdToTalkChannel", "Mantén para hablar en el canal")}
       >
         <span className={`absolute inset-0 rounded-full ${talking ? "bg-critical/25 animate-ping" : someoneElseTalking ? "bg-gold/25 animate-pulse" : "bg-gold/15"}`} />
         <span
-          className={`relative grid h-14 w-14 place-items-center rounded-full text-on-accent shadow-[0_8px_30px_-6px_rgba(212,160,23,0.7)] transition-transform ${
+          className={`relative grid h-[88px] w-[88px] place-items-center rounded-full text-on-accent shadow-[0_8px_30px_-6px_rgba(212,160,23,0.7)] transition-transform ${
             talking ? "scale-110 bg-critical text-white" : "bg-gold"
           }`}
         >
-          {connecting ? <Loader2 size={24} className="animate-spin" /> : someoneElseTalking ? <Volume2 size={24} /> : <Mic size={24} strokeWidth={2.2} />}
+          {connecting ? <Loader2 size={38} className="animate-spin" /> : someoneElseTalking ? <Volume2 size={38} /> : <Mic size={38} strokeWidth={2.2} />}
         </span>
       </button>
       </div>
