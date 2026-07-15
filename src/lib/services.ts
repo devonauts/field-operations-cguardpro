@@ -82,6 +82,9 @@ export const guardService = {
         tenantPath("/guard/me/clock-in/request?stationId=" + encodeURIComponent(stationId)),
       )
       .then(unwrap),
+  /** Latest late clock-in request for TODAY across stations (rehydrate after app restart). */
+  clockInRequestGetLatest: () =>
+    api.get(tenantPath("/guard/me/clock-in/request")).then(unwrap),
   /** Update my own contact details (phone/address/photo) — notifies HR in the CRM. */
   updateProfile: (data: { phone?: string; address?: string; profileImage?: any[] }) =>
     api.patch(tenantPath("/guard/me/profile"), { data }).then(unwrap),

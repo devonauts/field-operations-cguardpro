@@ -7,6 +7,7 @@ import { StatusChip } from "@/components/ui/kit";
 import { useAsync } from "@/lib/useAsync";
 import { guardService } from "@/lib/services";
 import { getCurrentPosition } from "@/lib/geo";
+import { onPush } from "@/lib/pushEvents";
 import { ClockOutFlow } from "@/components/ClockOutFlow";
 
 function useElapsed(since: any): { clock: string; label: string } {
@@ -36,6 +37,28 @@ const fmtClock = (d: any) => {
 export default function GuardShiftDetail() {
   const { t } = useTranslation();
   const { data, loading, reload } = useAsync(() => guardService.dashboard());
+
+  // Live early-clock-out decision on THIS screen — the one that actually hosts
+  // the clock-out button. The dashboard's poll/push only refreshed its own
+  // copy of the data, so the button here never flipped to "aprobada" without a
+  // manual pull-to-refresh. reload() is silent (no loading flash).
+  const pendingClockOut = data?.clockOutRequest?.status === "pending";
+  useEffect(() => {
+    if (!pendingClockOut) return;
+    const id = setInterval(() => { reload(); }, 6000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingClockOut]);
+  useEffect(() => {
+    const off = onPush((d: any) => {
+      const type = d?.type || d?.data?.type;
+      if (type === "attendance.clockout_approved" || type === "attendance.clockout_rejected") {
+        reload();
+      }
+    });
+    return off;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const punchInTime = data?.activeClockIn?.punchInTime || data?.activeClockIn?.createdAt;
   const elapsed = useElapsed(punchInTime);

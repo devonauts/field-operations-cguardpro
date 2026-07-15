@@ -231,6 +231,29 @@ export default function GuardDashboard() {
     }
   };
 
+  // Rehydrate a PENDING late clock-in request across app restarts. The request
+  // state above is session-local; without this, killing the app while waiting
+  // silently dropped the pending banner and the decision poll (the only
+  // recovery was the push notification or re-attempting the punch).
+  useEffect(() => {
+    if (isClockedIn || clockInReqStationId) return;
+    let active = true;
+    (async () => {
+      try {
+        const r: any = await guardService.clockInRequestGetLatest();
+        const req = r?.request;
+        if (active && req && req.status === "pending" && req.stationId) {
+          setClockInReqStationId(req.stationId);
+          setClockInReqStatus("pending");
+        }
+      } catch {
+        /* best-effort — the poll/push paths still work once state is set */
+      }
+    })();
+    return () => { active = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isClockedIn, user?.id]);
+
   // Live late clock-in decision: while a request is PENDING, poll the status
   // endpoint so the UI flips the moment the supervisor decides. Mirrors the
   // early-clock-out poll below; the push listener is the instant path.
