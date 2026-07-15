@@ -17,7 +17,12 @@
     "refresh": "Refresh",
     "takePhoto": "Take photo",
     "fromGallery": "Gallery",
-    "remove": "Remove"
+    "remove": "Remove",
+    "loadError": "Couldn't load",
+    "loadErrorHint": "Check your connection and try again.",
+    "off": "Off",
+    "ok": "OK",
+    "on": "On"
   },
   "auth": {
     "signIn": "Sign in",
@@ -33,7 +38,34 @@
     "errorGeneric": "Could not sign in. Check your credentials.",
     "errorNotAllowed": "This app is only for security guards and supervisors.",
     "errorNoRole": "Your account has no guard or supervisor role assigned.",
-    "rateLimited": "Too many attempts. Try again in a few seconds."
+    "rateLimited": "Too many attempts. Try again in a few seconds.",
+    "forgot": {
+      "back": "Sign in",
+      "continue": "Continue",
+      "error": "We couldn't process your request. Check your connection and try again.",
+      "invalidEmail": "Enter a valid email address.",
+      "link": "Forgot your password?",
+      "send": "Send link",
+      "sending": "Sending…",
+      "sentBody": "If an account exists for that email, we've sent a link to reset your password. Check your inbox.",
+      "sentTitle": "Check your email",
+      "subtitle": "Enter your email and we'll send you a link to reset your password.",
+      "title": "Reset password"
+    },
+    "reset": {
+      "cancel": "Cancel",
+      "confirm": "Confirm password",
+      "error": "The link is invalid or expired. Request a new one.",
+      "goLogin": "Go to sign in",
+      "mismatch": "The passwords don't match.",
+      "newPassword": "New password",
+      "saving": "Saving…",
+      "submit": "Save password",
+      "subtitle": "Create a new password for your account.",
+      "success": "Your password was updated. You can sign in now.",
+      "title": "Reset password",
+      "tooShort": "Password must be at least 8 characters."
+    }
   },
   "roles": {
     "securityGuard": "Security Guard",
@@ -52,13 +84,20 @@
     "timeOff": "Time off",
     "quiz": "Test",
     "training": "Training",
-    "backup": "Backup"
+    "backup": "Backup",
+    "home": "Home",
+    "messages": "Messages",
+    "radio": "Radio",
+    "visitors": "Visitors",
+    "you": "Profile"
   },
   "notices": {
     "title": "Notices",
     "subtitle": "Announcements from your company",
     "empty": "No notices yet",
-    "new": "New"
+    "new": "New",
+    "memoAck": "Received",
+    "memosPending": "Notices to confirm"
   },
   "timeoff": {
     "title": "Time off",
@@ -113,7 +152,34 @@
     "myIncidents": "My incidents",
     "timeOff": "Time off",
     "requestTimeOff": "Request time off",
-    "clockInForShift": "For your {{time}} shift"
+    "clockInForShift": "For your {{time}} shift",
+    "allZones": "Zones",
+    "assignedPosts": "Posts",
+    "checkpoints": "Checkpoints",
+    "clockInDone": "Clock-in registered",
+    "clockInHint": "You can clock in up to 15 minutes before your shift.",
+    "clockInNow": "Clock in",
+    "currentStatus": "Current status",
+    "distance": "Distance",
+    "duration": "Duration",
+    "errGeneric": "Couldn't clock in. Check your shift and try again.",
+    "errLocation": "Turn on GPS to clock in.",
+    "errNotScheduled": "You're not scheduled for this post today. If it's your day off, you don't need to clock in.",
+    "errProfile": "We couldn't find your guard profile. Contact your supervisor.",
+    "errStation": "Select a valid post.",
+    "guard": "Guard",
+    "hours30": "Hours · 30d",
+    "inProgress": "In progress",
+    "inactive": "Inactive",
+    "incidents": "Incidents",
+    "lastShift": "Last shift",
+    "myPost": "My post",
+    "restDayNext": "You have no shift today. Your next shift appears below.",
+    "restDayNone": "You have no shift scheduled today. No need to clock in.",
+    "restDayTitle": "Day off",
+    "secured": "Secured",
+    "today": "Today",
+    "tomorrow": "Tomorrow"
   },
   "late": {
     "title": "You're late for your shift",
@@ -229,7 +295,9 @@
     "viewOnMap": "View on map",
     "quickReport": "Quick report",
     "gpsLocating": "Locating…",
-    "gpsRetry": "GPS — retry"
+    "gpsRetry": "GPS — retry",
+    "today": "Today",
+    "yesterday": "Yesterday"
   },
   "patrol": {
     "title": "Patrol Tracking",
@@ -262,7 +330,16 @@
     "eveShift": "Evening shift",
     "nightShift": "Night shift",
     "fromPrevDay": "(prev. day)",
-    "toNextDay": "(continues)"
+    "toNextDay": "(continues)",
+    "day": "Day",
+    "freeDay": "Day off",
+    "legendFree": "Day off",
+    "legendShift": "Shift",
+    "month": "Month",
+    "noShiftsDay": "No shifts this day",
+    "timeOffApproved": "Time off approved",
+    "today": "Today",
+    "week": "Week"
   },
   "reports": {
     "title": "Reports & Analytics",
@@ -338,7 +415,16 @@
     "syncNow": "Sync now",
     "synced": "All checkpoints synced",
     "history": "My patrol history",
-    "noHistory": "No patrols yet"
+    "noHistory": "No patrols yet",
+    "allCheckpoints": "Checkpoints",
+    "chooseRoute": "Choose a patrol",
+    "clockInFirstBody": "Your company requires an active shift for patrol scans to count.",
+    "clockInFirstTitle": "Clock in to start patrols",
+    "invalidLocation": "Location out of range",
+    "notScanned": "Not scanned",
+    "outOfLocationServer": "Scan registered OUT of location: {{dist}} m from the checkpoint (max {{max}} m).",
+    "startWithPlus": "Tap + above to start a patrol.",
+    "validLocation": "Valid location"
   },
   "onduty": {
     "liveAlerts": "Incidents",
@@ -358,7 +444,47 @@
     "earlyOutReasonRequired": "Enter a reason to continue.",
     "earlyOutReasonSubmit": "Send request",
     "earlyOutCancel": "Cancel",
-    "earlyOutRequestSent": "Request sent. Wait for your supervisor’s approval."
+    "earlyOutRequestSent": "Request sent. Wait for your supervisor’s approval.",
+    "activeCount": "{{n}} active",
+    "activePatrol": "Active patrol",
+    "allCleared": "Patrol complete",
+    "cancelRequest": "Cancel",
+    "checkpointsCleared": "{{a}} of {{b}} checkpoints cleared",
+    "checkpointsWord": "Checkpoints",
+    "clockOutApprovedToast": "Your clock-out was approved. You can clock out now.",
+    "clockOutDone": "Clock-out registered",
+    "clockOutFailed": "Couldn't clock out.",
+    "clockOutRejectedToast": "Your clock-out request was rejected.",
+    "continue": "Continue",
+    "currentShift": "Current shift",
+    "deviceOnline": "Online",
+    "elapsed": "Elapsed",
+    "elapsedTime": "Time on shift",
+    "endsAt": "Ends",
+    "event": "Event",
+    "gpsVerified": "GPS verified",
+    "incidents": "Incidents",
+    "insideGeofence": "Inside geofence",
+    "nextCheckpoint": "Next checkpoint",
+    "noAlerts": "No active alerts.",
+    "noRoute": "No route",
+    "onDuty": "On duty",
+    "openPatrol": "Open patrol",
+    "pendingHint": "Waiting for supervisor approval. You can resend or cancel the request.",
+    "remaining": "{{r}} left",
+    "remainingShort": "{{r}} left",
+    "resendRequest": "Resend",
+    "salidaWord": "Clock-out",
+    "shiftWord": "Shift",
+    "startRound": "Start your patrol",
+    "started": "Started",
+    "tasks": "Shift tasks",
+    "teamOnDuty": "Team on duty",
+    "turnoEndsAt": "Your shift ends at {{time}}",
+    "viewAll": "View all",
+    "zoneAlert": "alert",
+    "zoneClear": "clear",
+    "zonePatrol": "patrol"
   },
   "features": {
     "visitors": "Visitors",
@@ -460,7 +586,9 @@
     "badge": "Badge",
     "vehicle": "Vehicle",
     "expectedDeparture": "Exp. Departure",
-    "checkedIn": "Checked In"
+    "checkedIn": "Checked In",
+    "camera": "Camera",
+    "facePhotoLabel": "Photo of the person"
   },
   "panic": {
     "title": "Panic alert",
@@ -579,7 +707,38 @@
     "takeSelfie": "Take a selfie",
     "choosePhoto": "Choose from gallery",
     "removePhoto": "Remove photo",
-    "photoError": "Could not upload the photo. Please try again."
+    "photoError": "Could not upload the photo. Please try again.",
+    "diagnostics": "Diagnostics",
+    "diagnosticsSub": "Device error log",
+    "employeeId": "Employee ID",
+    "groupAccount": "My account",
+    "groupDevice": "Device & app",
+    "joined": "Joined",
+    "languageSub": "Español / English",
+    "logsCount": "logs",
+    "metricCompliance": "Compliance",
+    "metricPatrols": "Patrols completed",
+    "metricPunctuality": "Punctuality",
+    "metricScore": "Score",
+    "noLogs": "No errors logged",
+    "noStation": "No post assigned",
+    "noticesSub": "Memos and announcements",
+    "offDuty": "Off duty",
+    "performance": "Performance summary",
+    "permissions": "Device permissions",
+    "permissionsSub": "Location, camera and notifications",
+    "personalInfo": "Personal information",
+    "personalInfoSub": "Update your contact details",
+    "phone": "Phone",
+    "roleGuard": "Security Officer",
+    "roleSupervisor": "Security Supervisor",
+    "scheduleSub": "Your upcoming shifts",
+    "settings": "Settings",
+    "sounds": "Sounds & vibration",
+    "soundsSub": "App tones and haptics",
+    "status": "Status",
+    "timeOff": "Time off",
+    "timeOffSub": "Balance and requests"
   },
   "startShift": {
     "eyebrow": "Before you start",
@@ -599,7 +758,8 @@
     "itemTasks": "I reviewed pending tasks",
     "itemTasksDesc": "Pending items and shift orders.",
     "startBtn": "Start shift",
-    "completeAll": "Complete the whole list to continue."
+    "completeAll": "Complete the whole list to continue.",
+    "advisoryRemaining": "{{count}} item(s) unchecked — optional"
   },
   "selfie": {
     "title": "Clock-in photo",
@@ -610,7 +770,8 @@
     "noLocation": "Location unavailable",
     "cameraError": "Couldn't access the camera. Check permissions.",
     "retake": "Retake",
-    "confirm": "Confirm clock-in"
+    "confirm": "Confirm clock-in",
+    "retry": "Retry"
   },
   "consignas": {
     "title": "Today's standing orders",
@@ -626,7 +787,10 @@
     "audio": "Voice note (optional)",
     "recordAudio": "Record voice note",
     "stop": "Stop recording",
-    "markDone": "Mark as done"
+    "markDone": "Mark as done",
+    "allDone": "Completed",
+    "completeError": "Couldn't complete the post order. Try again.",
+    "pendingCount": "{{n}} pending"
   },
   "quiz": {
     "title": "Station test",
@@ -761,7 +925,8 @@
     "listening": "Listening…",
     "speakNow": "Speak now…",
     "required": "The summary is required.",
-    "submit": "Submit & clock out"
+    "submit": "Submit & clock out",
+    "failedTitle": "Couldn't clock out"
   },
   "radio": {
     "allClear": "All clear",
@@ -796,12 +961,18 @@
     "openRadio": "Open radio screen",
     "replyError": "Could not send. Please try again.",
     "micUnavailable": "Recording is not available on this device.",
-    "micDenied": "Could not access the microphone. Check permissions."
+    "micDenied": "Could not access the microphone. Check permissions.",
+    "reportByVoice": "Report by voice",
+    "timeUp": "Time's up"
   },
   "map": {
     "openInMaps": "View on map",
     "lastSeen": "seen {{ago}}",
-    "locate": "Map"
+    "locate": "Map",
+    "noTeam": "No other guards on duty at this site.",
+    "team": "Teammates on duty",
+    "you": "you",
+    "zones": "Zones"
   },
   "tasks": {
     "complete": "Complete",
@@ -811,11 +982,23 @@
     "photosOptional": "Photos (optional)",
     "markDone": "Mark as completed",
     "completed": "Task completed",
-    "completeError": "Could not complete the task. Please try again."
+    "completeError": "Could not complete the task. Please try again.",
+    "completedOn": "Completed",
+    "detailTitle": "Task detail",
+    "empty": "No pending tasks",
+    "noNotes": "No notes",
+    "reference": "Reference image",
+    "statusDone": "Completed",
+    "statusPending": "Pending",
+    "subtitle": "Tasks requested by the client for your post",
+    "title": "Shift tasks"
   },
   "common": {
     "cancel": "Cancel",
-    "close": "Close"
+    "close": "Close",
+    "delete": "Delete",
+    "refresh": "Refresh",
+    "retry": "Retry"
   },
   "aria": {
     "notifications": "Notifications",
@@ -828,6 +1011,132 @@
     "members": "members",
     "deleteChat": "Delete conversation",
     "deleteHint": "It will be deleted only for you.",
-    "e2e": "Messages are end-to-end encrypted."
+    "e2e": "Messages are end-to-end encrypted.",
+    "attach": "Attach",
+    "compose": "Type a message…",
+    "contactOffice": "Message the office",
+    "empty": "No conversations",
+    "group": "Group",
+    "loadFailed": "Couldn't load the messages.",
+    "micFailed": "Couldn't access the microphone.",
+    "new": "New message",
+    "onlyMedia": "Images, video or audio only.",
+    "placeholder": "Type your message to the company…",
+    "readOnly": "This conversation is read-only.",
+    "record": "Record",
+    "recording": "Recording…",
+    "send": "Send",
+    "sendFailed": "Couldn't send. Check your connection and try again.",
+    "stopSend": "Send",
+    "threadEmpty": "No messages in this conversation yet.",
+    "title": "Messages",
+    "toOffice": "To the office",
+    "tooBig": "Maximum 100 MB.",
+    "uploadFailed": "Couldn't upload the file."
+  },
+  "brand": {
+    "tagline": "Security Operations"
+  },
+  "clock": {
+    "forcedOut": "Your shift ended and you were clocked out automatically."
+  },
+  "clockin": {
+    "approvedClockIn": "Approved — Clock in",
+    "approvedToast": "Your late clock-in was approved. You can clock in now.",
+    "availableAt": "Available at {{time}}",
+    "lateNeedsApprovalToast": "You're late. Request approval from your supervisor.",
+    "notYetAvailable": "Not available yet",
+    "rejectedToast": "Your late clock-in request was rejected.",
+    "requestAgain": "Request approval again",
+    "requestApproval": "Request late clock-in approval",
+    "requestError": "Couldn't send the request. Try again.",
+    "requestRejected": "Your request was rejected.",
+    "tooEarlyToast": "You can't clock in yet. Wait for your window to open.",
+    "waitingApproval": "Waiting for supervisor approval…"
+  },
+  "net": {
+    "charge": "plug in a charger.",
+    "lowBattery": "Low battery",
+    "offline": "Offline — some actions won't be available until it's restored.",
+    "pendingMany": "actions pending to send",
+    "pendingOne": "action pending to send",
+    "queuedReport": "Offline — the report will be sent when you reconnect.",
+    "syncing": "Sending pending actions…"
+  },
+  "notifications": {
+    "clear": "Clear",
+    "clearConfirmBody": "All your notifications will be deleted. This can't be undone.",
+    "clearConfirmTitle": "Clear notifications?",
+    "empty": "You have no notifications",
+    "error": "Couldn't load notifications",
+    "markAllRead": "Mark all as read",
+    "retry": "Retry",
+    "title": "Notifications"
+  },
+  "passdown": {
+    "acknowledge": "Got it",
+    "addInstruction": "Add instruction",
+    "from": "From",
+    "high": "High",
+    "hint": "Leave handover notes and instructions for the incoming guard. The next shift receives them automatically.",
+    "instructionPlaceholder": "e.g. Check the water pump at 3am",
+    "instructionsHint": "Each instruction becomes a task for the next shift.",
+    "instructionsInTasks": "These instructions are also in your Tasks.",
+    "instructionsLabel": "Instructions for the incoming guard",
+    "low": "Low",
+    "medium": "Medium",
+    "noNews": "No updates",
+    "noNewsSubmit": "No updates and clock out",
+    "receivedTitle": "Shift handover received",
+    "required": "Handover notes are required.",
+    "submit": "Hand off shift and clock out",
+    "summaryLabel": "Shift updates",
+    "title": "Shift handover"
+  },
+  "perm": {
+    "allow": "Allow",
+    "blockedHelp": "It's blocked. Open it in your phone's Settings → this app → Permissions, and turn it on.",
+    "camera": "Camera",
+    "cameraWhy": "Needed for the clock-in selfie and reports.",
+    "denied": "Blocked",
+    "granted": "Allowed",
+    "intro": "If you can't clock in or messages aren't coming through, check that these permissions are on.",
+    "location": "Location (GPS)",
+    "locationWhy": "CGuardPro collects your location while you're on shift for live tracking, your patrol route and clocking in/out, even with the app closed or the screen locked. It stops when you clock out. Choose “Allow all the time”.",
+    "microphone": "Microphone",
+    "microphoneWhy": "Needed for voice reports and the live radio channel.",
+    "notifications": "Notifications",
+    "notificationsWhy": "Needed to receive messages and notices from the company.",
+    "prompt": "Pending",
+    "subtitle": "Turn on device permissions",
+    "title": "Permissions",
+    "web": "Not applicable"
+  },
+  "shift": {
+    "clockInFirst": "Clock in to start your shift.",
+    "noActive": "You have no active shift",
+    "reminderToast": "You have an upcoming shift. Don't forget to clock in."
+  },
+  "sos": {
+    "button": "SOS / Panic",
+    "confirmHint": "This sends a critical alert with your location to the control center. Use it only in a real emergency.",
+    "desc": "Panic alert sent by the guard.",
+    "failedHint": "Check your connection and try again.",
+    "failedTitle": "Couldn't send",
+    "heading": "Emergency",
+    "queuedHint": "Offline right now. Your alert was saved and will be sent automatically as soon as the signal returns.",
+    "queuedTitle": "Will be sent when you reconnect",
+    "sending": "Sending alert…",
+    "sentHint": "Your control center was notified with your location.",
+    "sentTitle": "Alert sent",
+    "slide": "Slide for SOS",
+    "sub": "Send a panic alert to your control center",
+    "title": "SOS / Panic"
+  },
+  "time": {
+    "now": "now"
+  },
+  "visitors": {
+    "all": "All"
   }
 }

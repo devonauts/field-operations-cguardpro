@@ -17,7 +17,12 @@
     "refresh": "Actualizar",
     "takePhoto": "Tomar foto",
     "fromGallery": "Galería",
-    "remove": "Quitar"
+    "remove": "Quitar",
+    "loadError": "No se pudo cargar",
+    "loadErrorHint": "Revisa tu conexión e inténtalo de nuevo.",
+    "off": "Desactivado",
+    "ok": "OK",
+    "on": "Activado"
   },
   "auth": {
     "signIn": "Iniciar sesión",
@@ -33,7 +38,34 @@
     "errorGeneric": "No se pudo iniciar sesión. Revisa tus credenciales.",
     "errorNotAllowed": "Esta app es solo para vigilantes de seguridad y supervisores.",
     "errorNoRole": "Tu cuenta no tiene un rol de vigilante o supervisor asignado.",
-    "rateLimited": "Demasiados intentos. Intenta de nuevo en unos segundos."
+    "rateLimited": "Demasiados intentos. Intenta de nuevo en unos segundos.",
+    "forgot": {
+      "back": "Iniciar sesión",
+      "continue": "Continuar",
+      "error": "No pudimos procesar tu solicitud. Revisa tu conexión e inténtalo de nuevo.",
+      "invalidEmail": "Escribe un correo electrónico válido.",
+      "link": "¿Olvidaste tu contraseña?",
+      "send": "Enviar enlace",
+      "sending": "Enviando…",
+      "sentBody": "Si existe una cuenta con ese correo, te enviamos un enlace para restablecer tu contraseña. Revisa tu bandeja de entrada.",
+      "sentTitle": "Revisa tu correo",
+      "subtitle": "Escribe tu correo y te enviaremos un enlace para restablecer tu contraseña.",
+      "title": "Restablecer contraseña"
+    },
+    "reset": {
+      "cancel": "Cancelar",
+      "confirm": "Confirmar contraseña",
+      "error": "El enlace es inválido o expiró. Pide uno nuevo.",
+      "goLogin": "Ir a iniciar sesión",
+      "mismatch": "Las contraseñas no coinciden.",
+      "newPassword": "Nueva contraseña",
+      "saving": "Guardando…",
+      "submit": "Guardar contraseña",
+      "subtitle": "Crea una nueva contraseña para tu cuenta.",
+      "success": "Tu contraseña se actualizó. Ya puedes iniciar sesión.",
+      "title": "Restablecer contraseña",
+      "tooShort": "La contraseña debe tener al menos 8 caracteres."
+    }
   },
   "roles": {
     "securityGuard": "Vigilante de Seguridad",
@@ -52,13 +84,20 @@
     "timeOff": "Permisos",
     "quiz": "Examen",
     "training": "Entrenamiento",
-    "backup": "Respaldo"
+    "backup": "Respaldo",
+    "home": "Inicio",
+    "messages": "Mensajes",
+    "radio": "Radio",
+    "visitors": "Visitantes",
+    "you": "Perfil"
   },
   "notices": {
     "title": "Avisos",
     "subtitle": "Comunicados de tu empresa",
     "empty": "Aún no tienes avisos",
-    "new": "Nuevo"
+    "new": "Nuevo",
+    "memoAck": "Recibido",
+    "memosPending": "Memorandos por confirmar"
   },
   "timeoff": {
     "title": "Permisos",
@@ -113,7 +152,34 @@
     "myIncidents": "Mis incidentes",
     "timeOff": "Permisos",
     "requestTimeOff": "Solicitar permiso",
-    "clockInForShift": "Para tu turno de las {{time}}"
+    "clockInForShift": "Para tu turno de las {{time}}",
+    "allZones": "Zonas",
+    "assignedPosts": "Puestos",
+    "checkpoints": "Puntos",
+    "clockInDone": "Entrada registrada",
+    "clockInHint": "Puedes marcar entrada hasta 15 minutos antes de tu turno.",
+    "clockInNow": "Marcar entrada",
+    "currentStatus": "Estado actual",
+    "distance": "Distancia",
+    "duration": "Duración",
+    "errGeneric": "No se pudo marcar entrada. Verifica tu turno e inténtalo de nuevo.",
+    "errLocation": "Activa el GPS para marcar entrada.",
+    "errNotScheduled": "No estás programado para este puesto hoy. Si es tu día de descanso, no necesitas marcar entrada.",
+    "errProfile": "No encontramos tu perfil de vigilante. Contacta a tu supervisor.",
+    "errStation": "Selecciona un puesto válido.",
+    "guard": "Vigilante",
+    "hours30": "Horas · 30d",
+    "inProgress": "En curso",
+    "inactive": "Inactivo",
+    "incidents": "Incidentes",
+    "lastShift": "Último turno",
+    "myPost": "Mi puesto",
+    "restDayNext": "No tienes turno hoy. Tu próximo turno aparece abajo.",
+    "restDayNone": "No tienes un turno programado hoy. No es necesario marcar entrada.",
+    "restDayTitle": "Día de descanso",
+    "secured": "Seguro",
+    "today": "Hoy",
+    "tomorrow": "Mañana"
   },
   "late": {
     "title": "Vas tarde a tu turno",
@@ -229,7 +295,9 @@
     "viewOnMap": "Ver en mapa",
     "quickReport": "Reporte rápido",
     "gpsLocating": "Ubicando…",
-    "gpsRetry": "GPS — reintentar"
+    "gpsRetry": "GPS — reintentar",
+    "today": "Hoy",
+    "yesterday": "Ayer"
   },
   "patrol": {
     "title": "Seguimiento de Rondas",
@@ -262,7 +330,16 @@
     "eveShift": "Turno tarde",
     "nightShift": "Turno noche",
     "fromPrevDay": "(día anterior)",
-    "toNextDay": "(continúa)"
+    "toNextDay": "(continúa)",
+    "day": "Día",
+    "freeDay": "Día libre",
+    "legendFree": "Día libre",
+    "legendShift": "Turno",
+    "month": "Mes",
+    "noShiftsDay": "Sin turnos este día",
+    "timeOffApproved": "Tiempo libre aprobado",
+    "today": "Hoy",
+    "week": "Semana"
   },
   "reports": {
     "title": "Reportes y Analítica",
@@ -338,7 +415,16 @@
     "syncNow": "Sincronizar ahora",
     "synced": "Todos los puntos sincronizados",
     "history": "Mi historial de rondas",
-    "noHistory": "Aún no hay rondas"
+    "noHistory": "Aún no hay rondas",
+    "allCheckpoints": "Puntos",
+    "chooseRoute": "Elige una ronda",
+    "clockInFirstBody": "Tu empresa exige turno activo para que los escaneos de ronda cuenten.",
+    "clockInFirstTitle": "Marca tu entrada para iniciar rondas",
+    "invalidLocation": "Ubicación fuera de rango",
+    "notScanned": "No escaneado",
+    "outOfLocationServer": "Escaneo registrado FUERA de ubicación: {{dist}} m del punto (máx {{max}} m).",
+    "startWithPlus": "Toca + arriba para iniciar una ronda.",
+    "validLocation": "Ubicación válida"
   },
   "onduty": {
     "liveAlerts": "Novedades",
@@ -358,7 +444,47 @@
     "earlyOutReasonRequired": "Ingresa un motivo para continuar.",
     "earlyOutReasonSubmit": "Enviar solicitud",
     "earlyOutCancel": "Cancelar",
-    "earlyOutRequestSent": "Solicitud enviada. Espera la aprobación de tu supervisor."
+    "earlyOutRequestSent": "Solicitud enviada. Espera la aprobación de tu supervisor.",
+    "activeCount": "{{n}} activos",
+    "activePatrol": "Ronda activa",
+    "allCleared": "Ronda completa",
+    "cancelRequest": "Cancelar",
+    "checkpointsCleared": "{{a}} de {{b}} puntos completados",
+    "checkpointsWord": "Puntos",
+    "clockOutApprovedToast": "Tu salida fue aprobada. Ya puedes marcar salida.",
+    "clockOutDone": "Salida registrada",
+    "clockOutFailed": "No se pudo marcar salida.",
+    "clockOutRejectedToast": "Tu solicitud de salida fue rechazada.",
+    "continue": "Continuar",
+    "currentShift": "Turno actual",
+    "deviceOnline": "En línea",
+    "elapsed": "Transcurrido",
+    "elapsedTime": "Tiempo en turno",
+    "endsAt": "Finaliza",
+    "event": "Evento",
+    "gpsVerified": "GPS verificado",
+    "incidents": "Incidentes",
+    "insideGeofence": "En geocerca",
+    "nextCheckpoint": "Próximo punto",
+    "noAlerts": "Sin alertas activas.",
+    "noRoute": "Sin ruta",
+    "onDuty": "En turno",
+    "openPatrol": "Abrir ronda",
+    "pendingHint": "Esperando aprobación del supervisor. Puedes reenviar o cancelar la solicitud.",
+    "remaining": "faltan {{r}}",
+    "remainingShort": "{{r}} restante",
+    "resendRequest": "Reenviar",
+    "salidaWord": "Salida",
+    "shiftWord": "Turno",
+    "startRound": "Inicia tu ronda",
+    "started": "Inició",
+    "tasks": "Tareas del turno",
+    "teamOnDuty": "Equipo en servicio",
+    "turnoEndsAt": "Tu turno termina a las {{time}}",
+    "viewAll": "Ver todo",
+    "zoneAlert": "alerta",
+    "zoneClear": "despejado",
+    "zonePatrol": "ronda"
   },
   "features": {
     "visitors": "Visitas",
@@ -460,7 +586,9 @@
     "badge": "Credencial",
     "vehicle": "Vehículo",
     "expectedDeparture": "Salida est.",
-    "checkedIn": "Dentro"
+    "checkedIn": "Dentro",
+    "camera": "Cámara",
+    "facePhotoLabel": "Foto de la persona"
   },
   "panic": {
     "title": "Alerta de pánico",
@@ -579,7 +707,38 @@
     "takeSelfie": "Tomar selfie",
     "choosePhoto": "Elegir de galería",
     "removePhoto": "Quitar foto",
-    "photoError": "No se pudo subir la foto. Intenta de nuevo."
+    "photoError": "No se pudo subir la foto. Intenta de nuevo.",
+    "diagnostics": "Diagnóstico",
+    "diagnosticsSub": "Registro de errores del dispositivo",
+    "employeeId": "ID de empleado",
+    "groupAccount": "Mi cuenta",
+    "groupDevice": "Dispositivo y app",
+    "joined": "Ingreso",
+    "languageSub": "Español / English",
+    "logsCount": "registros",
+    "metricCompliance": "Cumplimiento",
+    "metricPatrols": "Rondas completas",
+    "metricPunctuality": "Puntualidad",
+    "metricScore": "Calificación",
+    "noLogs": "Sin errores registrados",
+    "noStation": "Sin puesto asignado",
+    "noticesSub": "Memos y comunicados",
+    "offDuty": "Fuera",
+    "performance": "Resumen de desempeño",
+    "permissions": "Permisos del dispositivo",
+    "permissionsSub": "Ubicación, cámara y notificaciones",
+    "personalInfo": "Información personal",
+    "personalInfoSub": "Actualiza tus datos de contacto",
+    "phone": "Teléfono",
+    "roleGuard": "Oficial de Seguridad",
+    "roleSupervisor": "Supervisor de Seguridad",
+    "scheduleSub": "Tus próximos turnos",
+    "settings": "Ajustes",
+    "sounds": "Sonidos y vibración",
+    "soundsSub": "Tonos y haptics de la app",
+    "status": "Estado",
+    "timeOff": "Tiempo libre",
+    "timeOffSub": "Saldo y solicitudes"
   },
   "startShift": {
     "eyebrow": "Antes de empezar",
@@ -599,7 +758,8 @@
     "itemTasks": "Revisé las tareas pendientes",
     "itemTasksDesc": "Pendientes y consignas del turno.",
     "startBtn": "Iniciar turno",
-    "completeAll": "Completa toda la lista para continuar."
+    "completeAll": "Completa toda la lista para continuar.",
+    "advisoryRemaining": "{{count}} elemento(s) sin marcar — opcional"
   },
   "selfie": {
     "title": "Foto de entrada",
@@ -610,7 +770,8 @@
     "noLocation": "Ubicación no disponible",
     "cameraError": "No se pudo acceder a la cámara. Revisa los permisos.",
     "retake": "Repetir",
-    "confirm": "Confirmar entrada"
+    "confirm": "Confirmar entrada",
+    "retry": "Reintentar"
   },
   "consignas": {
     "title": "Consignas de hoy",
@@ -626,7 +787,10 @@
     "audio": "Nota de voz (opcional)",
     "recordAudio": "Grabar nota de voz",
     "stop": "Detener grabación",
-    "markDone": "Marcar como hecha"
+    "markDone": "Marcar como hecha",
+    "allDone": "Completadas",
+    "completeError": "No se pudo completar la consigna. Intenta de nuevo.",
+    "pendingCount": "{{n}} pendiente(s)"
   },
   "quiz": {
     "title": "Examen del puesto",
@@ -761,7 +925,8 @@
     "listening": "Escuchando…",
     "speakNow": "Habla ahora…",
     "required": "El resumen es obligatorio.",
-    "submit": "Enviar y marcar salida"
+    "submit": "Enviar y marcar salida",
+    "failedTitle": "No se pudo marcar salida"
   },
   "radio": {
     "allClear": "Sin novedad",
@@ -796,12 +961,18 @@
     "openRadio": "Abrir pantalla de radio",
     "replyError": "No se pudo enviar. Intenta de nuevo.",
     "micUnavailable": "La grabación no está disponible en este dispositivo.",
-    "micDenied": "No se pudo acceder al micrófono. Revisa los permisos."
+    "micDenied": "No se pudo acceder al micrófono. Revisa los permisos.",
+    "reportByVoice": "Reportar por voz",
+    "timeUp": "Tiempo agotado"
   },
   "map": {
     "openInMaps": "Ver en mapa",
     "lastSeen": "visto {{ago}}",
-    "locate": "Mapa"
+    "locate": "Mapa",
+    "noTeam": "No hay otros vigilantes en servicio en este sitio.",
+    "team": "Compañeros en servicio",
+    "you": "tú",
+    "zones": "Zonas"
   },
   "tasks": {
     "complete": "Completar",
@@ -811,11 +982,23 @@
     "photosOptional": "Fotos (opcional)",
     "markDone": "Marcar como completada",
     "completed": "Tarea completada",
-    "completeError": "No se pudo completar la tarea. Intenta de nuevo."
+    "completeError": "No se pudo completar la tarea. Intenta de nuevo.",
+    "completedOn": "Completada",
+    "detailTitle": "Detalle de la tarea",
+    "empty": "Sin tareas pendientes",
+    "noNotes": "Sin notas",
+    "reference": "Imagen de referencia",
+    "statusDone": "Completada",
+    "statusPending": "Pendiente",
+    "subtitle": "Tareas solicitadas por el cliente para tu puesto",
+    "title": "Tareas del turno"
   },
   "common": {
     "cancel": "Cancelar",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "delete": "Eliminar",
+    "refresh": "Actualizar",
+    "retry": "Reintentar"
   },
   "aria": {
     "notifications": "Notificaciones",
@@ -828,6 +1011,132 @@
     "members": "miembros",
     "deleteChat": "Eliminar conversación",
     "deleteHint": "Se eliminará solo para ti.",
-    "e2e": "Los mensajes están cifrados de extremo a extremo."
+    "e2e": "Los mensajes están cifrados de extremo a extremo.",
+    "attach": "Adjuntar",
+    "compose": "Escribe un mensaje…",
+    "contactOffice": "Escribir a la oficina",
+    "empty": "Sin conversaciones",
+    "group": "Grupo",
+    "loadFailed": "No se pudieron cargar los mensajes.",
+    "micFailed": "No se pudo acceder al micrófono.",
+    "new": "Nuevo mensaje",
+    "onlyMedia": "Solo imágenes, videos o audio.",
+    "placeholder": "Escribe tu mensaje para la empresa…",
+    "readOnly": "Esta conversación es solo de lectura.",
+    "record": "Grabar",
+    "recording": "Grabando…",
+    "send": "Enviar",
+    "sendFailed": "No se pudo enviar. Revisa tu conexión e inténtalo de nuevo.",
+    "stopSend": "Enviar",
+    "threadEmpty": "Aún no hay mensajes en esta conversación.",
+    "title": "Mensajes",
+    "toOffice": "Para la oficina",
+    "tooBig": "Máximo 100 MB.",
+    "uploadFailed": "No se pudo subir el archivo."
+  },
+  "brand": {
+    "tagline": "Security Operations"
+  },
+  "clock": {
+    "forcedOut": "Tu turno terminó y se registró tu salida automáticamente."
+  },
+  "clockin": {
+    "approvedClockIn": "Aprobado — Marcar entrada",
+    "approvedToast": "Tu entrada tardía fue aprobada. Ya puedes marcar entrada.",
+    "availableAt": "Disponible a las {{time}}",
+    "lateNeedsApprovalToast": "Llegaste tarde. Solicita aprobación de tu supervisor.",
+    "notYetAvailable": "Aún no disponible",
+    "rejectedToast": "Tu solicitud de entrada tardía fue rechazada.",
+    "requestAgain": "Solicitar aprobación de nuevo",
+    "requestApproval": "Solicitar aprobación de entrada tardía",
+    "requestError": "No se pudo enviar la solicitud. Inténtalo de nuevo.",
+    "requestRejected": "Tu solicitud fue rechazada.",
+    "tooEarlyToast": "Aún no puedes marcar entrada. Espera a que abra tu ventana.",
+    "waitingApproval": "Esperando aprobación del supervisor…"
+  },
+  "net": {
+    "charge": "conecta un cargador.",
+    "lowBattery": "Batería baja",
+    "offline": "Sin conexión — algunas acciones no estarán disponibles hasta que se restablezca.",
+    "pendingMany": "acciones pendientes por enviar",
+    "pendingOne": "acción pendiente por enviar",
+    "queuedReport": "Sin conexión — el reporte se enviará al reconectar.",
+    "syncing": "Enviando acciones pendientes…"
+  },
+  "notifications": {
+    "clear": "Limpiar",
+    "clearConfirmBody": "Se eliminarán todas tus notificaciones. Esta acción no se puede deshacer.",
+    "clearConfirmTitle": "¿Limpiar notificaciones?",
+    "empty": "No tienes notificaciones",
+    "error": "No se pudieron cargar las notificaciones",
+    "markAllRead": "Marcar todo como leído",
+    "retry": "Reintentar",
+    "title": "Notificaciones"
+  },
+  "passdown": {
+    "acknowledge": "Entendido",
+    "addInstruction": "Agregar instrucción",
+    "from": "De",
+    "high": "Alta",
+    "hint": "Deja las novedades e instrucciones para el guardia que entra. El siguiente turno las recibe automáticamente.",
+    "instructionPlaceholder": "Ej. Revisar bomba de agua a las 3am",
+    "instructionsHint": "Cada instrucción se convierte en una tarea para el próximo turno.",
+    "instructionsInTasks": "Estas instrucciones también están en tus Tareas.",
+    "instructionsLabel": "Instrucciones para el guardia entrante",
+    "low": "Baja",
+    "medium": "Media",
+    "noNews": "Sin novedad",
+    "noNewsSubmit": "Sin novedad y marcar salida",
+    "receivedTitle": "Pase de turno recibido",
+    "required": "Las novedades son obligatorias.",
+    "submit": "Entregar turno y marcar salida",
+    "summaryLabel": "Novedades del turno",
+    "title": "Pase de turno"
+  },
+  "perm": {
+    "allow": "Permitir",
+    "blockedHelp": "Está bloqueado. Ábrelo en Ajustes del teléfono → esta app → Permisos, y actívalo.",
+    "camera": "Cámara",
+    "cameraWhy": "Necesaria para la selfie de marcación y reportes.",
+    "denied": "Bloqueado",
+    "granted": "Permitido",
+    "intro": "Si no marcas entrada o no llegan los mensajes, revisa que estos permisos estén activados.",
+    "location": "Ubicación (GPS)",
+    "locationWhy": "CGuardPro recopila tu ubicación mientras estás en turno para el seguimiento en vivo, tu recorrido de ronda y marcar entrada/salida, incluso con la app cerrada o la pantalla bloqueada. Se detiene al marcar salida. Elige “Permitir todo el tiempo”.",
+    "microphone": "Micrófono",
+    "microphoneWhy": "Necesario para los reportes de voz y el canal de radio en vivo.",
+    "notifications": "Notificaciones",
+    "notificationsWhy": "Necesaria para recibir mensajes y avisos de la empresa.",
+    "prompt": "Pendiente",
+    "subtitle": "Activa los permisos del dispositivo",
+    "title": "Permisos",
+    "web": "No aplica"
+  },
+  "shift": {
+    "clockInFirst": "Marca entrada para iniciar tu turno.",
+    "noActive": "No tienes un turno activo",
+    "reminderToast": "Tienes un turno próximo. No olvides marcar tu entrada."
+  },
+  "sos": {
+    "button": "SOS / Pánico",
+    "confirmHint": "Esto enviará una alerta crítica con tu ubicación a la central. Úsalo solo en una emergencia real.",
+    "desc": "Alerta de pánico enviada por el vigilante.",
+    "failedHint": "Revisa tu conexión e inténtalo de nuevo.",
+    "failedTitle": "No se pudo enviar",
+    "heading": "Emergencia",
+    "queuedHint": "Sin conexión ahora. Tu alerta quedó guardada y se enviará automáticamente en cuanto vuelva la señal.",
+    "queuedTitle": "Se enviará al reconectar",
+    "sending": "Enviando alerta…",
+    "sentHint": "Tu central fue notificada con tu ubicación.",
+    "sentTitle": "Alerta enviada",
+    "slide": "Deslizar para SOS",
+    "sub": "Envía una alerta de pánico a tu central",
+    "title": "SOS / Pánico"
+  },
+  "time": {
+    "now": "ahora"
+  },
+  "visitors": {
+    "all": "Todas"
   }
 }
