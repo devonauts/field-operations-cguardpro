@@ -525,23 +525,6 @@ export default function OnDutyView({ data }: { data: any }) {
         </div>
       </NavCard>
 
-      {/* ===================== QUICK ACTIONS (on duty) ===================== */}
-      {/* Ronda now lives in the bottom tab bar while on duty; Examen stays here
-          as a single, larger action. */}
-      <button
-        onClick={() => {
-          fb.tap();
-          history.push("/guard/quiz");
-        }}
-        className="flex min-h-[68px] w-full items-center gap-3 rounded-2xl border border-line bg-surface px-5 text-[15px] font-semibold text-ink active:bg-surface-2"
-      >
-        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gold/15 text-gold">
-          <ClipboardCheck size={22} />
-        </span>
-        <span className="flex-1 text-left">{t("nav.quiz", "Examen")}</span>
-        <ChevronRight size={18} className="shrink-0 text-muted" />
-      </button>
-
       {/* Visitantes — kept reachable from the on-duty home now that it's no longer
           a bottom tab (see GuardTabs nav-stability note). */}
       <button
