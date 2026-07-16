@@ -3,13 +3,9 @@ import { createRoot } from "react-dom/client";
 import { setupIonicReact } from "@ionic/react";
 import { pageTransition } from "./lib/pageTransition";
 
-/* Core Ionic CSS (required) */
-import "@ionic/react/css/core.css";
-import "@ionic/react/css/normalize.css";
-import "@ionic/react/css/structure.css";
-import "@ionic/react/css/typography.css";
-import "@ionic/react/css/padding.css";
-import "@ionic/react/css/flex-utils.css";
+/* Core Ionic CSS (required) — imported via ionic.css into the `ionic` cascade
+   layer so Tailwind utilities win over Ionic's unlayered button/padding resets. */
+import "./ionic.css";
 
 /* App theme + Tailwind */
 import "./theme/variables.css";

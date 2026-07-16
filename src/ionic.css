@@ -1,0 +1,12 @@
+/* Ionic base CSS is pulled into the `ionic` cascade layer so Tailwind v4
+   utilities (in `@layer utilities`) win over the UNLAYERED Ionic resets. The
+   offender was normalize.css button padding:0 — being unlayered it beat every
+   Tailwind padding utility on a button regardless of specificity, silently
+   killing the padding utilities on buttons app-wide. Layering Ionic below the
+   utilities layer restores utility behavior without altering Ionic components. */
+@import "@ionic/react/css/core.css" layer(ionic);
+@import "@ionic/react/css/normalize.css" layer(ionic);
+@import "@ionic/react/css/structure.css" layer(ionic);
+@import "@ionic/react/css/typography.css" layer(ionic);
+@import "@ionic/react/css/padding.css" layer(ionic);
+@import "@ionic/react/css/flex-utils.css" layer(ionic);
