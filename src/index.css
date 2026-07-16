@@ -166,6 +166,23 @@ ion-router-outlet {
   background: var(--background);
 }
 
+/* Phone-frame the app when previewed on a WIDE screen (desktop Chrome). Without
+   this the whole UI stretches full-width, so `justify-between` rows push their
+   content to opposite edges and everything reads as "stuck to the edge". On an
+   actual phone (< 640px) this rule doesn't apply, so the device is unaffected. */
+@media (min-width: 640px) {
+  ion-app {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-width: 430px;
+    margin-inline: auto;
+    box-shadow: 0 0 0 1px var(--line), 0 24px 60px -20px rgba(0, 0, 0, 0.5);
+  }
+}
+
 /* Uppercase tracked label used across the design */
 .label-eyebrow {
   text-transform: uppercase;
