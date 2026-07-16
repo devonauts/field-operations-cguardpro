@@ -52,7 +52,7 @@ export default function GuardTasks() {
                 {/* Whole card is tappable → opens the task detail (read-only when done). */}
                 <button
                   onClick={() => { fb.tap(); setActive(task); }}
-                  className="pressable flex w-full items-start justify-between gap-3 p-5 text-left"
+                  className="pressable flex w-full items-start justify-between gap-4 p-6 text-left"
                 >
                   <div className="min-w-0">
                     <p className="font-medium text-ink">{task.taskToDo}</p>
