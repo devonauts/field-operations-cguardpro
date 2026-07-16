@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, ChevronRight, Clock, MapPin, CalendarDays } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, MapPin, CalendarDays, Navigation, Hourglass, Radio } from "lucide-react";
 import { Screen } from "@/components/Screen";
-import { Card, ErrorState, Skeleton } from "@/components/ui";
+import { Card, ErrorState, Skeleton, Sheet } from "@/components/ui";
 import { Segmented } from "@/components/ui/kit";
 import { guardService } from "@/lib/services";
 import { asRows } from "@/lib/api";
@@ -86,6 +86,8 @@ export default function GuardSchedule() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [activeShift, setActiveShift] = useState<any | null>(null);
+  const openShift = (s: any) => { fb.tap(); setActiveShift(s); };
   const today = startOfDay(new Date());
 
   // Fetch a generous window around the focused month; refetch when month changes.
@@ -207,7 +209,7 @@ export default function GuardSchedule() {
               <Legend t={t} />
               <div className="mt-4">
                 <DayHeader anchor={anchor} locale={locale} view={view} />
-                <DayShifts shifts={anchorShifts} freeDay={freeSet.has(ymd(anchor))} t={t} />
+                <DayShifts shifts={anchorShifts} freeDay={freeSet.has(ymd(anchor))} onOpen={openShift} t={t} />
               </div>
             </>
           )}
@@ -216,14 +218,20 @@ export default function GuardSchedule() {
             <>
               <WeekTimeline anchor={anchor} today={today} weekdayLabels={weekdayLabels} shifts={shifts} workedDays={workedDays} freeDays={freeSet} onPick={(d: Date) => { fb.tap(); setAnchor(d); }} t={t} />
               <Legend t={t} />
+              <div className="mt-4">
+                <DayHeader anchor={anchor} locale={locale} view={view} />
+                <DayShifts shifts={anchorShifts} freeDay={freeSet.has(ymd(anchor))} onOpen={openShift} t={t} />
+              </div>
             </>
           )}
 
           {view === "day" && (
-            <DayTimeline shifts={shifts} freeDay={freeSet.has(ymd(anchor))} anchor={anchor} today={today} t={t} />
+            <DayTimeline shifts={shifts} freeDay={freeSet.has(ymd(anchor))} anchor={anchor} today={today} onOpen={openShift} t={t} />
           )}
         </>
       )}
+
+      <ShiftDetailSheet shift={activeShift} onClose={() => setActiveShift(null)} locale={locale} t={t} />
     </Screen>
   );
 }
@@ -382,7 +390,7 @@ function Legend({ t }: any) {
 
 /** iOS-Calendar-style day view: a scrollable 24h timeline with shift blocks
  *  positioned at their real times, hour gridlines, and a "now" indicator. */
-function DayTimeline({ shifts, freeDay, anchor, today, t }: any) {
+function DayTimeline({ shifts, freeDay, anchor, today, onOpen, t }: any) {
   const HOUR_H = 52;          // px per hour
   const GUTTER = 52;          // px width of the hour-label gutter
   const dayStart = startOfDay(anchor);
@@ -430,9 +438,11 @@ function DayTimeline({ shifts, freeDay, anchor, today, t }: any) {
 
           {/* Shift blocks */}
           {blocks.map((b: any, i: number) => (
-            <div
+            <button
+              type="button"
+              onClick={() => onOpen?.(b.s)}
               key={b.s.id || i}
-              className={`absolute z-20 overflow-hidden border border-gold/40 bg-gold/15 px-2 py-1 ${
+              className={`pressable absolute z-20 overflow-hidden border border-gold/40 bg-gold/15 px-2 py-1 text-left ${
                 b.continuesPrev ? "rounded-t-none border-t-0" : "rounded-t-lg"
               } ${b.continuesNext ? "rounded-b-none border-b-0" : "rounded-b-lg"}`}
               style={{ top: (b.sMin / 60) * HOUR_H + 1, height: ((b.eMin - b.sMin) / 60) * HOUR_H - 2, left: GUTTER + 4, right: 6 }}
@@ -447,7 +457,7 @@ function DayTimeline({ shifts, freeDay, anchor, today, t }: any) {
                   <MapPin size={11} className="shrink-0 text-gold" /> {b.s.station?.stationName || b.s.stationName}
                 </p>
               )}
-            </div>
+            </button>
           ))}
 
           {/* Empty state (no shifts and not a free day) */}
@@ -462,7 +472,7 @@ function DayTimeline({ shifts, freeDay, anchor, today, t }: any) {
   );
 }
 
-function DayShifts({ shifts, freeDay, t }: any) {
+function DayShifts({ shifts, freeDay, onOpen, t }: any) {
   if (freeDay && shifts.length === 0) {
     return (
       <Card className="flex items-center gap-3 p-4">
@@ -488,26 +498,126 @@ function DayShifts({ shifts, freeDay, t }: any) {
     <div className="stagger space-y-2.5">
       {shifts.map((s: any, i: number) => (
         <Card key={s.id || i} className="overflow-hidden p-0">
-          <div className="flex">
-            <span className="w-1 shrink-0 bg-gold" />
+          <button type="button" onClick={() => onOpen?.(s)} className="pressable flex w-full text-left">
+            <span className="w-1 shrink-0 self-stretch bg-gold" />
             <div className="flex-1 p-3.5">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <span className="flex items-center gap-1.5 text-[15px] font-bold text-ink">
                   <Clock size={15} className="text-gold" /> {fmt(s, "start")} – {fmt(s, "end")}
                 </span>
-                {(s.shiftSchedule || s.type) && (
-                  <span className="rounded-md border border-gold/40 bg-gold/5 px-2 py-0.5 text-[11px] font-medium text-gold">{s.shiftSchedule || s.type}</span>
-                )}
+                <span className="flex items-center gap-1.5">
+                  <span className="rounded-md border border-gold/40 bg-gold/5 px-2 py-0.5 text-[11px] font-medium text-gold">{shiftKindLabel(s, t)}</span>
+                  <ChevronRight size={16} className="shrink-0 text-faint" />
+                </span>
               </div>
               {(s.station?.stationName || s.stationName) && (
                 <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted">
                   <MapPin size={14} className="text-gold" /> {s.station?.stationName || s.stationName}
                 </div>
               )}
+              <p className="mt-1 text-[11px] text-faint">{shiftStatus(s, t).label} · {durationLabel(s, t)}</p>
             </div>
-          </div>
+          </button>
         </Card>
       ))}
     </div>
+  );
+}
+
+/* ------------------------------------------------------- shift detail */
+
+/** Diurno / Nocturno from the start hour (no explicit type on scheduled shifts). */
+function shiftKindLabel(s: any, t: any): string {
+  const r = shiftRange(s);
+  if (!r) return "";
+  const h = new Date(r.start).getHours();
+  return h >= 6 && h < 18 ? t("schedule.dayShift", "Diurno") : t("schedule.nightShift", "Nocturno");
+}
+
+/** Human duration of a shift ("8 h", "7 h 30 min"). */
+function durationLabel(s: any, t: any): string {
+  void t;
+  const r = shiftRange(s);
+  if (!r) return "—";
+  const mins = Math.max(0, Math.round((r.end - r.start) / 60000));
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m ? `${h} h ${m} min` : `${h} h`;
+}
+
+/** Próximo / En curso / Completado from now vs the shift window. */
+function shiftStatus(s: any, t: any): { key: string; label: string; tone: "gold" | "online" | "muted" } {
+  const r = shiftRange(s);
+  const now = Date.now();
+  if (!r) return { key: "unknown", label: "", tone: "muted" };
+  if (now < r.start) return { key: "upcoming", label: t("schedule.statusUpcoming", "Próximo"), tone: "gold" };
+  if (now > r.end) return { key: "done", label: t("schedule.statusDone", "Completado"), tone: "muted" };
+  return { key: "active", label: t("schedule.statusActive", "En curso"), tone: "online" };
+}
+
+function DetailField({ icon, label, value }: { icon: ReactNode; label: string; value: ReactNode }) {
+  return (
+    <div>
+      <p className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted">{icon}{label}</p>
+      <p className="mt-0.5 text-sm font-semibold text-ink">{value ?? "—"}</p>
+    </div>
+  );
+}
+
+/** Bottom sheet with a scheduled shift's full detail + a navigate action. */
+function ShiftDetailSheet({ shift, onClose, locale, t }: any) {
+  const s = shift;
+  const r = s ? shiftRange(s) : null;
+  const fmtT = (k: "start" | "end") =>
+    (s && (s[k === "start" ? "startTimeLabel" : "endTimeLabel"] ||
+      new Date(s[k === "start" ? "startTime" : "endTime"]).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }))) || "";
+  const dateLabel = r ? new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long" }).format(new Date(r.start)) : "";
+  const st = s ? shiftStatus(s, t) : null;
+  const stationName = s?.station?.stationName || s?.stationName;
+  const nickname = s?.station?.nickname;
+  const lat = Number(s?.station?.latitud);
+  const lng = Number(s?.station?.longitud);
+  const hasCoords = Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0);
+  const toneCls: Record<string, string> = {
+    gold: "border-gold/40 bg-gold/5 text-gold",
+    online: "border-online/40 bg-online/10 text-online",
+    muted: "border-line bg-surface-2 text-muted",
+  };
+  return (
+    <Sheet open={!!s} onClose={onClose} title={t("schedule.shiftDetail", "Detalle del turno")}>
+      {s && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[15px] font-bold capitalize text-ink">{dateLabel}</p>
+            {st?.label && <span className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${toneCls[st.tone]}`}>{st.label}</span>}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <DetailField icon={<Clock size={13} className="text-gold" />} label={t("schedule.time", "Horario")} value={`${fmtT("start")} – ${fmtT("end")}`} />
+            <DetailField icon={<Hourglass size={13} className="text-gold" />} label={t("schedule.duration", "Duración")} value={durationLabel(s, t)} />
+            <DetailField icon={<Radio size={13} className="text-gold" />} label={t("schedule.shiftType", "Tipo")} value={shiftKindLabel(s, t)} />
+            <DetailField icon={<MapPin size={13} className="text-gold" />} label={t("schedule.post", "Puesto")} value={stationName || "—"} />
+          </div>
+
+          {nickname && (
+            <p className="text-xs text-muted">{t("schedule.callsign", "Nominativo")}: <span className="font-semibold text-ink">{nickname}</span></p>
+          )}
+
+          {hasCoords ? (
+            <button
+              type="button"
+              onClick={() => { fb.tap(); window.open(`https://maps.google.com/?q=${lat},${lng}`, "_system"); }}
+              className="pressable flex w-full items-center justify-center gap-2 rounded-xl bg-gold px-4 py-3 font-bold text-on-accent active:bg-gold-hover"
+            >
+              <Navigation size={18} /> {t("schedule.navigate", "Cómo llegar")}
+            </button>
+          ) : (
+            <p className="rounded-xl border border-dashed border-line bg-surface-2 px-3 py-2 text-center text-xs text-muted">
+              {t("schedule.noLocation", "Sin ubicación registrada para este puesto")}
+            </p>
+          )}
+        </div>
+      )}
+    </Sheet>
   );
 }
