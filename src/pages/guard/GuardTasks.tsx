@@ -52,8 +52,12 @@ export default function GuardTasks() {
                 {/* Whole card is tappable → opens the task detail (read-only when done). */}
                 <button
                   onClick={() => { fb.tap(); setActive(task); }}
-                  className="pressable flex w-full items-start justify-between gap-4 p-6 text-left"
+                  className="pressable block w-full text-left"
                 >
+                  {/* Padding lives on this inner div, NOT the <button>: Ionic's
+                      unlayered normalize resets `button{padding:0}`, which in
+                      Tailwind v4 beats padding utilities on the button element. */}
+                  <div className="flex items-start justify-between gap-4 p-5">
                   <div className="min-w-0">
                     <p className="font-medium text-ink">{task.taskToDo}</p>
                     <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
@@ -76,6 +80,7 @@ export default function GuardTasks() {
                     )}
                   </div>
                   <ChevronRight size={18} className="mt-0.5 shrink-0 text-faint" />
+                  </div>
                 </button>
               </Card>
             );
