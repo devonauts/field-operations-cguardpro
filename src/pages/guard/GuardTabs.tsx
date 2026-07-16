@@ -173,6 +173,10 @@ export default function GuardTabs() {
         <Route exact path="/guard/performance" component={isModuleEnabled("performance") ? GuardPerformance : RedirectHome} />
         <Route exact path="/guard/profile" component={Profile} />
         {/* Tab destinations + the detail screens reached from dashboard cards */}
+        {/* Patrol as a TAB root (no back) vs. pushed from the Inicio "Ronda activa"
+            card as a detail (its own path so Ionic doesn't reuse the cached tab
+            instance) → the detail shows a native back button. */}
+        <Route exact path="/guard/patrol/active" component={GuardPatrol} />
         <Route exact path="/guard/patrol" component={GuardPatrol} />
         <Route exact path="/guard/incidents" component={GuardIncidents} />
         <Route exact path="/guard/shift" component={GuardShiftDetail} />

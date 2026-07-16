@@ -361,7 +361,7 @@ export default function OnDutyView({ data }: { data: any }) {
 
       {/* ============================ ACTIVE PATROL =========================== */}
       <NavCard
-        onClick={() => history.push("/guard/patrol?from=home")}
+        onClick={() => history.push("/guard/patrol/active")}
         className="card-elev overflow-hidden p-4"
       >
         <div className="flex items-center justify-between">

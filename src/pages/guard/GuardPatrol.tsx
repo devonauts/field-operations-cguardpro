@@ -63,10 +63,11 @@ function fmtElapsed(ms: number): string {
 export default function GuardPatrol() {
   const { t } = useTranslation();
   const [present] = useIonToast();
-  // `/guard/patrol` is BOTH a bottom-tab root (no back button) AND a detail pushed
-  // from the Inicio "Ronda activa" card. When pushed from home it carries
-  // `?from=home`, so it shows a native back button; from the tab bar it's a root.
-  const pushedFromHome = new URLSearchParams(useLocation().search).get("from") === "home";
+  // Patrol renders at two paths: `/guard/patrol` is the bottom-tab ROOT (no back
+  // button); `/guard/patrol/active` is the SAME screen pushed from the Inicio
+  // "Ronda activa" card (a detail → native back button). Distinct paths so Ionic
+  // never reuses the cached tab instance and mislabels the hierarchy.
+  const pushedFromHome = useLocation().pathname !== "/guard/patrol";
   const [selectedId, setSelectedId] = useState<string>("");
   const [scanned, setScanned] = useState<Set<string>>(new Set());
   const [startedAt, setStartedAt] = useState<number | null>(null);
