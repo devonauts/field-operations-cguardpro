@@ -115,23 +115,16 @@ body {
    block that swaps in (loaded data replacing a skeleton); `.stagger` on a list
    container cascades its direct children. The reduced-motion block above already
    neutralizes both for motion-sensitive users. */
-@keyframes enter-up {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
+/* A quick, cohesive fade — NO upward translate and NO per-item cascade. The
+   old translateY + staggered delays made content visibly "pull in" one item at a
+   time AFTER the header during an Ionic page push, which read as janky/broken.
+   Now content appears as one unit alongside the page-slide transition. */
+@keyframes enter-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
-.animate-in { animation: enter-up 0.34s cubic-bezier(0.22, 1, 0.36, 1) both; }
-.stagger > * { animation: enter-up 0.34s cubic-bezier(0.22, 1, 0.36, 1) both; }
-.stagger > *:nth-child(1) { animation-delay: 0.02s; }
-.stagger > *:nth-child(2) { animation-delay: 0.06s; }
-.stagger > *:nth-child(3) { animation-delay: 0.10s; }
-.stagger > *:nth-child(4) { animation-delay: 0.14s; }
-.stagger > *:nth-child(5) { animation-delay: 0.18s; }
-.stagger > *:nth-child(6) { animation-delay: 0.22s; }
-.stagger > *:nth-child(7) { animation-delay: 0.26s; }
-.stagger > *:nth-child(8) { animation-delay: 0.30s; }
-.stagger > *:nth-child(9) { animation-delay: 0.34s; }
-/* Cap the cascade so a long list's tail doesn't lag. */
-.stagger > *:nth-child(n+10) { animation-delay: 0.38s; }
+.animate-in { animation: enter-fade 0.18s ease-out both; }
+.stagger > * { animation: enter-fade 0.18s ease-out both; }
 
 /* Skeleton shimmer — the single loading primitive (use the <Skeleton> component) */
 @keyframes skeleton-shimmer {
