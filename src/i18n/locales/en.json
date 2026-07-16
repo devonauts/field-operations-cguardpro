@@ -340,7 +340,18 @@
     "noShiftsDay": "No shifts this day",
     "timeOffApproved": "Time off approved",
     "today": "Today",
-    "week": "Week"
+    "week": "Week",
+    "statusUpcoming": "Upcoming",
+    "statusActive": "In progress",
+    "statusDone": "Completed",
+    "time": "Time",
+    "duration": "Duration",
+    "shiftType": "Type",
+    "post": "Post",
+    "callsign": "Call-sign",
+    "navigate": "Directions",
+    "noLocation": "No saved location for this post",
+    "shiftDetail": "Shift detail"
   },
   "reports": {
     "title": "Reports & Analytics",

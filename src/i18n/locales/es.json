@@ -340,7 +340,18 @@
     "noShiftsDay": "Sin turnos este día",
     "timeOffApproved": "Tiempo libre aprobado",
     "today": "Hoy",
-    "week": "Semana"
+    "week": "Semana",
+    "statusUpcoming": "Próximo",
+    "statusActive": "En curso",
+    "statusDone": "Completado",
+    "time": "Horario",
+    "duration": "Duración",
+    "shiftType": "Tipo",
+    "post": "Puesto",
+    "callsign": "Nominativo",
+    "navigate": "Cómo llegar",
+    "noLocation": "Sin ubicación registrada para este puesto",
+    "shiftDetail": "Detalle del turno"
   },
   "reports": {
     "title": "Reportes y Analítica",
