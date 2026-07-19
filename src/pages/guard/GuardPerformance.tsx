@@ -111,7 +111,9 @@ function Content({ p, t }: { p: any; t: (k: string, o?: any) => string }) {
     { key: "onTime", value: s.onTimeShifts ?? 0 },
     {
       key: "attendanceRate",
-      value: s.attendanceRate == null ? "—" : `${Math.round(s.attendanceRate * 100)}%`,
+      // Backend already returns 0–100 (guardPerformanceService rounds *100) —
+      // multiplying again showed "10000 %".
+      value: s.attendanceRate == null ? "—" : `${Math.round(s.attendanceRate)}%`,
     },
     { key: "avgLatenessMin", value: `${round(s.avgLatenessMin)} min` },
     { key: "absences", value: s.absences ?? 0 },

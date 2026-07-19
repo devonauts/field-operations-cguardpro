@@ -153,7 +153,10 @@ export default function FloatingRadioButton() {
   return (
     <div
       ref={ref}
-      className="fixed z-50"
+      // pointer-events-none on the wrappers: only the ROUND button itself takes
+      // touches — the square wrapper was stealing taps aimed at content under
+      // its corners (chat mic button, form buttons).
+      className="pointer-events-none fixed z-50"
       style={{ ...style, paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       {/* The button is the only in-flow element so its position never depends on
@@ -175,7 +178,7 @@ export default function FloatingRadioButton() {
         onPointerCancel={onUp}
         onContextMenu={(e) => e.preventDefault()}
         style={{ touchAction: "none", WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" } as any}
-        className={`no-press relative grid h-24 w-24 place-items-center rounded-full ${canTalk ? "" : "opacity-70"}`}
+        className={`no-press pointer-events-auto relative grid h-24 w-24 place-items-center rounded-full ${canTalk ? "" : "opacity-70"}`}
         aria-label={t("radio.holdToTalkChannel", "Mantén para hablar en el canal")}
       >
         <span className={`absolute inset-0 rounded-full ${talking ? "bg-critical/25 animate-ping" : someoneElseTalking ? "bg-gold/25 animate-pulse" : "bg-gold/15"}`} />
