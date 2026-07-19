@@ -19,7 +19,6 @@ import {
 import { useNotifications, AppNotification } from "@/context/NotificationContext";
 import { useAuth } from "@/context/AuthContext";
 import { SkeletonList, ErrorState, EmptyState } from "@/components/ui";
-import { SUPERVISOR_ROLE } from "@/lib/roles";
 import type { WorkerRole } from "@/lib/roles";
 import { relativeTime } from "@/lib/format";
 import i18n from "@/i18n";
@@ -278,21 +277,7 @@ export function routeForNotification(
   const family = (n.type || "").split(".")[0];
   const convoId = d.conversationId ?? d.conversation_id ?? d.threadId ?? d.thread_id;
 
-  if (role === SUPERVISOR_ROLE) {
-    // Supervisors only have a subset of destinations. Anything without a real
-    // supervisor route returns null (no navigation).
-    switch (family) {
-      case "incident":
-        return "/supervisor/incidents";
-      case "shift":
-        return "/supervisor/schedule";
-      default:
-        // message / radio_check / attendance have no supervisor screen.
-        return null;
-    }
-  }
-
-  // Guard (default).
+  // Guards only — the worker app no longer serves supervisors (lib/roles.ts).
   switch (family) {
     case "message":
       return convoId ? `/guard/messages/${convoId}` : "/guard/messages";

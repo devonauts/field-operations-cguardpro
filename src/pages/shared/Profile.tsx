@@ -50,7 +50,6 @@ import { useAsync } from "@/lib/useAsync";
 import { guardService } from "@/lib/services";
 import { useFileUrl } from "@/lib/fileUrl";
 import { loadGuardPerformance, Performance } from "@/lib/performance";
-import { SUPERVISOR_ROLE } from "@/lib/roles";
 import { getErrorLog, clearErrorLog, type LogEntry } from "@/lib/errorLog";
 import fb, { soundsEnabled, setSoundsEnabled, setHapticsEnabled } from "@/lib/feedback";
 
@@ -101,10 +100,8 @@ export default function Profile() {
   const avatarSrc = useFileUrl(avatarSource) || null;
   const email = guard.email || user?.email || "—";
   const phone = guard.phone || "—";
-  const isSupervisor = role === SUPERVISOR_ROLE;
-  const roleLabel = isSupervisor
-    ? t("profile.roleSupervisor", "Supervisor de Seguridad")
-    : t("profile.roleGuard", "Oficial de Seguridad");
+  // Guards only — the worker app no longer serves supervisors (lib/roles.ts).
+  const roleLabel = t("profile.roleGuard", "Oficial de Seguridad");
   const employeeId = guard.employeeId || guard.guardId?.slice?.(0, 8)?.toUpperCase?.() || "—";
   // Assigned post: prefer the station-junction assignment, then fall back to the
   // guard's current/next scheduled shift station (guards are often assigned via

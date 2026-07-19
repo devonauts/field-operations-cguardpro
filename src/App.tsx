@@ -13,8 +13,6 @@ import { startLocationReporter } from "./lib/locationReporter";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import GuardTabs from "./pages/guard/GuardTabs";
-import SupervisorTabs from "./pages/supervisor/SupervisorTabs";
-import { SUPERVISOR_ROLE } from "./lib/roles";
 import { RadioProvider } from "./context/RadioContext";
 import FloatingRadioButton from "./components/FloatingRadioButton";
 import RadioCheckAlert from "./components/RadioCheckAlert";
@@ -39,7 +37,7 @@ function parseResetToken(url?: string | null): string | null {
 }
 
 function Gate() {
-  const { loading, isAuthenticated, role } = useAuth();
+  const { loading, isAuthenticated } = useAuth();
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -47,10 +45,10 @@ function Gate() {
     // register the push token onto it (keyed by the same stable deviceId) — this
     // avoids the race that created two device rows and lost the FCM token.
     (async () => {
-      if (role !== SUPERVISOR_ROLE) await reportDevice();
+      await reportDevice();
       await registerPush();
     })();
-  }, [isAuthenticated, role]);
+  }, [isAuthenticated]);
 
   if (loading) {
     return (
@@ -62,9 +60,8 @@ function Gate() {
 
   if (!isAuthenticated) return <Login />;
 
-  if (role === SUPERVISOR_ROLE) return <SupervisorTabs />;
-
-  // Guards: live radio stays connected app-wide while on duty (floating PTT),
+  // Guards only — supervisors are rejected at login (see lib/roles.ts).
+  // Live radio stays connected app-wide while on duty (floating PTT),
   // so the channel works across screens without opening the radio page.
   return (
     <RadioProvider>
