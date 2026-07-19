@@ -1,8 +1,10 @@
-// Roles allowed to use the worker app. Only field guards and supervisors.
+// Roles allowed to use the worker app. GUARDS ONLY — supervisors use the
+// supervisor app, admins use the CRM. The backend also enforces this
+// (app:'worker' only accepts securityGuard); this is the client-side mirror.
 export const GUARD_ROLE = "securityGuard";
 export const SUPERVISOR_ROLE = "securitySupervisor";
 
-export const ALLOWED_ROLES = [GUARD_ROLE, SUPERVISOR_ROLE] as const;
+export const ALLOWED_ROLES = [GUARD_ROLE] as const;
 export type WorkerRole = (typeof ALLOWED_ROLES)[number];
 
 const normalize = (r: any): string => {
@@ -33,10 +35,10 @@ export function hasAllowedRole(user: any): boolean {
   return roles.some((r) => (ALLOWED_ROLES as readonly string[]).includes(r));
 }
 
-/** Resolve the effective worker role (supervisor wins over guard). */
+/** Resolve the effective worker role. Guards only — a guard+supervisor dual
+ *  holder is served the guard experience here (supervisor uses the other app). */
 export function resolveWorkerRole(user: any): WorkerRole | null {
   const roles = collectRoles(user);
-  if (roles.includes(SUPERVISOR_ROLE)) return SUPERVISOR_ROLE;
   if (roles.includes(GUARD_ROLE)) return GUARD_ROLE;
   return null;
 }
