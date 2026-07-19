@@ -39,7 +39,7 @@ import { useAsync } from "@/lib/useAsync";
 import { ConsignasSection } from "@/components/ConsignasSection";
 import { useAuth } from "@/context/AuthContext";
 import { guardService } from "@/lib/services";
-import { setDuty } from "@/lib/dutyState";
+import { setDuty, getDuty } from "@/lib/dutyState";
 import { useBranding } from "@/lib/appBranding";
 import fb from "@/lib/feedback";
 import { onPush } from "@/lib/pushEvents";
@@ -174,8 +174,27 @@ export default function GuardDashboard() {
   const [clockInReqBusy, setClockInReqBusy] = useState(false);
 
   // Publish duty state to the shell (tab bar hides operational UI when off duty).
+  // Flipping true→false is destructive (disconnects the radio, hides the PTT
+  // button mid-shift), and /guard/me is refetched on EVERY app resume — so a
+  // single transient `isClockedIn:false` (backend hiccup, token refresh) must
+  // not be trusted: confirm with one immediate refetch before publishing.
+  // A real clock-out confirms on that refetch; a hiccup heals invisibly.
+  const offDutyUnconfirmed = useRef(false);
   useEffect(() => {
-    if (data) setDuty(isClockedIn);
+    if (!data) return;
+    if (isClockedIn) {
+      offDutyUnconfirmed.current = false;
+      setDuty(true);
+      return;
+    }
+    if (getDuty() && !offDutyUnconfirmed.current) {
+      offDutyUnconfirmed.current = true;
+      reload();
+      return;
+    }
+    offDutyUnconfirmed.current = false;
+    setDuty(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, isClockedIn]);
 
   // Toast announcing an early-clock-out decision. Shared by the poll fallback

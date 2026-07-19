@@ -90,7 +90,13 @@ export default function GuardTabs() {
     return onPush((d: any) => {
       if (!d || d._tapped !== "1") return;
       const route = routeForPush(d);
-      if (route) { try { fb.tap(); } catch { /* ignore */ } history.push(route); }
+      // Don't push the route we're already on: same-route pushes STACK a
+      // duplicate Ionic view, and the unbalanced enter/leave events that
+      // follow are what used to strand the floating radio button hidden.
+      if (route && history.location.pathname !== route) {
+        try { fb.tap(); } catch { /* ignore */ }
+        history.push(route);
+      }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -132,7 +138,12 @@ export default function GuardTabs() {
     const off = onPush((d: any) => {
       if (d?.type === "message.new") setUnread((n) => n + 1);
       // A radio-check request: jump the guard straight to the Radio screen.
-      if (d?.type === "radio.check_request") history.push("/guard/radio");
+      // Only for DATA pushes (foreground) — a tapped notification already
+      // navigates via the deep-link handler above; doing both stacked two
+      // radio views for the same pase. Skip too if already on the screen.
+      if (d?.type === "radio.check_request" && d?._tapped !== "1" && history.location.pathname !== "/guard/radio") {
+        history.push("/guard/radio");
+      }
       // Shift ended → forced clock-out: flip off-duty and return to dashboard.
       if (d?.type === "guard.forced_clockout") {
         setDuty(false);

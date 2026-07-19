@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useLocation } from "react-router-dom";
 import { Mic, Loader2, Volume2 } from "lucide-react";
 import { useRadio } from "@/context/RadioContext";
 
@@ -33,7 +34,13 @@ function safeAreaBottom(): number {
  */
 export default function FloatingRadioButton() {
   const { t } = useTranslation();
-  const { onDuty, screenActive, state, speaker, talking, hint, myId, someoneElseTalking, resume, pressTalk, releaseTalk } = useRadio();
+  const { onDuty, state, speaker, talking, hint, myId, someoneElseTalking, resume, pressTalk, releaseTalk } = useRadio();
+  // Hide while the full radio screen is open — derived from the ROUTE, not an
+  // imperative latch: lifecycle-event bookkeeping got stuck on Android (missed
+  // ionViewWillLeave after background navigations) and hid the button app-wide
+  // until restart. The route can't get stuck.
+  const { pathname } = useLocation();
+  const onRadioScreen = pathname.startsWith("/guard/radio");
 
   const ref = useRef<HTMLDivElement>(null);
   const drag = useRef<{
@@ -68,7 +75,7 @@ export default function FloatingRadioButton() {
     };
   }, [releaseTalk]);
 
-  if (!onDuty || screenActive) return null;
+  if (!onDuty || onRadioScreen) return null;
 
   const connecting = state === "connecting";
   const canTalk = !connecting && !someoneElseTalking;

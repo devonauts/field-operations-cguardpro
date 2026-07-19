@@ -1,6 +1,4 @@
-import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { useIonViewWillEnter, useIonViewWillLeave } from "@ionic/react";
 import { Mic, Loader2, Users, Volume2 } from "lucide-react";
 import { useRadio } from "@/context/RadioContext";
 
@@ -12,19 +10,14 @@ import { useRadio } from "@/context/RadioContext";
  */
 export default function RadioLiveChannel() {
   const { t } = useTranslation();
-  const { state, roster, speaker, talking, hint, myId, someoneElseTalking, onDuty, setScreenActive, resume, pressTalk, releaseTalk } = useRadio();
+  const { state, roster, speaker, talking, hint, myId, someoneElseTalking, onDuty, resume, pressTalk, releaseTalk } = useRadio();
 
-  // Hide the app-wide floating button while this full screen is open (one button).
-  // Use Ionic's view lifecycle, NOT mount/unmount: Ionic CACHES tab pages, so
-  // an unmount-based cleanup wouldn't fire when navigating away — which would
-  // leave screenActive=true and the floating button hidden everywhere.
-  useIonViewWillEnter(() => setScreenActive(true));
-  useIonViewWillLeave(() => setScreenActive(false));
-  useEffect(() => {
-    setScreenActive(true);
-    return () => setScreenActive(false);
-  }, [setScreenActive]);
-
+  // NOTE: the floating PTT button hides itself while this screen is open by
+  // checking the CURRENT ROUTE (FloatingRadioButton). It used to be an
+  // imperative screenActive latch set from Ionic view-lifecycle events here —
+  // one missed ionViewWillLeave (stacked duplicate pushes of /guard/radio,
+  // transitions started while the Android WebView was frozen in background)
+  // left it stuck true and hid the button app-wide until an app restart.
   const connecting = state === "connecting";
 
   const onPttDown = (e: React.PointerEvent) => {
