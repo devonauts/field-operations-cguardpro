@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHistory } from "react-router-dom";
-import { ChevronRight, ClipboardCheck, LogOut, Siren, Timer, UserCheck } from "lucide-react";
+import { ChevronRight, ClipboardCheck, LogOut, RadioTower, Siren, Timer, UserCheck } from "lucide-react";
 import { useAsync } from "@/lib/useAsync";
 import { incidentService, guardService, taskService } from "@/lib/services";
 import { rondasService } from "@/lib/rondas";
@@ -524,6 +524,23 @@ export default function OnDutyView({ data }: { data: any }) {
           </div>
         </div>
       </NavCard>
+
+      {/* Radio — visible entry to the live channel. The floating PTT button is
+          unlabeled, so without this row the radio screen is only reachable via
+          push deep-links (App Review couldn't find it — Guideline 2.5.4). */}
+      <button
+        onClick={() => {
+          fb.tap();
+          history.push("/guard/radio");
+        }}
+        className="flex min-h-[68px] w-full items-center gap-3 rounded-2xl border border-line bg-surface px-5 text-[15px] font-semibold text-ink active:bg-surface-2"
+      >
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gold/15 text-gold">
+          <RadioTower size={22} />
+        </span>
+        <span className="flex-1 text-left">{t("nav.radio", "Radio")}</span>
+        <ChevronRight size={18} className="shrink-0 text-muted" />
+      </button>
 
       {/* Visitantes — kept reachable from the on-duty home now that it's no longer
           a bottom tab (see GuardTabs nav-stability note). */}
