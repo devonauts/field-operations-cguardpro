@@ -42,7 +42,14 @@ export function RondaQRScanner({
             /* per-frame decode failures are normal; ignore */
           }
         );
-        if (active) setStatus("scanning");
+        if (!active) {
+          // Unmounted while the camera was warming up: the cleanup's stop()
+          // already rejected ("not running"), so release the stream here or
+          // the camera stays on until reload.
+          scanner.stop().then(() => scanner.clear()).catch(() => {});
+          return;
+        }
+        setStatus("scanning");
       } catch {
         if (active) {
           setStatus("error");

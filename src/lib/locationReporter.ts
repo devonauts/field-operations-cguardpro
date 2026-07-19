@@ -151,16 +151,29 @@ async function stopBackgroundWatcher() {
   }
 }
 
+let acquiring = false;
 async function run() {
-  if (timer || watcherId) return;
-  // Prefer the native background watcher; only fall back to the foreground timer.
-  const bg = await startBackgroundWatcher();
-  if (bg) {
-    void tick(); // one immediate fix so the trail starts at go-on-duty
-    return;
+  if (timer || watcherId || acquiring) return;
+  acquiring = true;
+  try {
+    // Prefer the native background watcher; only fall back to the foreground timer.
+    const bg = await startBackgroundWatcher();
+    // addWatcher can block on a permission prompt; if the guard clocked out
+    // meanwhile, halt() already ran as a no-op (watcherId was still null) —
+    // tear down now or the GPS + "Turno activo" notification outlive the shift.
+    if (!getDuty()) {
+      halt();
+      return;
+    }
+    if (bg) {
+      void tick(); // one immediate fix so the trail starts at go-on-duty
+      return;
+    }
+    void tick();
+    timer = setInterval(tick, INTERVAL_MS);
+  } finally {
+    acquiring = false;
   }
-  void tick();
-  timer = setInterval(tick, INTERVAL_MS);
 }
 function halt() {
   if (timer) { clearInterval(timer); timer = null; }

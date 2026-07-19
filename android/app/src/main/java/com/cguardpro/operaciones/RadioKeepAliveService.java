@@ -53,9 +53,11 @@ public class RadioKeepAliveService extends Service {
             startForeground(NOTIF_ID, notif);
         }
 
-        // Restart if the OS kills us while the channel should still be alive; the
-        // plugin's stop() is what truly ends it (off duty / channel disconnect).
-        return START_STICKY;
+        // NOT sticky: if the OS kills the app process, resurrecting this service
+        // alone is useless (the radio lives in the WebView, which is gone) and
+        // leaves a misleading "Radio activa" notification with no radio behind
+        // it. RadioContext restarts the service when the app reconnects.
+        return START_NOT_STICKY;
     }
 
     @Override

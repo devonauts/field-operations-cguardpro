@@ -44,6 +44,13 @@ export class VoiceChannel {
   private speakerId: string | null = null;
   /** true once the LiveKit room is connected (RadioContext polls this). */
   joined = false;
+  /**
+   * Set by disconnect(). start() re-checks it after every await: a disconnect
+   * that lands during the token fetch (clock-out / reconnectTick teardown)
+   * would otherwise no-op (room is still null) and the in-flight start() would
+   * connect an ownerless room + leak its hidden <audio> elements.
+   */
+  private disposed = false;
 
   get connected(): boolean {
     return this.room?.state === ConnectionState.Connected;
@@ -61,6 +68,7 @@ export class VoiceChannel {
   ): void {
     this.cb = cb || {};
     this.selfId = opts.selfId || "";
+    this.disposed = false;
     this.cb.onState?.("connecting");
     void this.start(opts);
   }
@@ -79,6 +87,7 @@ export class VoiceChannel {
       const token: string = data?.token;
       const iceServers = Array.isArray(data?.iceServers) ? data.iceServers : [];
       if (!url || !token) throw new Error("radio token payload");
+      if (this.disposed) return; // disconnected while fetching the token
 
       const room = new Room({
         adaptiveStream: false,
@@ -141,6 +150,7 @@ export class VoiceChannel {
         });
 
       await room.connect(url, token, { autoSubscribe: true });
+      if (this.disposed) { void room.disconnect(); return; }
       // Pre-grant the mic permission now (join is a user gesture) so the FIRST
       // push-to-talk publishes instantly instead of the permission prompt
       // interrupting the hold. Best-effort; the track is released immediately —
@@ -150,6 +160,7 @@ export class VoiceChannel {
         s.getTracks().forEach((t) => t.stop());
       } catch { /* user can still grant on first PTT */ }
     } catch (e: any) {
+      if (this.disposed) return;
       this.cb.onState?.("error");
       this.cb.onError?.(e?.message || i18n.t("radio.connectError", "No se pudo conectar la radio"));
     }
@@ -211,6 +222,7 @@ export class VoiceChannel {
   }
 
   disconnect(): void {
+    this.disposed = true;
     this.joined = false;
     this.speakerId = null;
     try {

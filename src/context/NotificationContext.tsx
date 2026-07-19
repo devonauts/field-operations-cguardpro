@@ -125,7 +125,8 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     const disconnect = connectNotifications((ev) => {
       setItems((prev) => {
         if (prev.some((n) => n.id === ev.id)) return prev;
-        return [fromRealtimeEvent(ev), ...prev];
+        // Cap so a socket-only stream can't grow the list unbounded over a shift.
+        return [fromRealtimeEvent(ev), ...prev].slice(0, 100);
       });
     });
     return disconnect;
