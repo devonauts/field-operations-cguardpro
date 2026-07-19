@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { IonModal } from "@ionic/react";
 import { modalEnterAnimation, modalLeaveAnimation } from "@/lib/modalAnimation";
@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { visitorService, VisitorPhoto } from "@/lib/services";
 import { VisitorPreAuthScan } from "./VisitorPreAuthScan";
+import { pushBackHandler } from "@/lib/backButton";
 import { fileUrlFromFile } from "@/lib/fileUrl";
 import { useAsync } from "@/lib/useAsync";
 import { fmtTime, fmtDateTime } from "@/lib/format";
@@ -252,6 +253,19 @@ export function VisitorFlow({ station, onClose, embedded }: { station: any; onCl
     else if (mode === "capture" || mode === "vehicle") setMode("choose");
     else { setMode("list"); setSelected(null); }
   };
+
+  // Hardware back mirrors the header back arrow (step back within the flow)
+  // instead of popping the ROUTE — a route pop unmounted the whole flow and
+  // silently discarded everything the guard had typed.
+  useEffect(() => {
+    if (mode === "list") return;
+    return pushBackHandler(() => { goBack(); return true; });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
+  useEffect(() => {
+    if (!scanPreAuth) return;
+    return pushBackHandler(() => { setScanPreAuth(false); return true; });
+  }, [scanPreAuth]);
 
   const openDetail = (v: any) => { setSelected(v); setMode("detail"); };
 

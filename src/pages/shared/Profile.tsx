@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import i18n from "@/i18n";
 import { useHistory } from "react-router-dom";
 import {
   Settings,
@@ -58,7 +59,10 @@ const APP_VERSION = "2.0.0";
 function fmtDate(d: any): string {
   if (!d) return "—";
   try {
-    return new Date(d).toLocaleDateString(undefined, {
+    // Follow the APP language, not the device locale — otherwise "Joined"
+    // showed a Spanish-formatted date in English mode.
+    const locale = i18n.language?.startsWith("en") ? "en-US" : "es-ES";
+    return new Date(d).toLocaleDateString(locale, {
       year: "numeric",
       month: "short",
       day: "numeric",

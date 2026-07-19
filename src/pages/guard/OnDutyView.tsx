@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useIonViewWillEnter } from "@ionic/react";
 import { useTranslation } from "react-i18next";
 import { useHistory } from "react-router-dom";
 import { ChevronRight, ClipboardCheck, LogOut, RadioTower, Siren, Timer, UserCheck } from "lucide-react";
@@ -147,14 +148,29 @@ export default function OnDutyView({ data }: { data: any }) {
   const alertBadge = (shiftIncidents.length ? shiftIncidents : incidents).filter(isOpenIncident).length;
 
   // Patrol progress.
-  const { data: patrols, loading: patrolsLoading } = useAsync<any[]>(
+  const { data: patrols, loading: patrolsLoading, reload: reloadPatrols } = useAsync<any[]>(
     () => rondasService.patrols().catch(() => []),
     [],
   );
-  const { data: scans, loading: scansLoading } = useAsync<any[]>(
+  const { data: scans, loading: scansLoading, reload: reloadScans } = useAsync<any[]>(
     () => rondasService.scans({ limit: 100 }).catch(() => []),
     [],
   );
+  // Rondas start/advance from OTHER screens (Rondas tab) while this home stays
+  // mounted (Ionic caches tab pages) — without a refresh the RONDA ACTIVA card
+  // said "Sin ruta" forever next to a genuinely running round. Re-pull when the
+  // home becomes visible again, plus a slow poll while it stays open.
+  useIonViewWillEnter(() => {
+    reloadPatrols();
+    reloadScans();
+  });
+  useEffect(() => {
+    const id = setInterval(() => {
+      reloadPatrols();
+      reloadScans();
+    }, 45_000);
+    return () => clearInterval(id);
+  }, [reloadPatrols, reloadScans]);
   // Client-requested tasks for my station(s).
   const { data: shiftTasks } = useAsync<any[]>(
     () => taskService.list().catch(() => []),
@@ -337,7 +353,7 @@ export default function OnDutyView({ data }: { data: any }) {
                 tone="gold"
                 icon={<Timer size={20} />}
                 value={remainingLabel}
-                label={t("onduty.remaining", "Restante")}
+                label={t("onduty.remainingLabel", "Restante")}
               />
               <MetricTile
                 tone="neutral"

@@ -7,6 +7,7 @@ import { Screen } from "@/components/Screen";
 import { ErrorState, SkeletonList, Sheet } from "@/components/ui";
 import { useAsync } from "@/lib/useAsync";
 import { messageService } from "@/lib/services";
+import { useAuth } from "@/context/AuthContext";
 import { useFileUrl } from "@/lib/fileUrl";
 import { onPush } from "@/lib/pushEvents";
 import { fb } from "@/lib/feedback";
@@ -19,8 +20,15 @@ const newId = () =>
 
 type Chip = "all" | "unread";
 
-function nameOf(c: any, t?: any): string {
-  return c.recipientName || c.counterpartName || c.subject || (t ? t("messages.company", "Empresa") : "Empresa");
+function nameOf(c: any, t?: any, selfName?: string | null): string {
+  const raw = c.recipientName || c.counterpartName || c.subject;
+  // A guard→office thread comes back with the guard's OWN name as the
+  // recipient — titling the conversation with yourself is confusing, so label
+  // it as the office instead.
+  if (raw && selfName && String(raw).trim().toLowerCase() === String(selfName).trim().toLowerCase()) {
+    return t ? t("messages.toOffice", "Para la oficina") : "Para la oficina";
+  }
+  return raw || (t ? t("messages.company", "Empresa") : "Empresa");
 }
 function fmtTime(iso: string | null | undefined, t?: any): string {
   if (!iso) return "";
@@ -49,7 +57,7 @@ function ConvAvatar({ c }: { c: any }) {
   );
 }
 
-function ConvRow({ c, onOpen, onLongPress }: { c: any; onOpen: (c: any) => void; onLongPress: (c: any) => void }) {
+function ConvRow({ c, onOpen, onLongPress, selfName }: { c: any; onOpen: (c: any) => void; onLongPress: (c: any) => void; selfName?: string | null }) {
   const { t } = useTranslation();
   const preview = c.lastMessagePreview || (c.isGroup ? t("messages.group", "Grupo") : "");
   const [sender, ...rest] = String(preview).split(/:\s(.+)/);
@@ -72,7 +80,7 @@ function ConvRow({ c, onOpen, onLongPress }: { c: any; onOpen: (c: any) => void;
       <ConvAvatar c={c} />
       <span className="min-w-0 flex-1">
         <span className="flex items-center justify-between gap-2">
-          <span className={`truncate ${styles.name}`}>{nameOf(c, t)}</span>
+          <span className={`truncate ${styles.name}`}>{nameOf(c, t, selfName)}</span>
           <span className={styles.time}>{fmtTime(c.lastMessageAt, t)}</span>
         </span>
         <span className="mt-0.5 flex items-center gap-1.5">
@@ -92,6 +100,8 @@ const ConvRowMemo = memo(ConvRow);
 export default function GuardMessages() {
   const { t } = useTranslation();
   const history = useHistory();
+  const { user } = useAuth();
+  const selfName = user?.fullName || user?.firstName || null;
   const { data, loading, error, reload } = useAsync<any>(() => messageService.listThreads({ limit: 50 }));
   const rows: any[] = (data?.rows || []).filter((c: any) => c && c.id);
   const [composing, setComposing] = useState(false);
@@ -101,14 +111,14 @@ export default function GuardMessages() {
 
   const confirmDelete = useCallback((c: any) => {
     presentActionSheet({
-      header: nameOf(c, t),
+      header: nameOf(c, t, selfName),
       subHeader: t("messages.deleteHint", "Se eliminará solo para ti."),
       buttons: [
         { text: t("messages.deleteChat", "Eliminar conversación"), role: "destructive", handler: () => { messageService.remove(String(c.id)).then(() => reload()).catch(() => {}); } },
         { text: t("app.cancel", "Cancelar"), role: "cancel" },
       ],
     });
-  }, [presentActionSheet, t, reload]);
+  }, [presentActionSheet, t, reload, selfName]);
 
   // Stable handlers so memoized ConvRowMemo rows don't re-render every tick.
   const openConv = useCallback((c: any) => { fb.tap(); history.push(`/guard/messages/${c.id}`); }, [history]);
@@ -181,7 +191,7 @@ export default function GuardMessages() {
               </button>
             </div>
           ) : (
-            shown.map((c) => <ConvRowMemo key={c.id} c={c} onOpen={openConv} onLongPress={longPressConv} />)
+            shown.map((c) => <ConvRowMemo key={c.id} c={c} onOpen={openConv} onLongPress={longPressConv} selfName={selfName} />)
           )}
         </div>
       )}

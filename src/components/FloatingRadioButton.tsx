@@ -41,6 +41,15 @@ export default function FloatingRadioButton() {
   // until restart. The route can't get stuck.
   const { pathname } = useLocation();
   const onRadioScreen = pathname.startsWith("/guard/radio");
+  const visible = onDuty && !onRadioScreen;
+
+  // Flag the FAB's presence on <body> so page CSS can reserve bottom room —
+  // otherwise the button sits on the last actionable element of scrolled
+  // content (SOS slide, form submit buttons). See index.css.
+  useEffect(() => {
+    document.body.classList.toggle("radio-fab-visible", visible);
+    return () => document.body.classList.remove("radio-fab-visible");
+  }, [visible]);
 
   const ref = useRef<HTMLDivElement>(null);
   const drag = useRef<{
@@ -75,7 +84,7 @@ export default function FloatingRadioButton() {
     };
   }, [releaseTalk]);
 
-  if (!onDuty || onRadioScreen) return null;
+  if (!visible) return null;
 
   const connecting = state === "connecting";
   const canTalk = !connecting && !someoneElseTalking;

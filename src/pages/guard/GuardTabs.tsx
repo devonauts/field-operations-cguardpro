@@ -34,6 +34,7 @@ import GuardPermissions from "./GuardPermissions";
 import Profile from "../shared/Profile";
 import { messageService } from "@/lib/services";
 import { onPush } from "@/lib/pushEvents";
+import { pushBackHandler } from "@/lib/backButton";
 import { getDuty, subscribeDuty, setDuty } from "@/lib/dutyState";
 import { useAuth } from "@/context/AuthContext";
 import { useBranding } from "@/lib/appBranding";
@@ -83,6 +84,20 @@ export default function GuardTabs() {
   const userId = user?.id ?? null;
   const history = useHistory();
   const location = useLocation();
+
+  // Hardware back from an open message thread must return to the thread LIST —
+  // raw history.back() pops chronologically across tab stacks (it landed on
+  // whatever tab was visited before Mensajes).
+  useEffect(() => {
+    return pushBackHandler(() => {
+      if (/^\/guard\/messages\/.+/.test(history.location.pathname)) {
+        history.push("/guard/messages");
+        return true;
+      }
+      return false;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Deep-link on notification TAP: tapping ANY push should land the guard on the
   // relevant screen (radio pase, a new task, a message thread, an incident, …).
@@ -136,7 +151,11 @@ export default function GuardTabs() {
   // Push-driven updates: live badge increments + navigation side effects.
   useEffect(() => {
     const off = onPush((d: any) => {
-      if (d?.type === "message.new") setUnread((n) => n + 1);
+      // Skip our own outgoing messages (echoed back by socket/push) — they were
+      // inflating the unread badge the moment the guard sent something.
+      if (d?.type === "message.new" && String(d?.senderId || "") !== String(userId || "")) {
+        setUnread((n) => n + 1);
+      }
       // A radio-check request: jump the guard straight to the Radio screen.
       // Only for DATA pushes (foreground) — a tapped notification already
       // navigates via the deep-link handler above; doing both stacked two

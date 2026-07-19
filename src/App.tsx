@@ -9,6 +9,7 @@ import { registerPush, reportDevice } from "./lib/push";
 import AnimatedSplash from "./components/AnimatedSplash";
 import { StatusBanner } from "./components/StatusBanner";
 import { startDeviceStatus } from "./lib/deviceStatus";
+import { runBackChain } from "./lib/backButton";
 import { startLocationReporter } from "./lib/locationReporter";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
@@ -87,8 +88,10 @@ export default function App() {
     (async () => {
       try {
         sub = await CapApp.addListener("backButton", ({ canGoBack }: { canGoBack: boolean }) => {
-          if (canGoBack) window.history.back();
-          else CapApp.minimizeApp?.();
+          runBackChain(canGoBack, () => {
+            if (canGoBack) window.history.back();
+            else CapApp.minimizeApp?.();
+          });
         });
       } catch { /* not native */ }
     })();

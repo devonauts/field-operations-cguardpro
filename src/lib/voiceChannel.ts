@@ -19,10 +19,15 @@ import {
   RoomEvent,
   Track,
   ConnectionState,
+  setLogLevel,
   type RemoteTrack,
   type Participant,
 } from "livekit-client";
 import i18n from "@/i18n";
+
+// Quiet LiveKit's default logger — its periodic debug lines (incl. a bare
+// `undefined` every stats tick) flood logcat via Capacitor/Console.
+setLogLevel("warn");
 
 export type VoiceMember = { userId: string; name: string; role: string };
 export type VoiceSpeaker = { userId: string; name: string } | null;

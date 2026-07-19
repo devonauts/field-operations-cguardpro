@@ -209,7 +209,14 @@ export default function GuardThread() {
   };
   useEffect(() => () => { if (recTick.current) clearInterval(recTick.current); cancelRecording(); }, []);
 
-  const title = conversation?.subject || conversation?.counterpartName || t("messages.title", "Mensajes");
+  // A guard→office thread resolves the guard's OWN name as subject/counterpart
+  // — label it as the office instead of heading the chat with yourself.
+  const selfName = String(user?.fullName || user?.firstName || "").trim().toLowerCase();
+  const rawTitle = conversation?.subject || conversation?.counterpartName || "";
+  const title =
+    rawTitle && selfName && rawTitle.trim().toLowerCase() === selfName
+      ? t("messages.toOffice", "Para la oficina")
+      : rawTitle || t("messages.title", "Mensajes");
   const membersLabel = conversation?.memberCount
     ? `${conversation.memberCount} ${t("messages.members", "miembros")}`
     : conversation?.isGroup ? t("messages.group", "Grupo") : "";

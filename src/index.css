@@ -440,6 +440,15 @@ ion-modal::part(content) {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+/* While the floating radio PTT is on screen (on duty, not on the radio page —
+   FloatingRadioButton flags it on <body>), reserve bottom room in page scroll
+   content so the FAB never covers the last actionable element (SOS slide,
+   submit buttons, hints). Scoped to Screen's direct content wrappers — modal
+   footers keep their normal safe-area padding. */
+body.radio-fab-visible ion-content > .safe-bottom {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 128px);
+}
+
 /* Map Ionic's safe-area variables to the real device insets so the tab bar,
    toolbars and content all clear the notch / home indicator. Without this,
    Ionic falls back to 0 and the bottom tab bar is jammed against the home

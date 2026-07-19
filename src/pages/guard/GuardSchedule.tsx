@@ -18,6 +18,9 @@ const startOfWeekMon = (d: Date) => { const x = startOfDay(d); const dow = (x.ge
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const sameDay = (a: Date, b: Date) => ymd(a) === ymd(b);
 const MIN_MS = 60000;
+// Sentence-case a locale date label. The old CSS `capitalize` title-cased
+// every word ("Julio De 2026") — Spanish only capitalizes the first letter.
+const capFirst = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 const DAY_MIN = 1440;
 
 /** A shift's [start, end] in ms (end defaults to +30min when missing/invalid). */
@@ -189,7 +192,7 @@ export default function GuardSchedule() {
       <div className="mb-3 flex items-center justify-between">
         <button onClick={() => step(-1)} className="grid h-9 w-9 place-items-center rounded-full text-muted active:bg-surface-2"><ChevronLeft size={20} /></button>
         <div className="flex items-center gap-2">
-          <span className="text-[15px] font-bold capitalize text-ink">{periodLabel}</span>
+          <span className="text-[15px] font-bold text-ink">{capFirst(periodLabel)}</span>
           {!sameDay(anchor, today) && (
             <button onClick={goToday} className="rounded-full border border-line px-2 py-0.5 text-[11px] font-semibold text-gold active:bg-gold/10">{t("schedule.today", "Hoy")}</button>
           )}
@@ -372,8 +375,8 @@ function WeekTimeline({ anchor, today, weekdayLabels, shifts, workedDays, freeDa
 function DayHeader({ anchor, locale, view }: any) {
   if (view === "day") return null; // the period header already shows the day
   return (
-    <p className="mb-2 text-[13px] font-bold capitalize text-ink">
-      {new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long" }).format(anchor)}
+    <p className="mb-2 text-[13px] font-bold text-ink">
+      {capFirst(new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long" }).format(anchor))}
     </p>
   );
 }
@@ -588,7 +591,7 @@ function ShiftDetailSheet({ shift, onClose, locale, t }: any) {
       {s && (
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[15px] font-bold capitalize text-ink">{dateLabel}</p>
+            <p className="text-[15px] font-bold text-ink">{capFirst(dateLabel)}</p>
             {st?.label && <span className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${toneCls[st.tone]}`}>{st.label}</span>}
           </div>
 
