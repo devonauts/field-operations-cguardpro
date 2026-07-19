@@ -22,7 +22,7 @@ export function StatusBanner() {
 
   return (
     <div
-      className="fixed left-0 right-0 z-[2000] flex flex-col"
+      className="fixed left-0 right-0 z-[2000] flex flex-col sm:mx-auto sm:max-w-[430px]"
       style={{ top: 0, paddingTop: "env(safe-area-inset-top)" }}
     >
       {!online && (

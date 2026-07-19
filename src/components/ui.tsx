@@ -279,7 +279,7 @@ export function Sheet({
       <div
         role="dialog"
         aria-modal="true"
-        className={`sheet-panel safe-bottom relative max-h-[88vh] overflow-y-auto rounded-t-2xl border-t border-line bg-surface ${closing ? "sheet-panel-out" : ""} ${className}`}
+        className={`sheet-panel safe-bottom relative max-h-[88vh] overflow-y-auto rounded-t-2xl border-t border-line bg-surface sm:mx-auto sm:w-full sm:max-w-[430px] ${closing ? "sheet-panel-out" : ""} ${className}`}
       >
         <div className="sticky top-0 z-10 flex items-center justify-between gap-3 bg-surface/95 px-5 pb-2 pt-3 backdrop-blur">
           <div className="mx-auto h-1 w-9 rounded-full bg-line-2" aria-hidden />

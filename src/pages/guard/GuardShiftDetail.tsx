@@ -104,7 +104,7 @@ export default function GuardShiftDetail() {
             <div className="grid-overlay absolute inset-0 opacity-40" />
             <div className="relative">
               <span className="label-eyebrow">{t("onduty.elapsedTime", "Tiempo en turno")}</span>
-              <p className="mt-1 font-mono text-[52px] font-bold leading-none tracking-tight text-gold tabular-nums">
+              <p className="mt-1 font-mono text-[min(52px,13vw)] font-bold leading-none tracking-tight text-gold tabular-nums">
                 {elapsed.clock}
               </p>
               <p className="mt-2 text-sm text-muted">

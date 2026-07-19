@@ -639,7 +639,7 @@ function RouteChooserSheet({ routes, onPick, onClose }: { routes: RondaRoute[]; 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end" role="dialog">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative max-h-[80vh] overflow-y-auto rounded-t-2xl border-t border-line bg-surface p-4" style={footerStyle}>
+      <div className="relative max-h-[80vh] overflow-y-auto rounded-t-2xl border-t border-line bg-surface p-4 sm:mx-auto sm:w-full sm:max-w-[430px]" style={footerStyle}>
         <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-line-2" />
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-base font-bold text-ink">{t("rondas.chooseRoute", "Elige una ronda")}</h3>

@@ -76,6 +76,12 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <!-- ACCESS_FINE_LOCATION / RECORD_AUDIO would otherwise IMPLY these as
+         required and hide the app from Wi-Fi-only tablets / mic-less devices in
+         Play. The app degrades per-feature (PTT, dictation, GPS pings). -->
+    <uses-feature android:name="android.hardware.location" android:required="false" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
 
     <!-- Speech-to-text: allow querying the on-device speech recognizer (Android 11+). -->
     <queries>
