@@ -85,13 +85,22 @@ export default function GuardTabs() {
   const history = useHistory();
   const location = useLocation();
 
-  // Hardware back from an open message thread must return to the thread LIST —
-  // raw history.back() pops chronologically across tab stacks (it landed on
-  // whatever tab was visited before Mensajes).
+  // Hardware back on a NON-home tab root: hop to the home tab (Android
+  // bottom-nav convention) instead of letting the router pop across tab
+  // stacks. Detail pages (message thread, course, …) fall through to Ionic's
+  // router, which pops within the current stack (thread → list).
   useEffect(() => {
     return pushBackHandler(() => {
-      if (/^\/guard\/messages\/.+/.test(history.location.pathname)) {
-        history.push("/guard/messages");
+      const p = history.location.pathname;
+      const OTHER_TAB_ROOTS = [
+        "/guard/patrol",
+        "/guard/training",
+        "/guard/schedule",
+        "/guard/messages",
+        "/guard/profile",
+      ];
+      if (OTHER_TAB_ROOTS.includes(p)) {
+        history.push("/guard/dashboard");
         return true;
       }
       return false;

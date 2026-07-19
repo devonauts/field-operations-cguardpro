@@ -10,6 +10,7 @@ import AnimatedSplash from "./components/AnimatedSplash";
 import { StatusBanner } from "./components/StatusBanner";
 import { startDeviceStatus } from "./lib/deviceStatus";
 import { runBackChain } from "./lib/backButton";
+import { subscribeDuty } from "./lib/dutyState";
 import { startLocationReporter } from "./lib/locationReporter";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
@@ -80,22 +81,61 @@ export default function App() {
   // Start network + battery monitoring once for the whole app.
   useEffect(() => { startDeviceStatus(); startLocationReporter(); }, []);
 
-  // Android hardware back button: navigate back through the router history when a
-  // stack exists, otherwise minimize the app instead of dumping the user out.
-  // (Without this, Android's back gesture unexpectedly exits the app.)
+  // Clock-out invalidates any locally-persisted round session. Without this the
+  // Rondas tab resurrects a PREVIOUS shift's in-progress round from localStorage
+  // while the backend (per-shift by design) no longer reports it — so the tab
+  // showed "Ronda en curso" next to a home card saying "Sin ruta".
+  useEffect(
+    () =>
+      subscribeDuty((onDuty) => {
+        if (onDuty) return;
+        try {
+          for (let i = localStorage.length - 1; i >= 0; i--) {
+            const k = localStorage.key(i);
+            if (k && (k.startsWith("ronda.session.") || k.startsWith("ronda.scanned."))) {
+              localStorage.removeItem(k);
+            }
+          }
+        } catch { /* ignore */ }
+      }),
+    [],
+  );
+
+  // Android hardware back. Capacitor fires BOTH the App-plugin listener AND a
+  // document 'backbutton' event that Ionic core turns into 'ionBackButton' and
+  // routes (IonRouterOutlet pops a view at priority 0). A previous version
+  // ALSO navigated from the plugin listener, so every press navigated twice
+  // (back from a message thread skipped the list and landed on the prior tab).
+  // Correct wiring: keep an EMPTY plugin listener — its existence is what
+  // stops Capacitor's raw webview.goBack() default — and do all custom
+  // handling via 'ionBackButton' at priority 90 (below Ionic overlays at 100,
+  // above the router at 0): app handlers (pushBackHandler) get first refusal,
+  // then minimize at the home root, else let Ionic's router pop one view.
   useEffect(() => {
     let sub: { remove: () => void } | undefined;
     (async () => {
       try {
-        sub = await CapApp.addListener("backButton", ({ canGoBack }: { canGoBack: boolean }) => {
-          runBackChain(canGoBack, () => {
-            if (canGoBack) window.history.back();
-            else CapApp.minimizeApp?.();
-          });
-        });
+        sub = await CapApp.addListener("backButton", () => { /* handled via ionBackButton */ });
       } catch { /* not native */ }
     })();
-    return () => { try { sub?.remove(); } catch { /* ignore */ } };
+    const onIonBack = (ev: any) => {
+      ev.detail?.register?.(90, (processNextHandler: () => void) => {
+        runBackChain(true, () => {
+          const p = window.location.pathname;
+          // Home root (or pre-auth screens): minimize instead of exiting.
+          if (p === "/guard/dashboard" || !p.startsWith("/guard/")) {
+            CapApp.minimizeApp?.();
+            return;
+          }
+          processNextHandler(); // Ionic's router pops one view
+        });
+      });
+    };
+    document.addEventListener("ionBackButton", onIonBack);
+    return () => {
+      document.removeEventListener("ionBackButton", onIonBack);
+      try { sub?.remove(); } catch { /* ignore */ }
+    };
   }, []);
 
   // Listen for reset deep links (cold start + while running) and the web URL.

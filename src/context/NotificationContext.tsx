@@ -75,7 +75,9 @@ function fromRealtimeEvent(ev: PlatformEvent): AppNotification {
 }
 
 export const NotificationProvider = ({ children }: { children: ReactNode }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const myIdRef = useRef<string | null>(null);
+  myIdRef.current = user?.id ? String(user.id) : null;
   const [items, setItems] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -123,6 +125,10 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!isAuthenticated) return;
     const disconnect = connectNotifications((ev) => {
+      // Never surface the guard's OWN outgoing message as a notification
+      // (defense in depth — the backend also excludes the sender now).
+      const senderId = (ev as any)?.payload?.senderId;
+      if (ev.eventType === "message.new" && senderId && String(senderId) === myIdRef.current) return;
       setItems((prev) => {
         if (prev.some((n) => n.id === ev.id)) return prev;
         // Cap so a socket-only stream can't grow the list unbounded over a shift.
