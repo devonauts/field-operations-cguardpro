@@ -8,7 +8,7 @@ import {
   PartyPopper, RefreshCw, Navigation, Plus, Flag, History, CloudOff, ChevronRight,
 } from "lucide-react";
 import { Screen } from "@/components/Screen";
-import { Card, Loader, EmptyState, SectionTitle } from "@/components/ui";
+import { Card, Loader, EmptyState, SectionTitle, Sheet } from "@/components/ui";
 import { RondaQRScanner } from "@/components/RondaQRScanner";
 import { IncidentForm } from "@/components/IncidentForm";
 import { usePhotoCapture, PhotoStrip } from "@/components/photoCapture";
@@ -77,7 +77,7 @@ export default function GuardPatrol() {
   const [pendingCp, setPendingCp] = useState<RondaCheckpoint | null>(null);
   const [issueOpen, setIssueOpen] = useState(false);
   const [pending, setPending] = useState<PendingScan[]>(() => ls.get<PendingScan[]>(PENDING_KEY, []));
-  const [chooserOpen, setChooserOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const flushingRef = useRef(false);
   const flushPendingRef = useRef<() => void>(() => {});
 
@@ -138,11 +138,17 @@ export default function GuardPatrol() {
     const sess = ls.get<{ startedAt: number } | null>(sKey(routeId), null);
     setStartedAt(sess?.startedAt ?? null);
     const local: string[] = ls.get<string[]>(scKey(routeId), []);
-    // reconcile with backend scans for this route's tags
+    // Reconcile with backend scans for this route's tags — but only scans made
+    // DURING THIS SESSION. The day's earlier rounds also live in `scans`, and
+    // adopting them made a freshly-started second round show 2/2 "completada"
+    // at second zero (masked before because the tag-scans GET 404'd).
     const tagIdById = new Map((route?.tags || []).map((tg) => [tg.id, tg.tagIdentifier]));
-    const backend = (data?.scans || [])
-      .map((sc) => tagIdById.get(sc.siteTourTagId || ""))
-      .filter(Boolean) as string[];
+    const backend = sess?.startedAt
+      ? ((data?.scans || [])
+          .filter((sc) => new Date(sc.scannedAt).getTime() >= sess.startedAt)
+          .map((sc) => tagIdById.get(sc.siteTourTagId || ""))
+          .filter(Boolean) as string[])
+      : [];
     setScanned(new Set([...local, ...backend]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeId, data?.scans]);
@@ -171,7 +177,6 @@ export default function GuardPatrol() {
     const id = rid || routeId;
     if (!id || mustClockIn) return;
     fb.press();
-    setChooserOpen(false);
     if (id !== selectedId) setSelectedId(id);
     const ts = Date.now();
     // Persist BEFORE the route-restore effect runs so it reconciles to this
@@ -196,6 +201,35 @@ export default function GuardPatrol() {
   const doneCount = checkpoints.filter((c) => scanned.has(c.tagIdentifier)).length;
   const allDone = checkpoints.length > 0 && doneCount === checkpoints.length;
   const nextCp = checkpoints.find((c) => !scanned.has(c.tagIdentifier));
+
+  // Per-route status for the "rondas del turno" list. "done" comes from the
+  // SERVER's per-shift assignments (/guard/me/patrols) so the card state always
+  // matches what the CRM/client sees; an unfinished LOCAL session means the
+  // round was started this shift and can be resumed.
+  const patrolsToday: any[] = data?.patrols || [];
+  const routeStatus = (r: RondaRoute): "done" | "resume" | "todo" => {
+    if (patrolsToday.some((p) => p.siteTourId === r.id && p.status === "completed")) return "done";
+    if (ls.get<{ startedAt: number } | null>(sKey(r.id), null)) return "resume";
+    return "todo";
+  };
+  const allRoutesDone = routes.length > 0 && routes.every((r) => routeStatus(r) === "done");
+
+  // One tap on a round card: start it (or resume the session started earlier
+  // this shift). Completed rounds are disabled — the guard's job there is done.
+  const openRoute = (r: RondaRoute) => {
+    const st = routeStatus(r);
+    if (st === "done" || mustClockIn) return;
+    if (st === "resume") {
+      fb.tap();
+      if (r.id !== routeId) setSelectedId(r.id);
+      else {
+        const sess = ls.get<{ startedAt: number } | null>(sKey(r.id), null);
+        if (sess?.startedAt) setStartedAt(sess.startedAt);
+      }
+      return;
+    }
+    startPatrol(r.id);
+  };
 
   const onScan = (value: string) => {
     setScannerOpen(false);
@@ -295,14 +329,6 @@ export default function GuardPatrol() {
       right={
         startedAt ? (
           <span className="font-mono text-sm font-bold tabular-nums text-online">{fmtElapsed(now - startedAt)}</span>
-        ) : routes.length > 0 && !mustClockIn ? (
-          <button
-            onClick={() => { fb.tap(); setChooserOpen(true); }}
-            aria-label={t("rondas.start")}
-            className="grid h-10 w-10 place-items-center rounded-full bg-gold-strong text-on-accent active:bg-gold-hover"
-          >
-            <Plus size={22} />
-          </button>
         ) : undefined
       }
     >
@@ -378,27 +404,90 @@ export default function GuardPatrol() {
               </div>
             </>
           ) : (
-            /* =================== NOT STARTED — history first =================== */
+            /* ============ NOT STARTED — the shift's rounds, one tap each ============ */
             <>
-              {routes.length === 0 && (
+              {routes.length === 0 ? (
                 <div className="flex items-center gap-2 rounded-xl border border-line bg-surface px-4 py-3 text-xs text-muted">
                   <MapPin size={16} className="shrink-0 text-faint" />
                   <span>{t("rondas.noRoutes")}</span>
                 </div>
+              ) : (
+                <div>
+                  <SectionTitle icon={<Navigation size={16} />}>
+                    {t("rondas.shiftRounds", "Rondas del turno")}
+                  </SectionTitle>
+
+                  {allRoutesDone && (
+                    <Card className="mb-3 border-online/40 bg-online/5 p-4 text-center">
+                      <PartyPopper className="mx-auto mb-1 text-online" size={26} />
+                      <p className="text-sm font-semibold text-online">
+                        {t("rondas.allRoundsDoneTitle", "¡Rondas del turno completadas!")}
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted">
+                        {t("rondas.allRoundsDoneHint", "Buen trabajo. Todo quedó registrado en la central.")}
+                      </p>
+                    </Card>
+                  )}
+
+                  <div className="space-y-2.5">
+                    {routes.map((r) => {
+                      const st = routeStatus(r);
+                      const count = (r.tags || []).length;
+                      const done = st === "done";
+                      return (
+                        <button
+                          key={r.id}
+                          disabled={done}
+                          onClick={() => openRoute(r)}
+                          className={`flex w-full items-center gap-3.5 rounded-2xl border px-4 py-4 text-left ${
+                            done
+                              ? "border-online/40 bg-online/5 opacity-70"
+                              : "pressable border-line bg-surface active:bg-surface-2"
+                          }`}
+                        >
+                          <span
+                            className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${
+                              done ? "bg-online/15 text-online" : st === "resume" ? "bg-gold/25 text-gold" : "bg-gold/15 text-gold"
+                            }`}
+                          >
+                            {done ? <CheckCircle2 size={22} /> : <Navigation size={22} />}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-[15px] font-semibold text-ink">{r.name}</span>
+                            <span className={`mt-0.5 block text-xs ${done ? "text-online" : "text-muted"}`}>
+                              {done
+                                ? t("rondas.roundDone", "Ronda realizada")
+                                : st === "resume"
+                                  ? t("rondas.continueRound", "Ronda en curso — toca para continuar")
+                                  : `${count} ${t("rondas.allCheckpoints").toLowerCase()} · ${t("rondas.tapToStart", "Toca para iniciar")}`}
+                            </span>
+                          </span>
+                          {!done && <ChevronRight size={18} className="shrink-0 text-muted" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
-              <RondaHistory patrols={data?.patrols || []} canStart={routes.length > 0} onOpen={setDetailId} />
+
+              {/* History lives behind ONE clear button — not mixed into the main flow. */}
+              <button
+                onClick={() => { fb.tap(); setHistoryOpen(true); }}
+                className="pressable flex w-full items-center justify-center gap-2 rounded-2xl border border-line bg-surface py-3 text-sm font-semibold text-muted active:bg-surface-2"
+              >
+                <History size={16} />
+                {t("rondas.viewHistory", "Ver historial de rondas")}
+              </button>
             </>
           )}
         </div>
       )}
       {detailId && <RondaDetailModal assignmentId={detailId} onClose={() => setDetailId(null)} />}
 
-      {chooserOpen && (
-        <RouteChooserSheet
-          routes={routes}
-          onPick={(rid) => startPatrol(rid)}
-          onClose={() => setChooserOpen(false)}
-        />
+      {historyOpen && (
+        <Sheet open onClose={() => setHistoryOpen(false)} title={t("rondas.history")}>
+          <RondaHistory patrols={data?.patrols || []} onOpen={(id) => { setHistoryOpen(false); setDetailId(id); }} />
+        </Sheet>
       )}
 
       {/* action bar */}
@@ -591,20 +680,16 @@ function ScanConfirm({ checkpoint, settings, onClose, onSubmit }: {
 
 /* ----------------------------- history ----------------------------- */
 /** Primary content while no patrol is running: the ronda history, newest first. */
-function RondaHistory({ patrols, canStart, onOpen }: { patrols: any[]; canStart: boolean; onOpen: (id: string) => void }) {
+function RondaHistory({ patrols, onOpen }: { patrols: any[]; onOpen: (id: string) => void }) {
   const { t } = useTranslation();
   return (
-    <div>
-      <SectionTitle icon={<History size={16} />}>{t("rondas.history")}</SectionTitle>
+    <div className="px-4 pb-4">
       {patrols.length === 0 ? (
         <Card className="p-8 text-center">
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border border-line bg-surface-2">
             <History className="text-faint" size={26} />
           </div>
           <p className="text-sm font-semibold text-ink">{t("rondas.noHistory")}</p>
-          {canStart && (
-            <p className="mt-1 text-xs text-muted">{t("rondas.startWithPlus", "Toca + arriba para iniciar una ronda.")}</p>
-          )}
         </Card>
       ) : (
         <Card className="divide-y divide-line p-0">
@@ -633,42 +718,5 @@ function RondaHistory({ patrols, canStart, onOpen }: { patrols: any[]; canStart:
   );
 }
 
-/** Bottom sheet that always opens before starting: pick which ronda to run. */
-function RouteChooserSheet({ routes, onPick, onClose }: { routes: RondaRoute[]; onPick: (id: string) => void; onClose: () => void; }) {
-  const { t } = useTranslation();
-  return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end" role="dialog">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative max-h-[80vh] overflow-y-auto rounded-t-2xl border-t border-line bg-surface p-4 sm:mx-auto sm:w-full sm:max-w-[430px]" style={footerStyle}>
-        <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-line-2" />
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-base font-bold text-ink">{t("rondas.chooseRoute", "Elige una ronda")}</h3>
-          <button onClick={onClose} className="rounded-full p-1.5 text-muted active:bg-surface-2" aria-label={t("app.close", "Cerrar")}><X size={20} /></button>
-        </div>
-        {routes.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted">{t("rondas.noRoutes")}</p>
-        ) : (
-          <div className="space-y-2.5">
-            {routes.map((r) => {
-              const count = (r.tags || []).length;
-              return (
-                <button
-                  key={r.id}
-                  onClick={() => { fb.tap(); onPick(r.id); }}
-                  className="flex w-full items-center gap-3.5 rounded-2xl border border-line bg-surface px-4 py-4 text-left active:bg-surface-2"
-                >
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gold/15 text-gold"><Navigation size={22} /></span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[15px] font-semibold text-ink">{r.name}</span>
-                    <span className="mt-0.5 block text-xs text-muted">{count} {t("rondas.allCheckpoints").toLowerCase()}</span>
-                  </span>
-                  <ChevronRight size={18} className="shrink-0 text-muted" />
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+/* RouteChooserSheet removed: the shift's rounds are now first-class cards on
+   the main screen (tap = start / resume; completed = disabled). */

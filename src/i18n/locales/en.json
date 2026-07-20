@@ -372,6 +372,13 @@
   "rondas": {
     "title": "Patrols",
     "subtitle": "Checkpoint rounds",
+    "shiftRounds": "This shift's rounds",
+    "tapToStart": "Tap to start",
+    "roundDone": "Round completed",
+    "continueRound": "Round in progress — tap to continue",
+    "allRoundsDoneTitle": "All rounds completed!",
+    "allRoundsDoneHint": "Good job. Everything was reported to dispatch.",
+    "viewHistory": "View round history",
     "noRoutes": "No patrol routes assigned to this post yet.",
     "selectRoute": "Select a route",
     "route": "Route",

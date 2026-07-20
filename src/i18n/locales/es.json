@@ -372,6 +372,13 @@
   "rondas": {
     "title": "Rondas",
     "subtitle": "Recorrido de puntos de control",
+    "shiftRounds": "Rondas del turno",
+    "tapToStart": "Toca para iniciar",
+    "roundDone": "Ronda realizada",
+    "continueRound": "Ronda en curso — toca para continuar",
+    "allRoundsDoneTitle": "¡Rondas del turno completadas!",
+    "allRoundsDoneHint": "Buen trabajo. Todo quedó registrado en la central.",
+    "viewHistory": "Ver historial de rondas",
     "noRoutes": "Aún no hay rondas asignadas a este puesto.",
     "selectRoute": "Selecciona una ronda",
     "route": "Ronda",
