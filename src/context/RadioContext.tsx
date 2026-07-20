@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { apiOrigin, getToken, getTenantId } from "@/lib/api";
+import { api, apiOrigin, getToken, getTenantId, tenantPath } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { VoiceChannel, type VoiceMember, type VoiceSpeaker, type VoiceState } from "@/lib/voiceChannel";
 import { ensureMicPermission } from "@/lib/micPermission";
@@ -54,6 +54,8 @@ export function RadioProvider({ children }: { children: ReactNode }) {
 
   const vcRef = useRef<VoiceChannel | null>(null);
   const pressedRef = useRef(false);
+  /** When the current PTT transmission actually started publishing (audit log). */
+  const talkStartRef = useRef<number | null>(null);
   const speakerRef = useRef<VoiceSpeaker>(null);
   speakerRef.current = speaker;
 
@@ -208,7 +210,7 @@ export function RadioProvider({ children }: { children: ReactNode }) {
     if (!pressedRef.current) return; // released during the permission prompt
     const r = await vc.startTalk();
     if (!pressedRef.current) { vc.stopTalk(); return; } // released mid-acquire
-    if (r?.ok) setTalking(true);
+    if (r?.ok) { setTalking(true); talkStartRef.current = Date.now(); }
     else if (r?.busyWith) setHint(i18n.t("radio.xTalking", { name: r.busyWith, defaultValue: "{{name}} está hablando" }));
     else setHint(r?.error || i18n.t("radio.micAccessError", "No se pudo acceder al micrófono."));
   }, [state, myId]);
@@ -217,6 +219,19 @@ export function RadioProvider({ children }: { children: ReactNode }) {
     pressedRef.current = false;
     vcRef.current?.stopTalk();
     setTalking(false);
+    // Audit trail: report the finished transmission (LiveKit keeps no
+    // per-transmission record server-side). Fire-and-forget; sub-300ms
+    // accidental taps aren't worth logging.
+    const startedTx = talkStartRef.current;
+    talkStartRef.current = null;
+    if (startedTx) {
+      const durationMs = Date.now() - startedTx;
+      if (durationMs > 300) {
+        api
+          .post(tenantPath("/radio/transmission"), { data: { channel: "general", durationMs } })
+          .catch(() => {});
+      }
+    }
   }, []);
 
   const someoneElseTalking = !!speaker && speaker.userId !== myId;
