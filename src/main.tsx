@@ -78,14 +78,18 @@ createRoot(document.getElementById("root")!).render(
 /* Hide the native splash once the app has painted, with a gentle fade.
    No-op on web. Kept outside React render so a re-render can't re-trigger it. */
 if (Capacitor.isNativePlatform()) {
-  import("@capacitor/splash-screen")
-    .then(({ SplashScreen }) => {
-      requestAnimationFrame(() =>
-        setTimeout(
-          () => SplashScreen.hide({ fadeOutDuration: 350 }).catch(() => {}),
-          200
-        )
-      );
-    })
-    .catch(() => {});
+  const hideSplash = () =>
+    import("@capacitor/splash-screen")
+      .then(({ SplashScreen }) => SplashScreen.hide({ fadeOutDuration: 350 }))
+      .catch(() => {});
+  // Do NOT gate this on requestAnimationFrame: rAF freezes when the app is
+  // launched with the screen off (push/monkey launches under Doze) — the
+  // native splash then never hid and the app looked frozen on the logo while
+  // the web app ran underneath. Plain timers + a visibility fallback make the
+  // hide unconditional; SplashScreen.hide() is idempotent.
+  setTimeout(hideSplash, 250);
+  setTimeout(hideSplash, 1500);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") hideSplash();
+  });
 }
