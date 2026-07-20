@@ -508,6 +508,9 @@
   "visitor": {
     "title": "Visitor management",
     "register": "Register visitor",
+    "search": "Search by name, ID, plate…",
+    "searchEmpty": "No results for your search",
+    "loadMore": "Load earlier visits",
     "newVisit": "New visit",
     "firstName": "First name",
     "lastName": "Last name",

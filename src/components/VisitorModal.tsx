@@ -10,6 +10,7 @@ import {
   Users,
   Loader2,
   Camera,
+  Search,
   Images,
   ScanLine,
   ArrowLeft,
@@ -147,12 +148,34 @@ export function VisitorFlow({ station, onClose, embedded }: { station: any; onCl
   // flow has moved on (e.g. modal closed → flow unmounted) before it resolves.
   const scanGen = useRef(0);
 
-  const { data, loading, reload } = useAsync(() =>
-    visitorService.list({ limit: 50, withPhotos: 1 }).catch(() => [])
+  // Paged fetch window + local search: sites move 100+ visits/day, so a fixed
+  // limit:50 hid the morning's entries with no way to reach or find them.
+  const PAGE = 50;
+  const [pages, setPages] = useState(1);
+  const [search, setSearch] = useState("");
+  const { data, loading, reload } = useAsync(
+    () => visitorService.list({ limit: PAGE * pages, withPhotos: 1 }).catch(() => []),
+    [pages],
   );
-  const visits = (data || []).filter((v: any) =>
-    station?.id ? v.stationId === station.id || !v.stationId : true
-  );
+  const fetched: any[] = data || [];
+  // A full window means the server probably has more (newest-first).
+  const hasMore = fetched.length >= PAGE * pages;
+  const normText = (s: any) =>
+    String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const q = normText(search.trim());
+  const visits = fetched
+    .filter((v: any) => (station?.id ? v.stationId === station.id || !v.stationId : true))
+    .filter((v: any) => {
+      if (!q) return true;
+      return [
+        `${v.firstName || ""} ${v.lastName || ""}`,
+        v.idNumber,
+        v.company,
+        v.vehiclePlate,
+        v.personVisited,
+        v.tagNumber,
+      ].some((f) => normText(f).includes(q));
+    });
 
   // Track whether the next web <input> pick should be compressed at hi-res (the
   // ID document) vs the lighter default (face / extra photos).
@@ -306,6 +329,10 @@ export function VisitorFlow({ station, onClose, embedded }: { station: any; onCl
           onNew={() => { reset(); setMode("choose"); }}
           onOpen={openDetail}
           onScanPreAuth={() => setScanPreAuth(true)}
+          search={search}
+          onSearch={setSearch}
+          hasMore={hasMore}
+          onMore={() => setPages((p) => p + 1)}
         />
       )}
 
@@ -394,15 +421,25 @@ function VInfo({ icon, label, value }: { icon: React.ReactNode; label: string; v
   );
 }
 
-function ListView({ loading, visits, reload, onNew, onOpen, onScanPreAuth }: { loading: boolean; visits: any[]; reload: () => void; onNew: () => void; onOpen: (v: any) => void; onScanPreAuth: () => void; }) {
+function ListView({ loading, visits, reload, onNew, onOpen, onScanPreAuth, search, onSearch, hasMore, onMore }: { loading: boolean; visits: any[]; reload: () => void; onNew: () => void; onOpen: (v: any) => void; onScanPreAuth: () => void; search: string; onSearch: (v: string) => void; hasMore: boolean; onMore: () => void; }) {
   const { t } = useTranslation();
   return (
     <>
       <div className="flex-1 overflow-y-auto px-4 py-4">
+        {/* Search across the loaded window (name, cédula, empresa, placa, anfitrión). */}
+        <div className="relative mb-3">
+          <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
+          <input
+            value={search}
+            onChange={(e) => onSearch(e.target.value)}
+            placeholder={t("visitor.search", "Buscar por nombre, cédula, placa…")}
+            className="w-full rounded-xl border border-line bg-surface py-2.5 pl-10 pr-4 text-[15px] text-ink outline-none placeholder:text-muted focus:border-gold/60"
+          />
+        </div>
         {loading ? (
           <SkeletonList rows={5} />
         ) : visits.length === 0 ? (
-          <EmptyState icon={<Users size={32} />} title={t("visitor.empty")} />
+          <EmptyState icon={<Users size={32} />} title={search ? t("visitor.searchEmpty", "Sin resultados para la búsqueda") : t("visitor.empty")} />
         ) : (
           <div className="space-y-2 pb-2">
             {visits.map((v: any, i: number) => {
@@ -465,6 +502,14 @@ function ListView({ loading, visits, reload, onNew, onOpen, onScanPreAuth }: { l
                 </div>
               );
             })}
+            {hasMore && !search && (
+              <button
+                onClick={onMore}
+                className="pressable w-full rounded-2xl border border-line bg-surface py-3 text-sm font-semibold text-gold active:bg-surface-2"
+              >
+                {t("visitor.loadMore", "Cargar visitas anteriores")}
+              </button>
+            )}
           </div>
         )}
       </div>

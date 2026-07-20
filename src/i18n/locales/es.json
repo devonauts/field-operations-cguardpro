@@ -508,6 +508,9 @@
   "visitor": {
     "title": "Manejo de visitas",
     "register": "Registrar visita",
+    "search": "Buscar por nombre, cédula, placa…",
+    "searchEmpty": "Sin resultados para la búsqueda",
+    "loadMore": "Cargar visitas anteriores",
     "newVisit": "Nueva visita",
     "firstName": "Nombre",
     "lastName": "Apellido",
