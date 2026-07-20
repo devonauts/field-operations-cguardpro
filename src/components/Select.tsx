@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { pushBackHandler } from "@/lib/backButton";
 import { ChevronDown, Check, X } from "lucide-react";
 
 export interface SelectOption {
@@ -25,6 +26,11 @@ export function CustomSelect({
   onChange: (value: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  // Hardware back with the picker open must only close it (see ui.tsx Sheet).
+  useEffect(() => {
+    if (!open) return;
+    return pushBackHandler(() => { setOpen(false); return true; });
+  }, [open]);
   const selected = options.find((o) => o.value === value);
 
   return (

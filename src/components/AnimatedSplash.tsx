@@ -22,9 +22,20 @@ export default function AnimatedSplash() {
   useEffect(() => {
     const t1 = setTimeout(() => setPhase("out"), HOLD_MS);
     const t2 = setTimeout(() => setPhase("gone"), HOLD_MS + FADE_MS);
+    // Launched with the screen OFF (push/Doze), WebView timers can freeze and
+    // this overlay stayed up forever, looking like a dead app. When the app
+    // becomes visible, fast-forward the dismissal unconditionally.
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        setTimeout(() => setPhase("out"), 800);
+        setTimeout(() => setPhase("gone"), 800 + FADE_MS);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
 
@@ -46,7 +57,10 @@ export default function AnimatedSplash() {
           "radial-gradient(120% 90% at 50% 38%, color-mix(in srgb, var(--background) 88%, var(--ink) 4%) 0%, var(--background) 52%, color-mix(in srgb, var(--background) 92%, #000 8%) 100%)",
         opacity: phase === "out" ? 0 : 1,
         transition: `opacity ${FADE_MS}ms ease`,
-        pointerEvents: phase === "out" ? "none" : "auto",
+        // ALWAYS none: this overlay is pure decoration (aria-hidden). If it
+        // ever gets stuck (frozen timers on a screen-off launch), taps must
+        // still reach the app underneath instead of a dead logo.
+        pointerEvents: "none",
       }}
     >
       <style>{css}</style>

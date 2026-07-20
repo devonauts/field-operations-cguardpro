@@ -119,7 +119,7 @@ export default function GuardPermissions() {
   };
 
   const items: { kind: Kind; icon: any; title: string; why: string }[] = [
-    { kind: "location", icon: <MapPin size={20} />, title: t("perm.location", "Ubicación (GPS)"), why: t("perm.locationWhy", "Necesaria para marcar entrada/salida en tu puesto.") },
+    { kind: "location", icon: <MapPin size={20} />, title: t("perm.location", "Ubicación (GPS)"), why: t("perm.locationWhy", "CGuardPro recopila tu ubicación mientras estás en turno para el seguimiento en vivo, tu recorrido de ronda y marcar entrada/salida, incluso con la app cerrada o la pantalla bloqueada. Se detiene al marcar salida. Elige “Permitir todo el tiempo”.") },
     { kind: "camera", icon: <Camera size={20} />, title: t("perm.camera", "Cámara"), why: t("perm.cameraWhy", "Necesaria para la selfie de marcación y reportes.") },
     { kind: "microphone", icon: <Mic size={20} />, title: t("perm.microphone", "Micrófono"), why: t("perm.microphoneWhy", "Necesario para los reportes de voz y el canal de radio en vivo.") },
     { kind: "notifications", icon: <Bell size={20} />, title: t("perm.notifications", "Notificaciones"), why: t("perm.notificationsWhy", "Necesaria para recibir mensajes y avisos de la empresa.") },

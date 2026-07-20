@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Loader2, CheckCircle2, AlertTriangle, X, ChevronsRight } from "lucide-react";
 import fb from "@/lib/feedback";
+import { pushBackHandler } from "@/lib/backButton";
 import { Button } from "@/components/ui/kit";
 import {
   Severity,
@@ -251,6 +252,16 @@ export function Sheet({
   className?: string;
 }) {
   const { t } = useTranslation();
+  // Hardware back with the sheet open must ONLY close the sheet — without this
+  // handler the press fell through to the router and closed the sheet AND
+  // navigated the page underneath at the same time.
+  useEffect(() => {
+    if (!open) return;
+    return pushBackHandler(() => {
+      onClose();
+      return true;
+    });
+  }, [open, onClose]);
   // Keep the sheet mounted through its slide-DOWN exit before unmounting, so closing
   // animates like a native modal instead of vanishing.
   const [render, setRender] = useState(open);

@@ -9,7 +9,11 @@ import type { Animation } from "@ionic/react";
  * (Bottom-sheet IonModals that use `breakpoints` already slide up — leave those.)
  */
 const EASING = "cubic-bezier(0.32, 0.72, 0, 1)";
-const DURATION = 420;
+// 320ms (was 420 — outside the app's 150-350ms band), 0 under reduced motion:
+// the global CSS kill-switch can't reach Ionic's Web-Animations engine, so
+// this must check matchMedia itself (same pattern as pageTransition.ts).
+const DURATION = () =>
+  typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 320;
 
 export function modalEnterAnimation(baseEl: HTMLElement): Animation {
   const root = (baseEl.shadowRoot || baseEl) as ParentNode;
@@ -28,7 +32,7 @@ export function modalEnterAnimation(baseEl: HTMLElement): Animation {
   return createAnimation()
     .addElement(baseEl)
     .easing(EASING)
-    .duration(DURATION)
+    .duration(DURATION())
     .addAnimation([backdrop, wrapper]);
 }
 

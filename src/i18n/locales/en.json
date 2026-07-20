@@ -645,7 +645,8 @@
       "consignas": "Standing orders",
       "rondas": "Patrols",
       "quiz": "Test",
-      "training": "Training"
+      "training": "Training",
+      "clientRating": "Client rating"
     },
     "stat": {
       "hours": "Hours worked",

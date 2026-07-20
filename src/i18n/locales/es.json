@@ -645,7 +645,8 @@
       "consignas": "Consignas",
       "rondas": "Rondas",
       "quiz": "Examen",
-      "training": "Capacitación"
+      "training": "Capacitación",
+      "clientRating": "Calificación del cliente"
     },
     "stat": {
       "hours": "Horas trabajadas",

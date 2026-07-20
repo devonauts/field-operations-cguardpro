@@ -5,6 +5,7 @@ import { CheckCircle2, Loader2, Radio as RadioIcon, Mic, Square, X } from "lucid
 import { radioCheckService } from "@/lib/services";
 import { startRecording, stopRecording, cancelRecording, isRecordingSupported } from "@/lib/audioRecorder";
 import { onPush } from "@/lib/pushEvents";
+import { getDuty } from "@/lib/dutyState";
 import { useRadio } from "@/context/RadioContext";
 import fb from "@/lib/feedback";
 
@@ -59,7 +60,9 @@ export default function RadioCheckAlert() {
         setEntry((prev: any) => (prev && (!e || prev.id !== e.id) ? null : prev));
         return;
       }
-      setEntry(e);
+      // Same entry → keep the same object so the full-screen alert doesn't
+      // re-render on every 8s poll while a check is pending.
+      setEntry((prev: any) => (prev && prev.id === e.id ? prev : e));
     } catch {
       /* keep prior state */
     }
@@ -68,8 +71,11 @@ export default function RadioCheckAlert() {
   // Poll fallback + instant push wake. Tight cadence (8s) — the response window is
   // only ~60s, so a missed push must still surface fast.
   useEffect(() => {
-    refresh();
-    const id = setInterval(refresh, 8000);
+    // Off duty no check can target this guard — don't burn radio/battery with
+    // a permanent 8s poll (it ran app-wide, 24/7). Push wake stays unfiltered.
+    const run = () => { if (getDuty()) refresh(); };
+    run();
+    const id = setInterval(run, 8000);
     const off = onPush((d: any) => {
       if (d?.type === "radio.check_request") refresh();
     });
@@ -183,7 +189,7 @@ export default function RadioCheckAlert() {
     <div
       role="dialog"
       aria-modal="true"
-      className="safe-top safe-bottom fixed inset-0 z-[9999] flex flex-col bg-surface text-ink"
+      className="safe-top safe-bottom fixed inset-0 z-[30000] flex flex-col bg-surface text-ink"
       style={{ animation: "rcaFade .18s ease-out" }}
     >
       <style>{`@keyframes rcaFade{from{opacity:0}to{opacity:1}}@keyframes rcaPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}`}</style>

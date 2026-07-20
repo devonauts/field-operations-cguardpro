@@ -633,9 +633,12 @@ export default function GuardDashboard() {
         await Promise.all([reload(), perf.reload()]);
       }}
     >
-      {loading ? (
+      {loading && !data ? (
+        // Stale-while-revalidate: only block with a spinner on the FIRST load.
+        // Returning to this tab used to flash a full-page spinner on every
+        // background reload even though yesterday's data was already in hand.
         <Loader />
-      ) : error ? (
+      ) : error && !data ? (
         <EmptyState title={t("app.noData")} hint={error} />
       ) : isClockedIn ? (
         /* ====================== ON-DUTY VIEW ====================== */
@@ -925,9 +928,14 @@ function dayLabel(target: Date, t: any): string {
   const startOfDay = (d: Date) =>
     new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   const diffDays = Math.round((startOfDay(target) - startOfDay(new Date())) / 86400000);
-  const weekday = target.toLocaleDateString(undefined, { weekday: "long" });
+  // APP language, not device locale — a Spanish UI on an English phone showed
+  // "Hoy · Sunday". And diffDays<0 is NOT "Hoy": an in-progress shift that
+  // started yesterday read "Hoy · Sunday" on Monday.
+  const locale = i18n.language?.startsWith("en") ? "en-US" : "es-ES";
+  const weekday = target.toLocaleDateString(locale, { weekday: "long" });
   const cap = weekday.charAt(0).toUpperCase() + weekday.slice(1);
-  if (diffDays <= 0) return `${t("guard.today", "Hoy")} · ${cap}`;
+  if (diffDays === 0) return `${t("guard.today", "Hoy")} · ${cap}`;
+  if (diffDays === -1) return `${t("guard.yesterday", "Ayer")} · ${cap}`;
   if (diffDays === 1) return `${t("guard.tomorrow", "Mañana")} · ${cap}`;
   return cap;
 }
