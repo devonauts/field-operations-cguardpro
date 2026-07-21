@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Redirect, Route, useHistory, useLocation } from "react-router-dom";
+import { App as CapApp } from "@capacitor/app";
 import {
   IonTabs,
   IonTabBar,
@@ -189,6 +190,23 @@ export default function GuardTabs() {
     seedUnread(() => alive);
     return () => { alive = false; };
   }, [location.pathname, seedUnread]);
+
+  // Re-seed the unread badge whenever the app returns to the foreground. A
+  // message that arrived while the app was backgrounded/closed (FCM foreground
+  // events don't fire then) would otherwise leave the badge stale until the
+  // guard happened to open Mensajes — the reported "el badge no aumenta".
+  useEffect(() => {
+    let alive = true;
+    let sub: { remove: () => void } | undefined;
+    (async () => {
+      try {
+        sub = await CapApp.addListener("appStateChange", ({ isActive }) => {
+          if (isActive) seedUnread(() => alive);
+        });
+      } catch { /* not native */ }
+    })();
+    return () => { alive = false; try { sub?.remove(); } catch { /* ignore */ } };
+  }, [seedUnread]);
 
   return (
     <>
