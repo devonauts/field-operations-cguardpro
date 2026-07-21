@@ -455,6 +455,18 @@ ion-modal::part(content) {
   flex-direction: column;
 }
 
+/* The app is VERTICAL-ONLY on phones: kill sideways panning globally. Any
+   child overflowing by a few px (long unbroken titles, wide chips) let
+   ion-content's scroller pan in all directions — reported on the incidents
+   screen, but this hardens every page. */
+ion-content {
+  --overflow: auto;
+}
+ion-content::part(scroll) {
+  overflow-x: hidden !important;
+  overscroll-behavior-x: none;
+}
+
 /* Respect device safe areas (notch / home indicator) inside Capacitor */
 .safe-top {
   padding-top: env(safe-area-inset-top);
