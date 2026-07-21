@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { IonModal } from "@ionic/react";
 import { modalEnterAnimation, modalLeaveAnimation } from "@/lib/modalAnimation";
 import { Camera, MapPin, RefreshCw, Check, X, Loader2, ShieldCheck } from "lucide-react";
-import { getCurrentPosition, reverseGeocode, Coords } from "@/lib/geo";
+import { getCurrentPosition, reverseGeocode, isLocationGranted, Coords } from "@/lib/geo";
 import { getAppTimeZone } from "@/lib/format";
 import { logError, logInfo } from "@/lib/errorLog";
 import { Capacitor } from "@capacitor/core";
@@ -206,6 +206,17 @@ export function SelfieClockIn({
     setLocating(true);
     (async () => {
       try {
+        // NEVER trigger the location permission dialog from here: this screen
+        // has a LIVE camera stream, and the system prompt over getUserMedia
+        // crashes the WebView on some Android devices. The permission is
+        // pre-warmed when the clock-in checklist opens (beginClockIn →
+        // ensureLocationPermission). If it's still not granted, skip silently
+        // — clock-in proceeds via the station-coords fallback.
+        if (!(await isLocationGranted())) {
+          logInfo("selfie.location", "skipped (not granted; using fallback)");
+          if (!cancelled) setLocating(false);
+          return;
+        }
         const pos = await getCurrentPosition();
         if (cancelled) return;
         setCoords(pos);

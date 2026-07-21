@@ -40,6 +40,7 @@ import { ConsignasSection } from "@/components/ConsignasSection";
 import { useAuth } from "@/context/AuthContext";
 import { guardService } from "@/lib/services";
 import { setDuty, getDuty } from "@/lib/dutyState";
+import { ensureLocationPermission } from "@/lib/geo";
 import { useBranding } from "@/lib/appBranding";
 import fb from "@/lib/feedback";
 import { onPush } from "@/lib/pushEvents";
@@ -487,6 +488,10 @@ export default function GuardDashboard() {
     setFlowStation(station);
     setChecklist(null);
     setFlowStep("checklist");
+    // Ask for location NOW, while the calm checklist is up — not later inside
+    // the selfie where the dialog would collide with the live camera stream
+    // and crash the WebView on some Android devices. Fire-and-forget.
+    void ensureLocationPermission();
   };
   const resetFlow = () => {
     setFlowStep("idle");

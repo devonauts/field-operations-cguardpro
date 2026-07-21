@@ -33,6 +33,40 @@ export function distanceMeters(
  * against a hard ceiling so the caller's `await` always settles — clock-in can
  * then proceed without GPS (the photo just lacks an address).
  */
+/**
+ * Pre-warm the location permission WITHOUT fetching a fix. Call this early in a
+ * flow that will need GPS (e.g. when the clock-in checklist opens) so the system
+ * dialog appears on a calm screen — NOT concurrently with a live camera stream,
+ * which crashes the WebView renderer on some Android devices (MediaTek). By the
+ * time the selfie's getCurrentPosition() runs, the permission is already granted
+ * and no dialog collides with the camera. Fire-and-forget; never throws.
+ */
+export async function ensureLocationPermission(): Promise<boolean> {
+  try {
+    if (!Capacitor.isNativePlatform()) return true;
+    const { Geolocation } = await import("@capacitor/geolocation");
+    let perm = await Geolocation.checkPermissions();
+    if (perm.location !== "granted" && perm.coarseLocation !== "granted") {
+      perm = await Geolocation.requestPermissions({ permissions: ["location"] });
+    }
+    return perm.location === "granted" || perm.coarseLocation === "granted";
+  } catch {
+    return false;
+  }
+}
+
+/** True if location is already granted — checked WITHOUT showing a dialog. */
+export async function isLocationGranted(): Promise<boolean> {
+  try {
+    if (!Capacitor.isNativePlatform()) return !!navigator.geolocation;
+    const { Geolocation } = await import("@capacitor/geolocation");
+    const p = await Geolocation.checkPermissions();
+    return p.location === "granted" || p.coarseLocation === "granted";
+  } catch {
+    return false;
+  }
+}
+
 export async function getCurrentPosition(): Promise<Coords> {
   return Promise.race([
     getCurrentPositionRaw(),
