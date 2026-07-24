@@ -18,6 +18,24 @@ const startOfWeekMon = (d: Date) => { const x = startOfDay(d); const dow = (x.ge
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const sameDay = (a: Date, b: Date) => ymd(a) === ymd(b);
 const MIN_MS = 60000;
+
+// The calendar day a UTC instant falls on IN THE TENANT'S TIMEZONE (YYYY-MM-DD).
+// The rotation is defined in tenant-local time: a night shift stored at 00:00Z
+// (19:00 the previous evening in UTC-5) belongs to that PREVIOUS local day, and
+// the rest day AFTER it must read as libre. Bucketing with the device's own tz
+// (or UTC) shifts nights onto the wrong day → the "libre on the wrong day" bug.
+// Falls back to device-local only if the tz is missing/invalid.
+const dayKeyTz = (value: any, tz?: string): string | null => {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: tz || undefined, year: "numeric", month: "2-digit", day: "2-digit",
+    }).format(d);
+  } catch { return ymd(d); }
+};
+// Parse a YYYY-MM-DD key back to a local calendar Date (noon-anchored, tz-safe).
+const keyToDate = (k: string): Date => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d); };
 // Sentence-case a locale date label. The old CSS `capitalize` title-cased
 // every word ("Julio De 2026") — Spanish only capitalizes the first letter.
 const capFirst = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
@@ -38,18 +56,6 @@ function overlapsDay(s: any, day: Date): boolean {
   if (!r) return false;
   const dayStart = startOfDay(day).getTime();
   return r.start < dayStart + DAY_MIN * MIN_MS && r.end > dayStart;
-}
-
-/** Every calendar-day key a shift touches (so an overnight shift marks BOTH days). */
-function shiftDayKeys(s: any): string[] {
-  const r = shiftRange(s);
-  if (!r) return [];
-  const keys: string[] = [];
-  let cur = startOfDay(new Date(r.start));
-  let guard = 0;
-  while (cur.getTime() < r.end && guard < 14) { keys.push(ymd(cur)); cur = addDays(cur, 1); guard++; }
-  if (!keys.length) keys.push(ymd(new Date(r.start)));
-  return keys;
 }
 
 /**
@@ -85,7 +91,11 @@ export default function GuardSchedule() {
   const [view, setView] = useState<View>("month");
   const [anchor, setAnchor] = useState<Date>(() => startOfDay(new Date()));
   const [shifts, setShifts] = useState<any[]>([]);
+  const [tz, setTz] = useState<string>("");
   const [freeDays, setFreeDays] = useState<Set<string>>(new Set());
+  // Authoritative per-day schedule from the backend (date -> 'D'|'N'|'L'|novedad).
+  // The backend is the single source of truth; we just paint this.
+  const [dayCodes, setDayCodes] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -106,7 +116,11 @@ export default function GuardSchedule() {
       .then((d: any) => {
         if (!alive) return;
         setShifts(asRows(d?.shifts || []));
+        setTz(d?.timezone || "");
         setFreeDays(new Set<string>(d?.freeDays || []));
+        const codes: Record<string, string> = {};
+        for (const day of (d?.days || [])) { if (day?.date) codes[String(day.date)] = String(day.code || ""); }
+        setDayCodes(codes);
       })
       .catch((e: any) => { if (alive) { setShifts([]); setFreeDays(new Set()); setLoadError(e?.message || "error"); } })
       .finally(() => { if (alive) setLoading(false); });
@@ -122,34 +136,40 @@ export default function GuardSchedule() {
     [shifts, anchor],
   );
 
-  // Every day any shift TOUCHES (start day through end day) — overnight shifts
-  // mark both days. Drives the worked-day dots and the free-day exclusion.
+  const hasDayCodes = Object.keys(dayCodes).length > 0;
+  const isWorkCode = (c: string) => c === "D" || c === "N" || c === "24";
+  const isRestCode = (c: string) => c === "L" || c === "V" || c === "PM" || c === "F";
+
+  // Worked days come straight from the backend's authoritative day-by-day
+  // schedule (dayCodes). No client-side rotation math or shift bucketing — that
+  // was the source of the "libre on the wrong day" drift. Fallback (old server
+  // without days[]): derive from each shift's START day in the tenant tz.
   const workedDays = useMemo(() => {
     const set = new Set<string>();
-    for (const s of shifts) for (const k of shiftDayKeys(s)) set.add(k);
+    if (hasDayCodes) {
+      for (const [date, code] of Object.entries(dayCodes)) if (isWorkCode(code)) set.add(date);
+    } else {
+      for (const s of shifts) { const k = dayKeyTz(pick(s, "startTime", "date", "shiftDate"), tz); if (k) set.add(k); }
+    }
     return set;
-  }, [shifts]);
+  }, [dayCodes, hasDayCodes, shifts, tz]);
 
-  // Free/rest days ("L"): approved time-off PLUS any non-working day that falls
-  // within the guard's scheduled rotation span (between the first and last
-  // shift we fetched). This reveals the rotation pattern — worked days carry a
-  // dot, rest days carry an "L" — without spamming unscheduled future months.
+  // Rest/free days ("L") — also straight from the backend. Fallback: time-off
+  // plus the gaps within the fetched shift span.
   const freeSet = useMemo(() => {
     const set = new Set<string>(freeDays);
-    const times = shifts
-      .map((s) => new Date(pick(s, "startTime", "date", "shiftDate") as any).getTime())
-      .filter((n) => !Number.isNaN(n));
-    if (times.length) {
-      let cur = startOfDay(new Date(Math.min(...times)));
-      const last = startOfDay(new Date(Math.max(...times)));
-      while (cur <= last) {
-        const k = ymd(cur);
-        if (!workedDays.has(k)) set.add(k);
-        cur = addDays(cur, 1);
+    if (hasDayCodes) {
+      for (const [date, code] of Object.entries(dayCodes)) if (isRestCode(code)) set.add(date);
+    } else {
+      const keys = [...workedDays].sort();
+      if (keys.length) {
+        let cur = keyToDate(keys[0]);
+        const last = keyToDate(keys[keys.length - 1]);
+        while (cur <= last) { const k = ymd(cur); if (!workedDays.has(k)) set.add(k); cur = addDays(cur, 1); }
       }
     }
     return set;
-  }, [shifts, freeDays, workedDays]);
+  }, [dayCodes, hasDayCodes, freeDays, workedDays]);
 
   /* ---------------- navigation ---------------- */
   const step = (dir: 1 | -1) => {
@@ -208,7 +228,7 @@ export default function GuardSchedule() {
         <>
           {view === "month" && (
             <>
-              <MonthGrid anchor={anchor} today={today} weekdayLabels={weekdayLabels} workedDays={workedDays} freeDays={freeSet} onPick={(d: Date) => { fb.tap(); setAnchor(d); }} />
+              <MonthGrid anchor={anchor} today={today} weekdayLabels={weekdayLabels} workedDays={workedDays} freeDays={freeSet} dayCodes={dayCodes} onPick={(d: Date) => { fb.tap(); setAnchor(d); }} />
               <Legend t={t} />
               <div className="mt-4">
                 <DayHeader anchor={anchor} locale={locale} view={view} />
@@ -241,7 +261,7 @@ export default function GuardSchedule() {
 
 /* ------------------------------------------------------------ subcomponents */
 
-function MonthGrid({ anchor, today, weekdayLabels, workedDays, freeDays, onPick }: any) {
+function MonthGrid({ anchor, today, weekdayLabels, workedDays, freeDays, dayCodes, onPick }: any) {
   const start = startOfWeekMon(startOfMonth(anchor));
   const cells = Array.from({ length: 42 }, (_, i) => addDays(start, i));
   const month = anchor.getMonth();
@@ -257,6 +277,8 @@ function MonthGrid({ anchor, today, weekdayLabels, workedDays, freeDays, onPick 
           const isSel = sameDay(d, anchor);
           const worked = workedDays.has(ymd(d));
           const free = freeDays.has(ymd(d));
+          const code: string = (dayCodes && dayCodes[ymd(d)]) || "";
+          const isWork = code === "D" || code === "N" || code === "24";
           return (
             <button key={i} onClick={() => onPick(d)} className="relative flex aspect-square flex-col items-center justify-center rounded-xl">
               <span className={[
@@ -264,11 +286,16 @@ function MonthGrid({ anchor, today, weekdayLabels, workedDays, freeDays, onPick 
                 isSel ? "bg-gold font-bold text-on-accent" : isToday ? "font-bold text-gold" : inMonth ? "text-ink" : "text-faint",
                 !isSel && free ? "bg-online/10" : "",
               ].join(" ")}>{d.getDate()}</span>
-              {/* bottom marker: shift dot, else "L" for a free/resting day */}
+              {/* bottom marker: the day's código (D/N/L…) from the backend; falls
+                  back to a dot when the server didn't send day codes. */}
               {worked ? (
-                <span className={`absolute bottom-1 h-1.5 w-1.5 rounded-full ${isSel ? "bg-on-accent/70" : "bg-gold"}`} />
+                isWork ? (
+                  <span className={`absolute bottom-0.5 text-[10px] font-bold leading-none ${isSel ? "text-on-accent" : code === "N" ? "text-indigo-400" : "text-gold"}`}>{code}</span>
+                ) : (
+                  <span className={`absolute bottom-1 h-1.5 w-1.5 rounded-full ${isSel ? "bg-on-accent/70" : "bg-gold"}`} />
+                )
               ) : free ? (
-                <span className={`absolute bottom-0.5 text-[11px] font-bold leading-none ${isSel ? "text-on-accent" : "text-online"}`}>L</span>
+                <span className={`absolute bottom-0.5 text-[11px] font-bold leading-none ${isSel ? "text-on-accent" : "text-online"}`}>{code === "V" || code === "PM" || code === "F" ? code : "L"}</span>
               ) : null}
             </button>
           );
